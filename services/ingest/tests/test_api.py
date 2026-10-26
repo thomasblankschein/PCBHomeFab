@@ -66,6 +66,7 @@ def test_unknown_path_is_a_problem(client: TestClient) -> None:
     response = client.get("/v1/nothing")
     assert response.status_code == 404
     validate("problem", response.json())
+    assert response.json()["code"] == "common.not_found"
 
 
 def test_too_large_upload() -> None:

@@ -1,0 +1,23 @@
+body {
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 46rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+code {
+  background: #eee;
+  padding: 0 0.3em;
+}
+
+img {
+  max-width: 100%;
+}
+
+.error {
+  color: #b00020;
+}

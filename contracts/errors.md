@@ -9,6 +9,7 @@ its own prefix, plus `common.*`.
 | `common.busy` | 503 | too many parallel requests, retry after `Retry-After` seconds |
 | `common.timeout` | 503 | the request took longer than the time limit and was stopped |
 | `common.invalid_request` | 422 | the request does not match the contract (missing part, bad JSON, wrong value) |
+| `common.not_found` | 404 | no such path |
 | `common.too_large` | 413 | a request part is larger than the limit of the service |
 | `common.internal` | 500 | unexpected error, details only in the log (look for the `request_id`) |
 | `ingest.invalid_zip` | 422 | the upload is not a ZIP file |

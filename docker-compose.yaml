@@ -1,0 +1,134 @@
+# PCBHomeFab: independent services that talk only through REST (see docs/architecture.md).
+#
+#   gateway  -> frontend (static pages)        reachable from outside: only the gateway
+#            -> jobs (/api/...)  -> ingest, panel, exposure, mill
+#
+# Start:   cp .env.example .env   (set PCBHOMEFAB_IP_SALT), then   docker compose up -d --build
+# Scale:   docker compose up -d --scale exposure=2     (the processing services keep no state)
+# Check:   scripts/smoke_test.sh http://localhost
+name: pcbhomefab
+
+x-service: &service
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - internal
+
+x-limits: &limits
+  MAX_UPLOAD_MB: ${PCBHOMEFAB_MAX_UPLOAD_MB:-10}
+
+services:
+  gateway:
+    image: pcbhomefab-gateway:latest
+    build: ./services/gateway
+    restart: unless-stopped
+    ports:
+      - "${PCBHOMEFAB_HTTP_PORT:-80}:80"
+      - "${PCBHOMEFAB_HTTPS_PORT:-443}:443"
+      - "${PCBHOMEFAB_HTTPS_PORT:-443}:443/udp"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      CADDY_TLS: ${CADDY_TLS:-}
+      MAX_REQUEST_MB: ${MAX_REQUEST_MB:-100}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - edge
+      - internal
+    depends_on:
+      frontend:
+        condition: service_healthy
+      jobs:
+        condition: service_healthy
+
+  frontend:
+    <<: *service
+    image: pcbhomefab-frontend:latest
+    build: ./services/frontend
+    mem_limit: 64m
+
+  jobs:
+    <<: *service
+    image: pcbhomefab-jobs:latest
+    build: ./services/jobs
+    mem_limit: 512m
+    environment:
+      <<: *limits
+      INGEST_URL: http://ingest:8000
+      PANEL_URL: http://panel:8000
+      EXPOSURE_URL: http://exposure:8000
+      MILL_URL: http://mill:8000
+      IP_SALT: ${PCBHOMEFAB_IP_SALT:?Set PCBHOMEFAB_IP_SALT in .env to a random secret}
+      TRUST_PROXY: "1"
+      ROOT_PATH: /api
+      MAX_FILES: ${PCBHOMEFAB_MAX_FILES:-8}
+      MAX_BOARDS: ${PCBHOMEFAB_MAX_BOARDS:-200}
+      JOB_TTL_HOURS: ${PCBHOMEFAB_JOB_TTL_HOURS:-168}
+      JOB_TIMEOUT_S: ${PCBHOMEFAB_JOB_TIMEOUT_S:-300}
+      RATE_LIMIT_PER_HOUR: ${PCBHOMEFAB_RATE_LIMIT_PER_HOUR:-30}
+      MAX_QUEUED: ${PCBHOMEFAB_MAX_QUEUED:-100}
+      WORKERS: ${PCBHOMEFAB_WORKERS:-2}
+    volumes:
+      - jobs_data:/data
+    depends_on:
+      ingest:
+        condition: service_healthy
+      panel:
+        condition: service_healthy
+      exposure:
+        condition: service_healthy
+      mill:
+        condition: service_healthy
+
+  ingest:
+    <<: *service
+    image: pcbhomefab-ingest:latest
+    build: ./services/ingest
+    mem_limit: 512m
+    environment:
+      <<: *limits
+
+  panel:
+    <<: *service
+    image: pcbhomefab-panel:latest
+    build: ./services/panel
+    mem_limit: 128m
+
+  exposure:
+    <<: *service
+    image: pcbhomefab-exposure:latest
+    build: ./services/exposure
+    mem_limit: 1g
+    environment:
+      <<: *limits
+
+  mill:
+    <<: *service
+    image: pcbhomefab-mill:latest
+    build: ./services/mill
+    mem_limit: 512m
+    environment:
+      <<: *limits
+      PCBHOMEFAB_TOOLS_FILE: ${PCBHOMEFAB_TOOLS_FILE:-}
+    volumes:
+      # Only for an own tool library, e.g. /data/tools.toml. Nothing else of the system touches this volume.
+      - mill_data:/data:ro
+
+networks:
+  edge: {}
+  # No access to the internet and to the host: the services can only talk to each other.
+  internal:
+    internal: true
+
+volumes:
+  jobs_data:
+  mill_data:
+  caddy_data:
+  caddy_config:

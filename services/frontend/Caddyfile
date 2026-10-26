@@ -1,0 +1,25 @@
+# Serves the static pages of the user interface. Only the gateway talks to this service.
+{
+	admin off
+	auto_https off
+}
+
+:8080 {
+	root * /srv
+	encode zstd gzip
+
+	respond /healthz 200
+
+	header {
+		Content-Security-Policy "default-src 'self'; img-src 'self'; frame-ancestors 'none'"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+
+	# /jobs/<id> is one page, the script reads the id from the address.
+	@job path_regexp job ^/jobs/[A-Za-z0-9_-]+$
+	rewrite @job /job.html
+
+	file_server
+}

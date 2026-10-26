@@ -58,7 +58,7 @@ def main() -> None:
                 with Image.open(path) as image:  # PNG bytes depend on the encoder, compare the pixels
                     data = image.convert("L").tobytes()
             else:
-                data = path.read_bytes()
+                data = path.read_bytes().replace(b"\r\n", b"\n")  # text written on Windows has CRLF line ends
             manifest[f["name"]] = {"sha256": hashlib.sha256(data).hexdigest(), "size": f["size"]}
     boards = [load_board(DATA / f"{n}.zip", name=n) for n, _ in BOARDS]
     expanded = [b for b, (_, c) in zip(boards, BOARDS, strict=True) for _ in range(c)]

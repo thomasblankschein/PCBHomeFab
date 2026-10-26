@@ -106,7 +106,8 @@ def install(app: FastAPI, service: str) -> None:
 
     @app.exception_handler(StarletteHTTPException)
     async def on_http(_request: Request, exc: StarletteHTTPException) -> JSONResponse:
-        return problem_response(exc.status_code, "common.invalid_request", str(exc.detail))
+        code = "common.not_found" if exc.status_code == 404 else "common.invalid_request"
+        return problem_response(exc.status_code, code, str(exc.detail))
 
     @app.exception_handler(Exception)
     async def on_error(_request: Request, exc: Exception) -> JSONResponse:
