@@ -1,0 +1,54 @@
+openapi: 3.1.0
+info:
+  title: PCBHomeFab ingest
+  version: 1.0.0
+  description: >
+    Reads a Gerber ZIP of a single-sided board and returns the canonical board package: a ZIP with exactly
+    `copper.gbr` (bottom copper) and `board.json` (see schemas/board.schema.json). Stateless.
+paths:
+  /healthz:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: The service is running.
+  /v1/packages:
+    post:
+      operationId: createPackage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Gerber ZIP with bottom copper, board outline and Excellon drill files.
+                name:
+                  type: string
+                  description: Board name written to board.json (1 to 40 characters of A-Z a-z 0-9 _ -).
+      responses:
+        "200":
+          description: The canonical board package.
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "413":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+components:
+  responses:
+    Problem:
+      description: Error, codes in errors.md.
+      content:
+        application/problem+json:
+          schema:
+            $ref: schemas/problem.schema.json

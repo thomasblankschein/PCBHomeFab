@@ -1,0 +1,218 @@
+{
+ "schema_version": 1,
+ "name": "basisplatine",
+ "outline": {
+  "xmin": 30.05,
+  "ymin": -62.5,
+  "xmax": 58.25,
+  "ymax": -24.5
+ },
+ "width_mm": 28.2,
+ "height_mm": 38.0,
+ "holes": [
+  {
+   "x_mm": 11.1,
+   "y_mm": 27.7,
+   "diameter_mm": 0.8,
+   "plated": true
+  },
+  {
+   "x_mm": 11.1,
+   "y_mm": 25.7,
+   "diameter_mm": 0.8,
+   "plated": true
+  },
+  {
+   "x_mm": 11.1,
+   "y_mm": 23.7,
+   "diameter_mm": 0.8,
+   "plated": true
+  },
+  {
+   "x_mm": 19.9,
+   "y_mm": 18.5,
+   "diameter_mm": 0.8,
+   "plated": true
+  },
+  {
+   "x_mm": 19.9,
+   "y_mm": 16.5,
+   "diameter_mm": 0.8,
+   "plated": true
+  },
+  {
+   "x_mm": 19.9,
+   "y_mm": 14.5,
+   "diameter_mm": 0.8,
+   "plated": true
+  },
+  {
+   "x_mm": 23.1,
+   "y_mm": 28.24,
+   "diameter_mm": 0.8,
+   "plated": true
+  },
+  {
+   "x_mm": 23.1,
+   "y_mm": 25.7,
+   "diameter_mm": 0.8,
+   "plated": true
+  },
+  {
+   "x_mm": 23.4,
+   "y_mm": 16.08,
+   "diameter_mm": 0.8,
+   "plated": true
+  },
+  {
+   "x_mm": 23.4,
+   "y_mm": 13.54,
+   "diameter_mm": 0.8,
+   "plated": true
+  },
+  {
+   "x_mm": 1.39,
+   "y_mm": 28.78,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 1.39,
+   "y_mm": 26.24,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 1.39,
+   "y_mm": 23.7,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 1.39,
+   "y_mm": 21.16,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 1.39,
+   "y_mm": 18.62,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 1.39,
+   "y_mm": 16.08,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 1.39,
+   "y_mm": 13.54,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 1.39,
+   "y_mm": 11.0,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 1.39,
+   "y_mm": 8.46,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 1.39,
+   "y_mm": 5.92,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 4.9,
+   "y_mm": 26.24,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 4.9,
+   "y_mm": 21.16,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 26.79,
+   "y_mm": 28.78,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 26.79,
+   "y_mm": 26.24,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 26.79,
+   "y_mm": 23.7,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 26.79,
+   "y_mm": 21.16,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 26.79,
+   "y_mm": 18.62,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 26.79,
+   "y_mm": 16.08,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 26.79,
+   "y_mm": 13.54,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 26.79,
+   "y_mm": 11.0,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 26.79,
+   "y_mm": 8.46,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 26.79,
+   "y_mm": 5.92,
+   "diameter_mm": 1.0,
+   "plated": true
+  },
+  {
+   "x_mm": 2.66,
+   "y_mm": 34.52,
+   "diameter_mm": 2.2,
+   "plated": false
+  },
+  {
+   "x_mm": 25.52,
+   "y_mm": 34.52,
+   "diameter_mm": 2.2,
+   "plated": false
+  }
+ ]
+}

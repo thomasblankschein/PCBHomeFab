@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "layout-request.schema.json",
+  "title": "Layout request",
+  "description": "Input of `panel`. Boards are placed in the order of the list, `count` copies of each.",
+  "type": "object",
+  "required": ["plate", "boards"],
+  "properties": {
+    "plate": {"$ref": "layout.schema.json#/$defs/plate"},
+    "gap_mm": {"type": "number", "minimum": 0, "default": 3.0},
+    "margin_mm": {"type": "number", "minimum": 0, "default": 3.0},
+    "boards": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "width_mm", "height_mm", "count"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,40}$"},
+          "width_mm": {"type": "number", "exclusiveMinimum": 0},
+          "height_mm": {"type": "number", "exclusiveMinimum": 0},
+          "count": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,130 @@
+openapi: 3.1.0
+info:
+  title: PCBHomeFab jobs
+  version: 1.0.0
+  description: >
+    The API the browser uses (behind the gateway under /api). Anonymous: creating a job returns a random id and the
+    job link is the only credential. Jobs and their files expire. Runs the workflow ingest, panel, exposure and
+    mill and is the only service with state.
+paths:
+  /healthz:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: The service is running.
+  /v1/profiles:
+    get:
+      operationId: listProfiles
+      responses:
+        "200":
+          description: Printer and mill profiles (from exposure and mill) and the limits of this installation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [printers, mills, limits]
+                properties:
+                  printers: {type: object}
+                  mills: {type: object}
+                  limits: {type: object}
+  /v1/tools:
+    get:
+      operationId: listTools
+      responses:
+        "200":
+          description: The tool library of the mill service.
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1/jobs:
+    post:
+      operationId: createJob
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [boards]
+              properties:
+                boards:
+                  type: array
+                  items: {type: string, format: binary}
+                  description: Gerber ZIP files, one per board design.
+                counts:
+                  type: array
+                  items: {type: integer, minimum: 1}
+                  description: Copies per file, same order (default 1 each).
+                printer: {type: string, default: photon-m3}
+                mill: {type: string, default: 3018pro}
+                exposure: {type: boolean, default: true}
+                mill_gcode: {type: boolean, default: true}
+                exposure_s: {type: number, minimum: 1, maximum: 3600, default: 120}
+                holes: {type: string, enum: [full, center, none], default: full}
+                gap_mm: {type: number, minimum: 0.5, maximum: 20, default: 3}
+                margin_mm: {type: number, minimum: 0, maximum: 20, default: 3}
+                flip: {type: string, enum: [x, y, none], default: x}
+                thickness_mm: {type: number, minimum: 0.4, maximum: 3.2, default: 1.5}
+                tabs: {type: boolean, default: true}
+                frame_left_mm: {type: number, minimum: 0, maximum: 20}
+                frame_bottom_mm: {type: number, minimum: 0, maximum: 20}
+                mirror_x: {type: boolean}
+      responses:
+        "201":
+          description: The job was queued.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, status]
+                properties:
+                  id: {type: string}
+                  status: {type: string}
+        "413":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "429":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+  /v1/jobs/{id}:
+    get:
+      operationId: getJob
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Job state.
+          content:
+            application/json:
+              schema:
+                $ref: schemas/job.schema.json
+        "404":
+          $ref: "#/components/responses/Problem"
+  /v1/jobs/{id}/files/{name}:
+    get:
+      operationId: getJobFile
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: name, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: The file of a finished job.
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/Problem"
+components:
+  responses:
+    Problem:
+      description: Error, codes in errors.md.
+      content:
+        application/problem+json:
+          schema:
+            $ref: schemas/problem.schema.json

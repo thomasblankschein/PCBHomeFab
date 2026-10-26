@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "board.schema.json",
+  "title": "board.json",
+  "description": "Metadata of a canonical board package (a ZIP with exactly `copper.gbr` and `board.json`). Made by `ingest`, read by `exposure` and `mill`. Lengths in millimetres, Y points up.",
+  "type": "object",
+  "required": ["schema_version", "name", "outline", "width_mm", "height_mm", "holes"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "name": {"type": "string", "minLength": 1, "maxLength": 40},
+    "outline": {
+      "description": "Bounding box of the board outline center lines in the coordinates of `copper.gbr`.",
+      "type": "object",
+      "required": ["xmin", "ymin", "xmax", "ymax"],
+      "properties": {
+        "xmin": {"type": "number"},
+        "ymin": {"type": "number"},
+        "xmax": {"type": "number"},
+        "ymax": {"type": "number"}
+      },
+      "additionalProperties": false
+    },
+    "width_mm": {"type": "number", "exclusiveMinimum": 0, "description": "xmax - xmin, rounded to 0.1 mm."},
+    "height_mm": {"type": "number", "exclusiveMinimum": 0, "description": "ymax - ymin, rounded to 0.1 mm."},
+    "holes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["x_mm", "y_mm", "diameter_mm", "plated"],
+        "properties": {
+          "x_mm": {"type": "number", "description": "Distance from the left edge of the outline."},
+          "y_mm": {"type": "number", "description": "Distance from the bottom edge of the outline."},
+          "diameter_mm": {"type": "number", "exclusiveMinimum": 0},
+          "plated": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "problem.schema.json",
+  "title": "Problem (RFC 9457)",
+  "description": "Body of every error response, media type application/problem+json. `code` is stable and listed in errors.md; `detail` is safe to show to users.",
+  "type": "object",
+  "required": ["type", "title", "status", "code", "detail"],
+  "properties": {
+    "type": {"type": "string", "description": "Always `about:blank`."},
+    "title": {"type": "string"},
+    "status": {"type": "integer", "minimum": 400, "maximum": 599},
+    "code": {"type": "string", "pattern": "^[a-z]+\\.[a-z_]+$"},
+    "detail": {"type": "string"},
+    "request_id": {"type": "string"}
+  },
+  "additionalProperties": false
+}

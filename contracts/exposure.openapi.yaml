@@ -1,0 +1,92 @@
+openapi: 3.1.0
+info:
+  title: PCBHomeFab exposure
+  version: 1.0.0
+  description: >
+    Builds the UV exposure mask for a layout and writes the printer slice file. White = exposed = copper is etched
+    away, black = copper stays; the image is mirrored in X if the profile says so. Stateless.
+paths:
+  /healthz:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: The service is running.
+  /v1/profiles:
+    get:
+      operationId: listProfiles
+      responses:
+        "200":
+          description: Printer profiles by id.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [printers]
+                properties:
+                  printers:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      required: [name, resolution, frame_left_mm, frame_bottom_mm, mirror_x, border_mm, default_exposure_s]
+                      properties:
+                        name: {type: string}
+                        resolution:
+                          type: array
+                          items: {type: integer}
+                          minItems: 2
+                          maxItems: 2
+                        frame_left_mm: {type: number}
+                        frame_bottom_mm: {type: number}
+                        mirror_x: {type: boolean}
+                        border_mm: {type: number}
+                        default_exposure_s: {type: number}
+  /v1/masks:
+    post:
+      operationId: createMasks
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [packages, layout, settings]
+              properties:
+                packages:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: >
+                    One canonical board package per board id. The file name is `<board_id>.zip`, the id is
+                    referenced by the layout.
+                layout:
+                  type: string
+                  description: JSON text, schemas/layout.schema.json
+                settings:
+                  type: string
+                  description: JSON text, schemas/exposure-settings.schema.json
+      responses:
+        "200":
+          description: >
+            ZIP with the requested files: `mask.png` (1 bit, display size), `mask_preview.png` (1024 x 640, grey)
+            and `exposure.pm3`.
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "413":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+components:
+  responses:
+    Problem:
+      description: Error, codes in errors.md.
+      content:
+        application/problem+json:
+          schema:
+            $ref: schemas/problem.schema.json

@@ -1,0 +1,22 @@
+{
+ "plate": {
+  "width_mm": 160,
+  "height_mm": 100
+ },
+ "gap_mm": 3,
+ "margin_mm": 3,
+ "boards": [
+  {
+   "id": "basisplatine",
+   "width_mm": 28.2,
+   "height_mm": 38.0,
+   "count": 1
+  },
+  {
+   "id": "fuehlerknoten",
+   "width_mm": 10.0,
+   "height_mm": 26.0,
+   "count": 15
+  }
+ ]
+}

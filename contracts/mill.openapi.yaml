@@ -1,0 +1,100 @@
+openapi: 3.1.0
+info:
+  title: PCBHomeFab mill
+  version: 1.0.0
+  description: >
+    Drill and outline G-code (GRBL) for a layout, one program per tool. Holes get the drill of the same diameter,
+    larger holes are milled, anything in between is an error. Stateless.
+paths:
+  /healthz:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: The service is running.
+  /v1/profiles:
+    get:
+      operationId: listProfiles
+      responses:
+        "200":
+          description: Mill profiles by id.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [mills]
+                properties:
+                  mills:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      required: [name, max_spindle_rpm, outline_endmill_mm, flip, tabs]
+                      properties:
+                        name: {type: string}
+                        max_spindle_rpm: {type: integer}
+                        outline_endmill_mm: {type: number}
+                        flip: {type: string}
+                        tabs: {type: boolean}
+  /v1/tools:
+    get:
+      operationId: listTools
+      responses:
+        "200":
+          description: The tool library (built-in or the file named by PCBHOMEFAB_TOOLS_FILE).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [source, tools]
+                properties:
+                  source: {type: string}
+                  tools:
+                    type: array
+                    items: {type: object}
+  /v1/programs:
+    post:
+      operationId: createPrograms
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [packages, layout, settings]
+              properties:
+                packages:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: One canonical board package per board id, file name `<board_id>.zip`.
+                layout:
+                  type: string
+                  description: JSON text, schemas/layout.schema.json
+                settings:
+                  type: string
+                  description: JSON text, schemas/mill-settings.schema.json
+      responses:
+        "200":
+          description: >
+            ZIP with one `<n>_<kind>_<diameter>mm.nc` file per tool, `preview.svg` and `programs.json`
+            (schemas/programs.schema.json).
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "413":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+components:
+  responses:
+    Problem:
+      description: Error, codes in errors.md.
+      content:
+        application/problem+json:
+          schema:
+            $ref: schemas/problem.schema.json

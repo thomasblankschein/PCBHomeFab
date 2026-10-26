@@ -1,0 +1,104 @@
+{
+ "plate": {
+  "width_mm": 160,
+  "height_mm": 100
+ },
+ "placements": [
+  {
+   "board_id": "basisplatine",
+   "x_mm": 3.0,
+   "y_mm": 3.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 34.2,
+   "y_mm": 3.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 47.2,
+   "y_mm": 3.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 60.2,
+   "y_mm": 3.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 73.2,
+   "y_mm": 3.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 86.2,
+   "y_mm": 3.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 99.2,
+   "y_mm": 3.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 112.2,
+   "y_mm": 3.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 125.2,
+   "y_mm": 3.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 138.2,
+   "y_mm": 3.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 3.0,
+   "y_mm": 44.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 16.0,
+   "y_mm": 44.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 29.0,
+   "y_mm": 44.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 42.0,
+   "y_mm": 44.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 55.0,
+   "y_mm": 44.0,
+   "rotation_deg": 0
+  },
+  {
+   "board_id": "fuehlerknoten",
+   "x_mm": 68.0,
+   "y_mm": 44.0,
+   "rotation_deg": 0
+  }
+ ]
+}

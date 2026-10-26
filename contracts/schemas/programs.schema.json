@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "programs.schema.json",
+  "title": "programs.json",
+  "description": "Index file inside the ZIP returned by `mill`.",
+  "type": "object",
+  "required": ["programs"],
+  "properties": {
+    "programs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["filename", "title", "tool", "holes", "outlines"],
+        "properties": {
+          "filename": {"type": "string"},
+          "title": {"type": "string"},
+          "tool": {"type": "string"},
+          "holes": {"type": "integer", "minimum": 0},
+          "outlines": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

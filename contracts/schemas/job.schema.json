@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "job.schema.json",
+  "title": "Job",
+  "type": "object",
+  "required": ["id", "status", "created", "expires", "error", "params", "files"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{20,32}$"},
+    "status": {"enum": ["queued", "running", "done", "failed"]},
+    "created": {"type": "number", "description": "Unix time in seconds."},
+    "expires": {"type": "number", "description": "Unix time in seconds."},
+    "error": {"type": ["string", "null"]},
+    "params": {"type": "object"},
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "size", "content_type"],
+        "properties": {
+          "name": {"type": "string"},
+          "size": {"type": "integer", "minimum": 0},
+          "content_type": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

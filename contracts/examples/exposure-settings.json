@@ -1,0 +1,10 @@
+{
+ "printer": "photon-m3",
+ "holes": "full",
+ "exposure_s": 60,
+ "outputs": [
+  "mask",
+  "preview",
+  "pm3"
+ ]
+}
