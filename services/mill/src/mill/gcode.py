@@ -376,7 +376,7 @@ def preview_svg(placements: list[Placement], plate: Plate, mill: MillProfile, sc
     for outer, cutouts in layout.outlines:
         xs, ys = [x for x, _ in outer], [y for _, y in outer]
         x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
-        if not cutouts and len(outer) == 4 and abs(_area(outer)) == (x1 - x0) * (y1 - y0):
+        if not cutouts and len(outer) == 4 and abs(abs(_area(outer)) - (x1 - x0) * (y1 - y0)) < 1e-6:
             parts.append(
                 f'<rect x="{sx(x0)}" y="{sy(y1)}" width="{(x1 - x0) * scale}" height="{(y1 - y0) * scale}" '
                 'fill="#2d6a4f" stroke="#d00000" stroke-width="1"/>'
