@@ -1,0 +1,22 @@
+# Reverse proxy in front of the web service.
+#
+# SITE_ADDRESS decides what Caddy serves:
+#   :80                    plain HTTP, for a trial or behind another proxy
+#   pcbhomefab.example.org public name, Caddy gets a Let's Encrypt certificate (ports 80 and 443 must be reachable)
+#   pcbhomefab.home.arpa   with CADDY_TLS="tls internal" a certificate from Caddy's own CA for the homelab
+{$SITE_ADDRESS::80} {
+	{$CADDY_TLS:}
+
+	encode zstd gzip
+
+	# A job takes up to 8 files of 10 MB each (see PCBHOMEFAB_MAX_FILES and PCBHOMEFAB_MAX_UPLOAD_MB).
+	request_body {
+		max_size {$MAX_REQUEST_MB:100}MB
+	}
+
+	header {
+		-Server
+	}
+
+	reverse_proxy web:8000
+}

@@ -67,6 +67,9 @@ Configuration through environment variables (all optional): `PCBHOMEFAB_DATA_DIR
 (only behind a trusted reverse proxy) and `PCBHOMEFAB_IP_SALT` (set it to a random secret). To run workers as separate
 processes set `PCBHOMEFAB_EMBEDDED_WORKERS=0` for the web process and start `pcbhomefab worker` as often as you like.
 
+Container setup with workers and HTTPS proxy (Docker Compose), Proxmox homelab notes and the move to a root server:
+[docs/deployment.md](docs/deployment.md).
+
 ## Development
 
 ```bash

@@ -1,0 +1,64 @@
+# PCBHomeFab: web process, workers and a reverse proxy.
+# Start:   cp .env.example .env   (set PCBHOMEFAB_IP_SALT), then   docker compose up -d --build
+# Workers: docker compose up -d --scale worker=3
+
+x-service: &service
+  image: pcbhomefab:latest
+  restart: unless-stopped
+  environment: &env
+    PCBHOMEFAB_DATA_DIR: /data
+    PCBHOMEFAB_IP_SALT: ${PCBHOMEFAB_IP_SALT:?Set PCBHOMEFAB_IP_SALT in .env to a random secret}
+    PCBHOMEFAB_TRUST_PROXY: "1"
+    PCBHOMEFAB_EMBEDDED_WORKERS: "0"
+    PCBHOMEFAB_MAX_UPLOAD_MB: ${PCBHOMEFAB_MAX_UPLOAD_MB:-10}
+    PCBHOMEFAB_MAX_FILES: ${PCBHOMEFAB_MAX_FILES:-8}
+    PCBHOMEFAB_MAX_BOARDS: ${PCBHOMEFAB_MAX_BOARDS:-200}
+    PCBHOMEFAB_JOB_TTL_HOURS: ${PCBHOMEFAB_JOB_TTL_HOURS:-168}
+    PCBHOMEFAB_JOB_TIMEOUT_S: ${PCBHOMEFAB_JOB_TIMEOUT_S:-120}
+    PCBHOMEFAB_RATE_LIMIT_PER_HOUR: ${PCBHOMEFAB_RATE_LIMIT_PER_HOUR:-30}
+    PCBHOMEFAB_MAX_QUEUED: ${PCBHOMEFAB_MAX_QUEUED:-100}
+  volumes:
+    - data:/data
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  web:
+    <<: *service
+    build: .
+    # Not published: only the proxy reaches it.
+
+  worker:
+    <<: *service
+    command: ["pcbhomefab", "worker"]
+    healthcheck:
+      disable: true
+    depends_on:
+      - web
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      CADDY_TLS: ${CADDY_TLS:-}
+      MAX_REQUEST_MB: ${MAX_REQUEST_MB:-100}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+volumes:
+  data:
+  caddy_data:
+  caddy_config:
