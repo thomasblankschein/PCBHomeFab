@@ -52,11 +52,17 @@ They are the reference for behaviour until the port is finished.
   imperative mood, short first line.
 - No secrets, no uploaded user data, no generated `.pm3`/`.nc` files in the repository.
 
+## State (2026-10-26)
+
+Milestones 1 and 2 are done, milestone 3 phase 1 works locally: `pcbhomefab exposure|mill` produces the mask PNG,
+`.pm3` (through UVtools, 24 tests green) and G-code. Open: container for UVtools, native `.pm3` writer, API, frontend.
+The reference for the output is the old scripts; tests compare against their results (`tests/data/reference_*`).
+
 ## Repository layout
 
 ```
-src/pcbhomefab/   core library (gerber, raster, panel, mask, pm3, gcode, profiles)
-tests/            pytest tests and small test data
+src/pcbhomefab/   board (Gerber ZIP ingest), raster, panel, mask, pm3, gcode, profiles, cli
+tests/            pytest tests and small test data (Gerber ZIPs of two real boards)
 docs/             architecture and roadmap
 ```
 

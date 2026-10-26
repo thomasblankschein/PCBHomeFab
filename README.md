@@ -11,9 +11,8 @@ Turn the Gerber files of a single-sided PCB into everything you need to make it 
 The project is meant to run as a small web service that many users can use at the same time, with anonymous
 sessions and a link per job. It can also be used as a plain Python library and command line tool.
 
-> **Status:** early development. The foundation is in place; the conversion core is being ported from the
-> scripts of the [fbh-monitor](https://github.com/thomasblankschein/fbh-monitor) project. See
-> [docs/roadmap.md](docs/roadmap.md).
+> **Status:** early development. The conversion core (Gerber ZIP, panelizing, exposure mask, `.pm3`, G-code) and a
+> command line tool work; the web service is next. See [docs/roadmap.md](docs/roadmap.md).
 
 ## How it works
 
@@ -26,6 +25,21 @@ Gerber ZIP ──▶ parse (B.Cu, Edge.Cuts, Excellon) ──▶ panelize ──
 
 Mask polarity: **white = exposed = copper is etched away**, black = copper stays. A copper pour is kept
 automatically.
+
+## Command line
+
+```bash
+# exposure mask (PNG) and .pm3 for the Photon M3; ":15" puts 15 copies of a board on the plate
+pcbhomefab exposure base.zip node.zip:15 --pm3 --exposure 120 --template reference.pm3 -o out --name panel
+
+# drill and mill G-code (GRBL) plus an SVG preview, same board order as for the mask
+pcbhomefab mill base.zip node.zip:15 -o out --name panel
+```
+
+The `.pm3` file needs [UVtools](https://github.com/sn4k3/UVtools) (`UVtoolsCmd`) for now. `--template` takes a `.pm3`
+file written by Photon Workshop; its machine table and print parameters are copied, which Photon Workshop requires
+(it refuses files with an unknown printer name). Boards must be given in the same order for `exposure` and `mill` so
+that the masks and the holes line up.
 
 ## Development
 

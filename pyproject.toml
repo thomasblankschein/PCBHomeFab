@@ -22,6 +22,9 @@ dev = [
     "mypy>=1.10",
 ]
 
+[project.scripts]
+pcbhomefab = "pcbhomefab.cli:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/pcbhomefab"]
 
