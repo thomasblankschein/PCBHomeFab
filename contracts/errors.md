@@ -35,6 +35,7 @@ its own prefix, plus `common.*`.
 | `jobs.not_found` | 404 | no such job (or it expired) |
 | `jobs.rate_limited` | 429 | too many jobs from this client |
 | `jobs.queue_full` | 503 | the queue is full |
+| `jobs.upstream_unavailable` | 503 | a service that the job needs cannot be reached |
 | `jobs.invalid_upload` | 422 | bad upload (count of files, counts, no output selected) |
 | `jobs.upload_too_large` | 413 | a file is larger than the limit |
 

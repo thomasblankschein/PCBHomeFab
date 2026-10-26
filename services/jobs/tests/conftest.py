@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -29,7 +30,12 @@ def validate(schema_name: str, instance: Any) -> None:
 def contract_operations() -> set[tuple[str, str]]:
     """``(METHOD, path)`` of every operation in the OpenAPI file of this service."""
     spec = yaml.safe_load((CONTRACTS / f"{SERVICE}.openapi.yaml").read_text())
-    return {(method.upper(), path) for path, operations in spec["paths"].items() for method in operations}
+    return {(method.upper(), normalize(path)) for path, operations in spec["paths"].items() for method in operations}
+
+
+def normalize(path: str) -> str:
+    """Path with parameter names removed: ``/v1/jobs/{id}`` and ``/v1/jobs/{job_id:path}`` are the same route."""
+    return re.sub(r"\{[^}]*\}", "{}", path)
 
 
 @pytest.fixture(scope="session")

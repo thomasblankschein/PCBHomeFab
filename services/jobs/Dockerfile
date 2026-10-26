@@ -9,9 +9,12 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY src ./src
 RUN pip install . \
-    && useradd --system --uid 10001 --home-dir /nonexistent --no-create-home app
+    && useradd --system --uid 10001 --home-dir /nonexistent --no-create-home app \
+    && mkdir /data && chown app /data
 
 USER app
+ENV DATA_DIR=/data
+VOLUME /data
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
