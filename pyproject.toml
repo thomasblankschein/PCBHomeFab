@@ -11,7 +11,7 @@ license = { text = "MIT" }
 requires-python = ">=3.11"
 authors = [{ name = "Thomas Blankschein" }]
 dependencies = [
-    "gerbonara>=1.0",
+    "gerbonara>=1.6",
     "pillow>=10.0",
 ]
 
