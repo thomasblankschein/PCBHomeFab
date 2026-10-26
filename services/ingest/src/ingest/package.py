@@ -18,6 +18,7 @@ from typing import Any
 from gerbonara import ExcellonFile, GerberFile, LayerStack
 
 from .common import Problem
+from .contour import extract_contour, relative
 
 #: Hard limits for uploaded archives (zip bombs, absurd uploads).
 MAX_ZIP_FILES = 64
@@ -136,7 +137,13 @@ def build_package(data: bytes, name: str) -> bytes:
             raise _problem("ingest.no_copper", "No bottom copper layer (B.Cu) found in the ZIP.")
         if stack.outline is None:
             raise _problem("ingest.no_outline", "No board outline layer (Edge.Cuts) found in the ZIP.")
-        xmin, ymin, xmax, ymax = _outline_bounds(stack.outline)
+        contour = extract_contour(stack.outline)
+        if contour is not None:  # the box of the real contour, also right for boards with arcs
+            xs = [x for x, _ in contour[0]]
+            ys = [y for _, y in contour[0]]
+            xmin, ymin, xmax, ymax = min(xs), min(ys), max(xs), max(ys)
+        else:
+            xmin, ymin, xmax, ymax = _outline_bounds(stack.outline)
         holes = _holes(stack, xmin, ymin)
         copper_bytes = Path(copper.original_path).read_bytes()  # the file as uploaded, read before the folder goes
 
@@ -151,6 +158,11 @@ def build_package(data: bytes, name: str) -> bytes:
         "height_mm": height,
         "holes": holes,
     }
+    if contour is not None:
+        board["contour"] = {
+            "outer": relative(contour[0], xmin, ymin),
+            "cutouts": [relative(cutout, xmin, ymin) for cutout in contour[1]],
+        }
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as package:
         for filename, content in (("copper.gbr", copper_bytes), ("board.json", json.dumps(board, indent=1).encode())):

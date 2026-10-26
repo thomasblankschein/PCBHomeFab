@@ -9,12 +9,15 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from shapely.geometry import MultiPolygon, Polygon
+
 from .common import Problem
 from .profiles import MillProfile, Plate
 from .tools import Tool, ToolLibrary, load_tools
 
 Point = tuple[float, float]
-Rect = tuple[float, float, float, float]
+#: A board shape: the outer polygon and the polygons of cutouts.
+Shape = tuple[list[Point], list[list[Point]]]
 
 
 @dataclass(frozen=True)
@@ -27,14 +30,14 @@ class Placement:
     height_mm: float
     #: ``(x, y, diameter)`` of every hole.
     holes: list[tuple[float, float, float]]
+    #: Real shape (outer polygon and cutouts) relative to the lower left corner; ``None`` means the rectangle.
+    contour: Shape | None = None
 
-    @property
-    def x1_mm(self) -> float:
-        return self.x_mm + self.width_mm
-
-    @property
-    def y1_mm(self) -> float:
-        return self.y_mm + self.height_mm
+    def shape(self) -> Shape:
+        if self.contour is not None:
+            return self.contour
+        w, h = self.width_mm, self.height_mm
+        return [(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)], []
 
 
 @dataclass(frozen=True)
@@ -55,8 +58,8 @@ class Layout:
 
     #: Holes by diameter.
     holes: dict[float, list[Point]]
-    #: Board rectangles (x0, y0, x1, y1).
-    outlines: list[Rect]
+    #: Board shapes.
+    outlines: list[Shape]
 
 
 class _Frame:
@@ -73,18 +76,18 @@ class _Frame:
             y = self.plate.height_mm - y
         return x + self.mill.offset_x_mm, y + self.mill.offset_y_mm
 
-    def rect(self, x0: float, y0: float, x1: float, y1: float) -> Rect:
-        ax, ay = self.point(x0, y0)
-        bx, by = self.point(x1, y1)
-        return min(ax, bx), min(ay, by), max(ax, bx), max(ay, by)
-
 
 def build_layout(placements: list[Placement], plate: Plate, mill: MillProfile) -> Layout:
     frame = _Frame(plate, mill)
     holes: dict[float, list[Point]] = {}
-    outlines: list[Rect] = []
+    outlines: list[Shape] = []
     for placement in placements:
-        outlines.append(frame.rect(placement.x_mm, placement.y_mm, placement.x1_mm, placement.y1_mm))
+        outer, cutouts = placement.shape()
+
+        def move(points: list[Point], p: Placement = placement) -> list[Point]:
+            return [frame.point(p.x_mm + x, p.y_mm + y) for x, y in points]
+
+        outlines.append((move(outer), [move(cutout) for cutout in cutouts]))
         for x, y, diameter in placement.holes:
             holes.setdefault(diameter, []).append(frame.point(placement.x_mm + x, placement.y_mm + y))
     return Layout(holes, outlines)
@@ -181,28 +184,107 @@ def _mill_hole(writer: _Writer, x: float, y: float, diameter: float, plate: Plat
     writer.up()
 
 
-def _mill_outline(writer: _Writer, rect: Rect, plate: Plate, mill: MillProfile) -> None:
-    """Walk around the board counter-clockwise (climb milling), outside the outline, with tabs."""
-    tool = writer.tool
-    r = tool.diameter_mm / 2
-    x0, y0, x1, y1 = rect[0] - r, rect[1] - r, rect[2] + r, rect[3] + r
-    corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)]
-    depth = plate.thickness_mm + mill.mill_overshoot_mm
-    tab_z = -(plate.thickness_mm - mill.tab_height_mm)
+def _area(points: list[Point]) -> float:
+    """Signed area, positive when the points run counter-clockwise."""
+    return sum(x1 * y2 - x2 * y1 for (x1, y1), (x2, y2) in zip(points, points[1:] + points[:1], strict=True)) / 2
+
+
+def _closed_path(points: list[Point], counter_clockwise: bool) -> list[Point]:
+    """Closed path (last point = first) in the wanted direction, starting at the lowest, then leftmost point."""
+    ring = list(points[:-1] if points[0] == points[-1] else points)
+    if (_area(ring) > 0) != counter_clockwise:
+        ring.reverse()
+    start = min(range(len(ring)), key=lambda i: (ring[i][1], ring[i][0]))
+    ring = ring[start:] + ring[:start]
+    return ring + [ring[0]]
+
+
+def _polygons(geometry: object) -> list[Polygon]:
+    if isinstance(geometry, Polygon):
+        return [geometry] if not geometry.is_empty else []
+    if isinstance(geometry, MultiPolygon):
+        return list(geometry.geoms)
+    return []
+
+
+def tool_paths(shape: Shape, radius: float) -> list[tuple[list[Point], bool]]:
+    """Paths of the tool centre for one board: first the cutouts (inside, clockwise), last the outer contour
+    (outside, counter-clockwise, climb milling). The flag says whether tabs hold the piece in place.
+    """
+    paths: list[tuple[list[Point], bool]] = []
+    outer, cutouts = shape
+    for cutout in cutouts:
+        pieces = _polygons(Polygon(cutout).buffer(-radius, join_style="mitre"))
+        if not pieces:
+            raise Problem(422, "mill.cutout_too_small", "A cutout in the board outline is too small for the end mill.")
+        paths += [(_closed_path(list(piece.exterior.coords)[:-1], False), False) for piece in pieces]
+    polygon = Polygon(outer)
+    if not polygon.is_valid:
+        polygon = polygon.buffer(0)
+    grown = max(_polygons(polygon.buffer(radius, join_style="mitre")), key=lambda p: p.area)
+    paths.append((_closed_path(list(grown.exterior.coords)[:-1], True), True))
+    return paths
+
+
+def _sections(path: list[Point], mill: MillProfile, with_tabs: bool) -> list[tuple[float, float, float, float, bool]]:
+    """Pieces of the path as ``(x0, y0, x1, y1, is_tab)``. A tab sits in the middle of every straight side that is
+    at least three tab widths long; a path without two such sides (a circle) gets tabs spread over its length.
+    """
+    width = mill.tab_width_mm
+    segments = list(zip(path, path[1:], strict=False))
+    lengths = [math.hypot(bx - ax, by - ay) for (ax, ay), (bx, by) in segments]
+    tabs: dict[int, list[tuple[float, float]]] = {}
+    if with_tabs and mill.tabs:
+        for index, length in enumerate(lengths):
+            if length >= 3 * width:
+                tabs[index] = [(length / 2 - width / 2, length / 2 + width / 2)]
+        total = sum(lengths)
+        if len(tabs) < 2:
+            count = 4 if total >= 12 * width else 2 if total >= 6 * width else 0
+            tabs = {}
+            for k in range(count):
+                centre = total * (k + 0.5) / count
+                first, last = centre - width / 2, centre + width / 2
+                start = 0.0
+                for index, length in enumerate(lengths):
+                    low, high = max(first, start), min(last, start + length)
+                    if low < high:
+                        # snap to the ends of the side so that sections join up exactly
+                        local = (
+                            0.0 if low - start < 1e-9 else low - start,
+                            length if start + length - high < 1e-9 else high - start,
+                        )
+                        tabs.setdefault(index, []).append(local)
+                    start += length
     sections: list[tuple[float, float, float, float, bool]] = []
-    for (ax, ay), (bx, by) in zip(corners, corners[1:], strict=False):
-        length = math.hypot(bx - ax, by - ay)
-        if not mill.tabs or length < 3 * mill.tab_width_mm:
+    for index, ((ax, ay), (bx, by)) in enumerate(segments):
+        length = lengths[index]
+        ranges = sorted(tabs.get(index, []))
+        if not ranges or length <= 0:
             sections.append((ax, ay, bx, by, False))
             continue
         dx, dy = (bx - ax) / length, (by - ay) / length
-        s1, s2 = length / 2 - mill.tab_width_mm / 2, length / 2 + mill.tab_width_mm / 2
-        sections += [
-            (ax, ay, ax + dx * s1, ay + dy * s1, False),
-            (ax + dx * s1, ay + dy * s1, ax + dx * s2, ay + dy * s2, True),
-            (ax + dx * s2, ay + dy * s2, bx, by, False),
-        ]
-    writer.rapid(x0, y0)
+        cuts = [0.0]
+        for low, high in ranges:
+            cuts += [low, high]
+        cuts.append(length)
+        for s0, s1 in zip(cuts, cuts[1:], strict=False):
+            if s1 <= s0:
+                continue
+            is_tab = any(low <= (s0 + s1) / 2 <= high for low, high in ranges)
+            p0 = (ax, ay) if s0 == 0.0 else (ax + dx * s0, ay + dy * s0)
+            p1 = (bx, by) if s1 == length else (ax + dx * s1, ay + dy * s1)
+            sections.append((p0[0], p0[1], p1[0], p1[1], is_tab))
+    return sections
+
+
+def _mill_outline(writer: _Writer, path: list[Point], with_tabs: bool, plate: Plate, mill: MillProfile) -> None:
+    """Walk along a tool path (see ``tool_paths``), with tabs if asked for."""
+    tool = writer.tool
+    depth = plate.thickness_mm + mill.mill_overshoot_mm
+    tab_z = -(plate.thickness_mm - mill.tab_height_mm)
+    sections = _sections(path, mill, with_tabs)
+    writer.rapid(*path[0])
     writer.up(0.5)
     z = 0.0
     while z < depth:
@@ -258,8 +340,9 @@ def generate(
             for x, y in _nearest_order(holes):
                 _mill_hole(writer, x, y, diameter, plate, mill)
         if is_outline:
-            for rect in layout.outlines:
-                _mill_outline(writer, rect, plate, mill)
+            for shape in layout.outlines:
+                for path, with_tabs in tool_paths(shape, cutter.diameter_mm / 2):
+                    _mill_outline(writer, path, with_tabs, plate, mill)
         name = f"{len(programs) + 1}_mill_{cutter.diameter_mm:.1f}mm.nc"
         programs.append(
             Program(
@@ -290,11 +373,18 @@ def preview_svg(placements: list[Placement], plate: Plate, mill: MillProfile, sc
     parts = [
         f'<rect x="0" y="0" width="{plate.width_mm * scale}" height="{height * scale}" fill="#c9a06a" stroke="black"/>'
     ]
-    for x0, y0, x1, y1 in layout.outlines:
-        parts.append(
-            f'<rect x="{sx(x0)}" y="{sy(y1)}" width="{(x1 - x0) * scale}" height="{(y1 - y0) * scale}" '
-            'fill="#2d6a4f" stroke="#d00000" stroke-width="1"/>'
-        )
+    for outer, cutouts in layout.outlines:
+        xs, ys = [x for x, _ in outer], [y for _, y in outer]
+        x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
+        if not cutouts and len(outer) == 4 and abs(_area(outer)) == (x1 - x0) * (y1 - y0):
+            parts.append(
+                f'<rect x="{sx(x0)}" y="{sy(y1)}" width="{(x1 - x0) * scale}" height="{(y1 - y0) * scale}" '
+                'fill="#2d6a4f" stroke="#d00000" stroke-width="1"/>'
+            )
+            continue
+        rings = [outer, *cutouts]
+        data = " ".join("M" + " L".join(f"{sx(x):.2f} {sy(y):.2f}" for x, y in ring) + " Z" for ring in rings)
+        parts.append(f'<path d="{data}" fill-rule="evenodd" fill="#2d6a4f" stroke="#d00000" stroke-width="1"/>')
     for diameter, points in layout.holes.items():
         for x, y in points:
             radius = max(diameter * scale / 2, 1.2)

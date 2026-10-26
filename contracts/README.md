@@ -16,9 +16,11 @@ itself and proves it with contract tests.
 `application/zip` with exactly two files:
 
 - `copper.gbr`: the bottom copper Gerber file, byte for byte as in the upload.
-- `board.json`: size, outline box in Gerber coordinates and the holes, see `schemas/board.schema.json`.
+- `board.json`: size, outline box in Gerber coordinates, the holes and the real board contour (`contour`: outer
+  polygon and cutouts from the Edge.Cuts layer), see `schemas/board.schema.json`. `contour` is optional: without it
+  (open or unreadable outline) the board is milled as its box.
 
-`ingest` makes it. `exposure` rasterizes `copper.gbr`; `mill` needs only `board.json`. Services accept only this
+`ingest` makes it. `exposure` rasterizes `copper.gbr`; `mill` needs only `board.json` and mills along the contour. Services accept only this
 layout and these two file names.
 
 ## Rules for every service

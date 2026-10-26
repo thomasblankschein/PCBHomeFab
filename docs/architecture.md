@@ -65,7 +65,8 @@ JSON schemas, errors are `problem+json` with a documented code).
 
 - **Canonical board package** (`application/zip`, output of `ingest`, input of `exposure` and `mill`): a ZIP with
   exactly `copper.gbr` (the bottom copper file as uploaded) and `board.json` (schema version, name, outline box in the
-  coordinates of the Gerber file, size, hole list with position, diameter and plating). Downstream services accept
+  coordinates of the Gerber file, size, hole list with position, diameter and plating, and the real board contour as
+  polygons: outer shape and cutouts from the Edge.Cuts layer, arcs approximated to 0.005 mm). Downstream services accept
   only this layout and these two file names. They need no ZIP safety logic and no Excellon parser: `exposure`
   rasterizes `copper.gbr` and takes the holes from `board.json`, `mill` needs only `board.json`.
   *Changed from the first draft:* the draft also carried `outline.gbr` and `drills.drl`. Everything downstream
@@ -117,7 +118,9 @@ Endpoints (the OpenAPI files are authoritative):
 3. **Rasterize and mask** (`exposure`): draw the bottom copper Gerber directly to a bitmap (40 µm per pixel). Dark =
    copper. White = no copper = exposed. Mirror in X. Output 1-bit PNG at display resolution.
 4. **`.pm3`** (`exposure`): build the file for the selected printer profile.
-5. **G-code** (`mill`): group holes by diameter, one program per tool, outline with tabs, preview as SVG.
+5. **G-code** (`mill`): group holes by diameter, one program per tool, outline along the real contour (offset by the
+   tool radius, tabs on the long sides, cutouts first), preview as SVG. A board whose Edge.Cuts layer is not made of
+   closed loops of lines and arcs is milled as its box. Panelizing still uses the box of each board.
 
 ## Profiles and tool library (data, not code)
 

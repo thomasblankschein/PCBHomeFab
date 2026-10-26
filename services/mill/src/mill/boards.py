@@ -15,6 +15,7 @@ from .common import Problem
 BoardId = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,40}$")]
 _BOARD_ID = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
 MAX_BOARD_JSON_BYTES = 2 * 1024 * 1024
+MAX_POINTS = 20000
 
 
 class Hole(BaseModel):
@@ -25,6 +26,15 @@ class Hole(BaseModel):
     plated: bool
 
 
+Polygon = Annotated[list[tuple[float, float]], Field(min_length=3, max_length=MAX_POINTS)]
+
+
+class Contour(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    outer: Polygon
+    cutouts: list[Polygon] = Field(max_length=100)
+
+
 class Board(BaseModel):
     """``board.json``. The mill needs the size and the holes, not the outline box or the copper."""
 
@@ -33,6 +43,7 @@ class Board(BaseModel):
     width_mm: float = Field(gt=0)
     height_mm: float = Field(gt=0)
     holes: list[Hole]
+    contour: Contour | None = None
 
 
 class Plate(BaseModel):

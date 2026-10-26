@@ -33,6 +33,7 @@ its own prefix, plus `common.*`.
 | `mill.no_endmill` | 422 | the end mill for the outline is not in the tool library |
 | `mill.spindle_too_fast` | 422 | a tool asks for more rpm than the machine allows |
 | `mill.invalid_tools` | 422 | the tool library file is invalid |
+| `mill.cutout_too_small` | 422 | a cutout in the board outline is too small for the end mill |
 | `jobs.not_found` | 404 | no such job (or it expired) |
 | `jobs.rate_limited` | 429 | too many jobs from this client |
 | `jobs.queue_full` | 503 | the queue is full |

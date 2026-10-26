@@ -22,6 +22,16 @@
     },
     "width_mm": {"type": "number", "exclusiveMinimum": 0, "description": "xmax - xmin, rounded to 0.1 mm."},
     "height_mm": {"type": "number", "exclusiveMinimum": 0, "description": "ymax - ymin, rounded to 0.1 mm."},
+    "contour": {
+      "description": "The real board shape from the outline layer (Edge.Cuts): the outer polygon and polygons of cutouts. Points in mm relative to the lower left corner of the outline box, the closing point is not repeated, arcs are approximated to 0.005 mm. Absent when the outline layer is not made of closed loops of lines and arcs: the board is then taken as its box.",
+      "type": "object",
+      "required": ["outer", "cutouts"],
+      "properties": {
+        "outer": {"$ref": "#/$defs/polygon"},
+        "cutouts": {"type": "array", "items": {"$ref": "#/$defs/polygon"}}
+      },
+      "additionalProperties": false
+    },
     "holes": {
       "type": "array",
       "items": {
@@ -37,5 +47,12 @@
       }
     }
   },
-  "additionalProperties": false
+  "additionalProperties": false,
+  "$defs": {
+    "polygon": {
+      "type": "array",
+      "minItems": 3,
+      "items": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2}
+    }
+  }
 }
