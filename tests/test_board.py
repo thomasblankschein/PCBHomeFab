@@ -36,3 +36,20 @@ def test_rejects_zip_without_copper() -> None:
         archive.writestr("readme.txt", "no gerber here")
     with pytest.raises(InputError):
         load_board(buffer.getvalue())
+
+
+def test_zip_with_only_the_needed_layers(tmp_path: Path) -> None:
+    """KiCad export with just B.Cu, Edge.Cuts and the drill files (gerbonara cannot map these on its own)."""
+    import io
+    import zipfile
+
+    source = zipfile.ZipFile(DATA / "fuehlerknoten.zip")
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        for entry in source.infolist():
+            if entry.filename.endswith(("B_Cu.gbr", "Edge_Cuts.gbr", ".drl")):
+                archive.writestr(entry.filename, source.read(entry))
+    board = load_board(buffer.getvalue())
+    reference = load_board(DATA / "fuehlerknoten.zip")
+    assert (board.width_mm, board.height_mm) == (reference.width_mm, reference.height_mm)
+    assert len(board.holes) == len(reference.holes)

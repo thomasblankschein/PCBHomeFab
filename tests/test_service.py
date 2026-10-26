@@ -95,8 +95,8 @@ def test_invalid_gerber_makes_the_job_fail_with_a_message(client: TestClient, se
     job = _post(client, ("bad.zip", buffer.getvalue())).json()
     assert process_next(JobStore(settings), settings, isolated=False)
     status = client.get(job["api"]).json()
-    assert status["status"] == FAILED and "could not be read" in status["error"]
-    assert "could not be read" in client.get(job["page"]).text
+    assert status["status"] == FAILED and "bottom copper" in status["error"]
+    assert "bottom copper" in client.get(job["page"]).text
 
 
 def test_upload_validation(client: TestClient) -> None:

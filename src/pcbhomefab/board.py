@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import io
+import re
+import tempfile
 import warnings
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from gerbonara import LayerStack
+from gerbonara import ExcellonFile, GerberFile, LayerStack
 
 from .errors import InputError
 
@@ -110,6 +112,37 @@ def _holes(stack: Any, xmin: float, ymin: float) -> list[Hole]:
     return holes
 
 
+_FUNCTION = re.compile(r"%TF\.FileFunction,([^*]*)\*%|TF\.FileFunction,(\S+)")
+
+
+def _file_function(text: str) -> str:
+    match = _FUNCTION.search(text[:2000])
+    return (match.group(1) or match.group(2)).lower() if match else ""
+
+
+def _open_by_attributes(zip_path: Path, folder: Path) -> Any:
+    """Assign the files to layers by their X2 ``FileFunction`` attribute (as written by KiCad)."""
+    with zipfile.ZipFile(zip_path) as archive:
+        archive.extractall(folder)
+    graphic: dict[tuple[str, str], Any] = {}
+    pth = npth = None
+    for path in sorted(p for p in folder.rglob("*") if p.is_file()):
+        text = path.read_text(errors="replace")
+        function = _file_function(text)
+        suffix = path.suffix.lower()
+        if suffix in (".drl", ".xln", ".drd", ".txt") and "m48" in text[:200].lower():
+            drill = ExcellonFile.open(path)
+            if "nonplated" in function or "npth" in path.stem.lower():
+                npth = drill
+            else:
+                pth = drill
+        elif function.startswith("copper") and function.endswith("bot"):
+            graphic[("bottom", "copper")] = GerberFile.open(path)
+        elif function.startswith("profile"):
+            graphic[("mechanical", "outline")] = GerberFile.open(path)
+    return LayerStack(graphic_layers=graphic, drill_pth=pth, drill_npth=npth, board_name=zip_path.stem)
+
+
 def load_board(source: bytes | str | Path, name: str | None = None) -> Board:
     """Read a Gerber ZIP (bytes or path) with bottom copper, outline and drill files."""
     if isinstance(source, bytes):
@@ -119,15 +152,16 @@ def load_board(source: bytes | str | Path, name: str | None = None) -> Board:
         name = name or Path(source).stem
     _check_zip(data)
 
-    import tempfile
-
     with tempfile.TemporaryDirectory() as tmp:
         zip_path = Path(tmp) / "board.zip"
         zip_path.write_bytes(data)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             try:
-                stack = LayerStack.open(zip_path)
+                try:
+                    stack = LayerStack.open(zip_path)
+                except Exception:  # gerbonara cannot map the files of a ZIP with only a few layers
+                    stack = _open_by_attributes(zip_path, Path(tmp) / "files")
             except Exception as exc:  # gerbonara raises many different types for broken input
                 raise InputError(
                     "The Gerber files could not be read. Send a ZIP with the bottom copper (B.Cu), "
