@@ -9,6 +9,7 @@
 | 5 | Frontend | Panel editor (counts, spacing, order), previews of mask and tool paths, profile selection, download | open |
 | 6 | Operation | Anonymous sessions with job links, expiry cleanup, Docker Compose with TLS, monitoring | Compose, proxy and smoke test done (first run on the homelab open), monitoring open |
 | 7 | Calibration and quality | Test pattern job for printer and mill alignment (mirroring, frame offset, zero point), user docs | open |
+| 8 | Service split | Independent services that talk only through REST, contracts first ([ADR-001](architecture.md), [plan](migration.md)) | planned, no feature changes |
 
 Out of scope for now: double-sided boards, accounts, other printers and controllers (the profile model leaves
 room for them), KiCad `.kicad_pcb` input.

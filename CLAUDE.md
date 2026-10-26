@@ -24,9 +24,13 @@ They are the reference for behaviour until the port is finished.
 - Users: **anonymous sessions**, every job has a link. No accounts for now.
 - Hosting: first on the maintainer's Proxmox homelab (Docker), later possibly a root server on the internet.
   Everything must therefore be stateless per request, limits on uploads/CPU time from day one.
-- Pure-Python core library `pcbhomefab` without web dependencies; web API and frontend sit on top.
 - Stack: FastAPI, jobs queued in SQLite (no broker, workers claim jobs atomically, one process per job with a time
-  limit), small SPA frontend later, Docker Compose. Redis only if workers ever run on several machines.
+  limit), small SPA frontend later, Docker Compose.
+- **Architecture (ADR-001, 2026-10-26, see `docs/architecture.md` and `docs/migration.md`):** independent services
+  (`gateway`, `frontend`, `jobs`, `ingest`, `panel`, `exposure`, `mill`) that talk only through REST, **no shared
+  code** between services, contracts in `contracts/`, only `jobs` holds state, calls between services are
+  synchronous. The CLI and the importable library `pcbhomefab` are dropped. This is being migrated step by step;
+  until the steps are done the package layout below is what exists. Do not add new cross-service imports.
 
 ## Domain knowledge to keep
 
