@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sys
 from dataclasses import replace
 from pathlib import Path
@@ -43,9 +44,7 @@ def _exposure(args: argparse.Namespace) -> None:
     print(f"{out / (args.name + '.png')}: {len(placements)} boards")
     if args.pm3:
         target = out / f"{args.name}.pm3"
-        write_pm3(
-            mask, PHOTON_M3, target, args.exposure, template=Path(args.template) if args.template else None
-        )
+        write_pm3(mask, PHOTON_M3, target, args.exposure, template=Path(args.template) if args.template else None)
         print(f"{target}")
 
 
@@ -58,9 +57,29 @@ def _mill(args: argparse.Namespace) -> None:
     for program in gcode.generate(placements, plate, mill):
         (out / f"{args.name}_{program.filename}").write_text(program.code, encoding="ascii", errors="replace")
         print(f"{args.name}_{program.filename}: {program.title}")
-    (out / f"{args.name}_preview.svg").write_text(
-        gcode.preview_svg(placements, plate, mill), encoding="utf-8"
-    )
+    (out / f"{args.name}_preview.svg").write_text(gcode.preview_svg(placements, plate, mill), encoding="utf-8")
+
+
+def _serve(args: argparse.Namespace) -> None:
+    import uvicorn
+
+    from .service.api import create_app
+
+    uvicorn.run(create_app(), host=args.host, port=args.port)
+
+
+def _worker(_args: argparse.Namespace) -> None:
+    import logging
+    import threading
+
+    from .service.config import Settings
+    from .service.store import JobStore
+    from .service.worker import worker_loop
+
+    logging.basicConfig(level=logging.INFO)
+    settings = Settings.from_env()
+    with contextlib.suppress(KeyboardInterrupt):
+        worker_loop(JobStore(settings), settings, threading.Event())
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -79,9 +98,7 @@ def main(argv: list[str] | None = None) -> int:
     exposure.add_argument("--holes", choices=["full", "center", "none"], default="full")
     exposure.add_argument("--pm3", action="store_true", help="also write a .pm3 file (needs UVtools)")
     exposure.add_argument("--exposure", type=float, help="exposure time in seconds")
-    exposure.add_argument(
-        "--template", help=".pm3 file made by Photon Workshop (machine table, print parameters)"
-    )
+    exposure.add_argument("--template", help=".pm3 file made by Photon Workshop (machine table, print parameters)")
     exposure.set_defaults(run=_exposure)
 
     mill = sub.add_parser("mill", help="drill and mill G-code for a GRBL mill")
@@ -90,6 +107,16 @@ def main(argv: list[str] | None = None) -> int:
     mill.add_argument("--thickness", type=float, default=1.5, help="material thickness in mm")
     mill.add_argument("--no-tabs", action="store_true")
     mill.set_defaults(run=_mill)
+
+    serve = sub.add_parser("serve", help="run the web service (needs the 'web' extra)")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+    serve.set_defaults(run=_serve)
+
+    worker = sub.add_parser(
+        "worker", help="run a separate job worker (set PCBHOMEFAB_EMBEDDED_WORKERS=0 for the web process)"
+    )
+    worker.set_defaults(run=_worker)
 
     args = parser.parse_args(argv)
     try:

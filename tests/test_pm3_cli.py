@@ -101,9 +101,7 @@ def test_uvtools_reads_the_file(tmp_path: Path, mask: Image.Image) -> None:
     assert uvtools is not None
     target = tmp_path / "mask.pm3"
     pm3.write_pm3(mask, PHOTON_M3, target, exposure_s=90)
-    props = subprocess.run(
-        [uvtools, "print-properties", str(target)], capture_output=True, text=True, check=True
-    )
+    props = subprocess.run([uvtools, "print-properties", str(target)], capture_output=True, text=True, check=True)
     assert "MachineName: Anycubic Photon M3" in props.stdout
     assert "ExposureTime: 90" in props.stdout
     assert "ResolutionX: 4096" in props.stdout

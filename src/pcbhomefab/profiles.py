@@ -105,3 +105,7 @@ MILL_3018PRO = MillProfile(
     drills=(0.8, 1.0),
     endmill_mm=1.0,
 )
+
+#: Profiles by the name used in the API.
+PRINTERS: dict[str, PrinterProfile] = {"photon-m3": PHOTON_M3}
+MILLS: dict[str, MillProfile] = {"3018pro": MILL_3018PRO}

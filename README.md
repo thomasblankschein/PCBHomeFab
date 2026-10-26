@@ -41,6 +41,32 @@ writes for the Photon M3 (it refuses files with an unknown printer name). `--tem
 Photon Workshop and copies its lift/retract parameters and machine table. Boards must be given in the same order for
 `exposure` and `mill` so that the masks and the holes line up.
 
+## Web service
+
+```bash
+pip install -e ".[web]"
+pcbhomefab serve --port 8000        # web service with one embedded worker
+```
+
+Open `http://localhost:8000/` for a minimal form, `/docs` for the API. Without accounts, every job gets a random id and
+the job link `/jobs/<id>` is the only credential. Jobs and files are deleted after seven days.
+
+```bash
+curl -F boards=@base.zip -F boards=@node.zip -F counts=1 -F counts=15 -F exposure_s=120 http://localhost:8000/api/jobs
+# {"id":"...","status":"queued","page":"/jobs/...","api":"/api/jobs/..."}
+curl http://localhost:8000/api/jobs/<id>                     # status and file list
+curl -O http://localhost:8000/api/jobs/<id>/files/exposure.pm3
+```
+
+Other options of `POST /api/jobs`: `exposure`, `mill_gcode` (choose the outputs), `holes`, `gap_mm`, `margin_mm`, `flip`,
+`thickness_mm`, `tabs`, `frame_left_mm`, `frame_bottom_mm`, `mirror_x`. `GET /api/profiles` lists printers, mills and limits.
+
+Configuration through environment variables (all optional): `PCBHOMEFAB_DATA_DIR`, `PCBHOMEFAB_MAX_UPLOAD_MB`,
+`PCBHOMEFAB_MAX_FILES`, `PCBHOMEFAB_MAX_BOARDS`, `PCBHOMEFAB_JOB_TTL_HOURS`, `PCBHOMEFAB_JOB_TIMEOUT_S`,
+`PCBHOMEFAB_RATE_LIMIT_PER_HOUR`, `PCBHOMEFAB_MAX_QUEUED`, `PCBHOMEFAB_EMBEDDED_WORKERS`, `PCBHOMEFAB_TRUST_PROXY=1`
+(only behind a trusted reverse proxy) and `PCBHOMEFAB_IP_SALT` (set it to a random secret). To run workers as separate
+processes set `PCBHOMEFAB_EMBEDDED_WORKERS=0` for the web process and start `pcbhomefab worker` as often as you like.
+
 ## Development
 
 ```bash

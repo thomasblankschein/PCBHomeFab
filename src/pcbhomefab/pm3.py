@@ -184,9 +184,7 @@ def _header_body(
         + struct.pack("<3I", 1, printer.resolution_x, printer.resolution_y)
         + struct.pack("<2f", 0.0, 0.0)  # weight, price
         + b"$\0\0\0"
-        + struct.pack(
-            "<5I", 0, print_time_s, 0, 0, 0
-        )  # per layer settings, print time, transition layers x2, mode
+        + struct.pack("<5I", 0, print_time_s, 0, 0, 0)  # per layer settings, print time, transition layers x2, mode
     )
 
 
@@ -215,9 +213,7 @@ def build_pm3(
 
     header = _table(b"HEADER", _header_body(printer, parameters, exposure, layers, print_time))
     preview_data = _preview(mask)
-    preview_body = (
-        struct.pack("<I", PREVIEW_SIZE[0]) + b"x".ljust(4, b"\0") + struct.pack("<I", PREVIEW_SIZE[1])
-    )
+    preview_body = struct.pack("<I", PREVIEW_SIZE[0]) + b"x".ljust(4, b"\0") + struct.pack("<I", PREVIEW_SIZE[1])
     preview = _table(b"PREVIEW", preview_body + preview_data, 16 + len(preview_body) + len(preview_data))
     color_table = struct.pack("<II", 0, 16) + b"\xff" * 16 + struct.pack("<I", 0)
     layer_table_length = 4 + 32 * layers
@@ -305,8 +301,8 @@ class Pm3Info:
 def _addresses(data: bytes) -> dict[str, int]:
     if len(data) < FILE_MARK_SIZE or data[:8] != b"ANYCUBIC":
         raise Pm3Error("Not an Anycubic slice file.")
-    version, _tables, header, _software, _preview, _color, layer_def, extra, machine, images = (
-        struct.unpack_from("<10I", data, 12)
+    version, _tables, header, _software, _preview, _color, layer_def, extra, machine, images = struct.unpack_from(
+        "<10I", data, 12
     )
     if version != VERSION:
         raise Pm3Error(f"Only file version {VERSION} is supported, the file has version {version}.")
@@ -317,9 +313,7 @@ def read_parameters(path: Path) -> PrintParameters:
     """Take the print parameters and the machine table from a ``.pm3`` file (for use as a template)."""
     data = path.read_bytes()
     at = _addresses(data)
-    body = (
-        at["header"] + 16
-    )  # body: pixel size, layer height, exposure, wait, bottom exposure, bottom layers, lift...
+    body = at["header"] + 16  # body: pixel size, layer height, exposure, wait, bottom exposure, bottom layers, lift...
     (wait,) = struct.unpack_from("<f", data, body + 12)
     lift, up, down = struct.unpack_from("<3f", data, body + 24)
     extra = data[at["extra"] + 16 : at["extra"] + 16 + EXTRA_BODY_SIZE]

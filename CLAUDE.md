@@ -25,7 +25,8 @@ They are the reference for behaviour until the port is finished.
 - Hosting: first on the maintainer's Proxmox homelab (Docker), later possibly a root server on the internet.
   Everything must therefore be stateless per request, limits on uploads/CPU time from day one.
 - Pure-Python core library `pcbhomefab` without web dependencies; web API and frontend sit on top.
-- Planned stack: FastAPI, asynchronous jobs in a queue (Redis + a worker), small SPA frontend, Docker Compose.
+- Stack: FastAPI, jobs queued in SQLite (no broker, workers claim jobs atomically, one process per job with a time
+  limit), small SPA frontend later, Docker Compose. Redis only if workers ever run on several machines.
 
 ## Domain knowledge to keep
 
@@ -55,17 +56,18 @@ They are the reference for behaviour until the port is finished.
 
 ## State (2026-10-26)
 
-Milestones 1 to 3 are done: `pcbhomefab exposure|mill` produces the mask PNG, the `.pm3` (native writer, 29 tests
+Milestones 1 to 4 are done (API with 42 tests): `pcbhomefab exposure|mill` produces the mask PNG, the `.pm3` (native writer, 29 tests
 green) and G-code. Photon Workshop opens the native `.pm3` file and shows the correct mask (confirmed by the maintainer).
-Open: API, frontend, deployment, calibration of mirroring and frame offsets on the real printer.
+Open: frontend, deployment (Compose, TLS), calibration of mirroring and frame offsets on the real printer.
 The reference for the output is the old scripts; tests compare against their results (`tests/data/reference_*`).
 
 ## Repository layout
 
 ```
 src/pcbhomefab/   board (Gerber ZIP ingest), raster, panel, mask, pm3, gcode, profiles, cli
+src/pcbhomefab/service/   web service: config, store (SQLite queue), runner, worker, api (FastAPI)
 tests/            pytest tests and small test data (Gerber ZIPs of two real boards)
 docs/             architecture and roadmap
 ```
 
-`api/` (FastAPI), `web/` (frontend) and deployment files are added in later milestones, see `docs/roadmap.md`.
+`web/` (frontend) and deployment files are added in later milestones, see `docs/roadmap.md`.

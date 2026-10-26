@@ -129,7 +129,10 @@ def load_board(source: bytes | str | Path, name: str | None = None) -> Board:
             try:
                 stack = LayerStack.open(zip_path)
             except Exception as exc:  # gerbonara raises many different types for broken input
-                raise InputError("The Gerber files could not be read.") from exc
+                raise InputError(
+                    "The Gerber files could not be read. Send a ZIP with the bottom copper (B.Cu), "
+                    "the board outline (Edge.Cuts) and the Excellon drill files."
+                ) from exc
 
     copper = stack.graphic_layers.get(("bottom", "copper"))
     if copper is None:

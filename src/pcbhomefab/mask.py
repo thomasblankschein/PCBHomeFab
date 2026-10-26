@@ -51,8 +51,7 @@ def build_mask(placements: list[Placement], printer: PrinterProfile, holes: str 
             cache[key] = no_copper
         left = round((printer.frame_left_mm + placement.x_mm) / pixel)
         top = round(
-            (printer.display_height_mm - printer.frame_bottom_mm - placement.y_mm - placement.board.height_mm)
-            / pixel
+            (printer.display_height_mm - printer.frame_bottom_mm - placement.y_mm - placement.board.height_mm) / pixel
         )
         mask.paste(cache[key], (left, top))
     if printer.mirror_x:

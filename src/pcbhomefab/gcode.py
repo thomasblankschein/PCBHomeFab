@@ -65,9 +65,7 @@ def build_layout(placements: list[Placement], plate: Plate, mill: MillProfile) -
     for placement in placements:
         outlines.append(frame.rect(placement.x_mm, placement.y_mm, placement.x1_mm, placement.y1_mm))
         for hole in placement.board.holes:
-            holes.setdefault(hole.diameter, []).append(
-                frame.point(placement.x_mm + hole.x, placement.y_mm + hole.y)
-            )
+            holes.setdefault(hole.diameter, []).append(frame.point(placement.x_mm + hole.x, placement.y_mm + hole.y))
     return Layout(holes, outlines)
 
 
@@ -77,9 +75,7 @@ def _nearest_order(points: list[Point]) -> list[Point]:
     ordered: list[Point] = []
     x, y = 0.0, 0.0
     while remaining:
-        nearest = min(
-            range(len(remaining)), key=lambda i: (remaining[i][0] - x) ** 2 + (remaining[i][1] - y) ** 2
-        )
+        nearest = min(range(len(remaining)), key=lambda i: (remaining[i][0] - x) ** 2 + (remaining[i][1] - y) ** 2)
         x, y = remaining.pop(nearest)
         ordered.append((x, y))
     return ordered
@@ -203,9 +199,7 @@ def generate(placements: list[Placement], plate: Plate, mill: MillProfile) -> li
         holes = layout.holes[diameter]
         if any(abs(diameter - d) < 0.01 for d in mill.drills):
             title = f"Drill {diameter:.1f} mm, {len(holes)} holes"
-            writer = _Writer(
-                title, mill, f"Insert the {diameter:.1f} mm drill and set Z0 to the plate surface"
-            )
+            writer = _Writer(title, mill, f"Insert the {diameter:.1f} mm drill and set Z0 to the plate surface")
             _drill(writer, holes, plate, mill)
             name = f"{len(programs) + 1}_drill_{diameter:.1f}mm.nc"
             programs.append(Program(name, title, writer.finish(), holes=len(holes)))
@@ -213,9 +207,7 @@ def generate(placements: list[Placement], plate: Plate, mill: MillProfile) -> li
             milled[diameter] = holes
 
     title = f"Mill with {mill.endmill_mm:.1f} mm end mill: large holes and outlines"
-    writer = _Writer(
-        title, mill, f"Insert the {mill.endmill_mm:.1f} mm end mill and set Z0 to the plate surface"
-    )
+    writer = _Writer(title, mill, f"Insert the {mill.endmill_mm:.1f} mm end mill and set Z0 to the plate surface")
     for diameter, holes in milled.items():
         for x, y in _nearest_order(holes):
             _mill_hole(writer, x, y, diameter, plate, mill)
@@ -248,8 +240,7 @@ def preview_svg(placements: list[Placement], plate: Plate, mill: MillProfile, sc
         return (height - (y - mill.offset_y_mm)) * scale
 
     parts = [
-        f'<rect x="0" y="0" width="{plate.width_mm * scale}" height="{height * scale}" '
-        'fill="#c9a06a" stroke="black"/>'
+        f'<rect x="0" y="0" width="{plate.width_mm * scale}" height="{height * scale}" fill="#c9a06a" stroke="black"/>'
     ]
     for x0, y0, x1, y1 in layout.outlines:
         parts.append(

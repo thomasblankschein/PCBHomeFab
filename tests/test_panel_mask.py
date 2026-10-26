@@ -44,9 +44,7 @@ def test_mask_polarity_copper_is_black(base: Board) -> None:
     x2 = PHOTON_M3.display_width_mm - (PHOTON_M3.frame_left_mm + 3.0)
     y2 = PHOTON_M3.display_height_mm - (PHOTON_M3.frame_bottom_mm + 3.0)
     y1 = y2 - base.height_mm
-    area = mask.crop((round(x1 / pixel), round(y1 / pixel), round(x2 / pixel), round(y2 / pixel))).convert(
-        "L"
-    )
+    area = mask.crop((round(x1 / pixel), round(y1 / pixel), round(x2 / pixel), round(y2 / pixel))).convert("L")
     white = sum(1 for v in area.tobytes() if v) / (area.width * area.height)
     assert white < 0.3
     # outside the boards everything stays dark

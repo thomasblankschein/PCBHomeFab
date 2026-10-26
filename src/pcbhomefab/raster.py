@@ -37,9 +37,7 @@ def _draw_line(draw: ImageDraw.ImageDraw, p1: Point, p2: Point, width_px: float,
     )
 
 
-def _draw_primitive(
-    draw: ImageDraw.ImageDraw, prim: Any, to_px: Callable[[float, float], Point], scale: float
-) -> None:
+def _draw_primitive(draw: ImageDraw.ImageDraw, prim: Any, to_px: Callable[[float, float], Point], scale: float) -> None:
     value = 255 if prim.polarity_dark else 0
     kind = type(prim).__name__
     if kind == "Circle":

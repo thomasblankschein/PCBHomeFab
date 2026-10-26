@@ -11,10 +11,13 @@ frontend (SPA)  ──HTTP──▶  api (FastAPI)  ──queue──▶  worker
 - **Core library `pcbhomefab`:** pure Python, no web dependencies. Everything that matters for the output lives here
   and is unit-testable without a server.
 - **API:** accepts uploads, validates them, creates jobs, reports status, serves results and previews.
-- **Worker:** runs the CPU-heavy steps (rasterizing, packing, `.pm3` writing). Any number of workers may run in
-  parallel; they hold no state.
-- **Storage:** files per job in a directory (or object store) with an expiry time, job metadata in SQLite first,
-  PostgreSQL if needed.
+- **Worker:** runs the CPU-heavy steps (rasterizing, packing, `.pm3` writing). Each job runs in its own process with a
+  time limit, so a broken or slow job cannot block or crash the service. Workers hold no state, any number may run, as
+  threads inside the web process or as separate `pcbhomefab worker` processes.
+- **Storage and queue:** the job database (SQLite, WAL mode) is the queue: a worker claims the oldest queued job with an
+  atomic update. Files live in one folder per job (`input/`, `output/`) and are deleted with the job after the expiry
+  time. A broker such as Redis is only needed when workers run on several machines; the store is a small class that can
+  be replaced then.
 
 ## Anonymous sessions
 
