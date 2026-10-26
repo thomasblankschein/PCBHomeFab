@@ -35,8 +35,8 @@ class PrinterProfile:
     #: The image is mirrored in X because the copper side faces the LCD.
     mirror_x: bool = True
     default_exposure_s: float = 120.0
-    #: Width of an exposed (white) frame along the outer edge of the plate. Photon Workshop needs a closed outer
-    #: contour to slice the image as an object. 0 switches the frame off.
+    #: Width of an exposed (white) frame along the outer edge of the whole display, even outside the plate.
+    #: Photon Workshop needs a closed outer contour to slice the image as an object. 0 switches the frame off.
     border_mm: float = 1.0
     #: Lift/retract parameters written to the slice file.
     lift_height_mm: float = 6.0

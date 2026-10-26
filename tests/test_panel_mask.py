@@ -77,22 +77,18 @@ def test_hole_modes_change_mask(base: Board) -> None:
         build_mask(placements, PHOTON_M3, holes="bogus")
 
 
-def test_plate_border_is_a_closed_white_frame(base: Board) -> None:
+def test_display_border_is_a_closed_white_frame(base: Board) -> None:
     mask = build_mask(pack([base], Plate()), PHOTON_M3).convert("L")
-    pixel = PHOTON_M3.pixel_mm
-    width = round(PHOTON_M3.border_mm / pixel)
-    # plate (mirrored in X): display x from width - (frame + 160) to width - frame, y from 40 to 2540 px
-    x0 = round((PHOTON_M3.display_width_mm - PHOTON_M3.frame_left_mm - Plate().width_mm) / pixel)
-    x1 = round((PHOTON_M3.display_width_mm - PHOTON_M3.frame_left_mm) / pixel) - 1
-    y0 = round((PHOTON_M3.display_height_mm - PHOTON_M3.frame_bottom_mm - Plate().height_mm) / pixel)
-    y1 = round((PHOTON_M3.display_height_mm - PHOTON_M3.frame_bottom_mm) / pixel) - 1
-    for x in range(x0, x1 + 1, 7):
-        assert mask.getpixel((x, y0)) == 255 and mask.getpixel((x, y1)) == 255
-        assert mask.getpixel((x, y0 + width - 1)) == 255 and mask.getpixel((x, y1 - width + 1)) == 255
-    for y in range(y0, y1 + 1, 7):
-        assert mask.getpixel((x0, y)) == 255 and mask.getpixel((x1, y)) == 255
-    assert width == 25 and mask.getpixel((x0 + width + 2, y0 + width + 2)) == 0  # just inside the frame stays dark
-    assert mask.getpixel((x0 - 3, y0 + 100)) == 0  # nothing outside the plate
+    width = round(PHOTON_M3.border_mm / PHOTON_M3.pixel_mm)
+    assert width == 25
+    w, h = mask.size
+    for x in range(0, w, 7):
+        assert mask.getpixel((x, 0)) == 255 and mask.getpixel((x, width - 1)) == 255
+        assert mask.getpixel((x, h - 1)) == 255 and mask.getpixel((x, h - width)) == 255
+    for y in range(0, h, 7):
+        assert mask.getpixel((0, y)) == 255 and mask.getpixel((width - 1, y)) == 255
+        assert mask.getpixel((w - 1, y)) == 255 and mask.getpixel((w - width, y)) == 255
+    assert mask.getpixel((width, h // 2)) == 0 and mask.getpixel((w // 2, width)) == 0  # inside stays dark
 
 
 def test_border_can_be_switched_off(base: Board) -> None:
@@ -100,4 +96,4 @@ def test_border_can_be_switched_off(base: Board) -> None:
     with_border = build_mask(placements, PHOTON_M3)
     without = build_mask(placements, replace(PHOTON_M3, border_mm=0))
     assert with_border.tobytes() != without.tobytes()
-    assert max(without.crop((100, 100, 400, 400)).convert("L").tobytes()) == 0
+    assert max(without.crop((0, 0, 400, 400)).convert("L").tobytes()) == 0

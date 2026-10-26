@@ -10,7 +10,7 @@ from PIL import Image, ImageDraw, ImageOps
 
 from .board import Board
 from .panel import Placement
-from .profiles import Plate, PrinterProfile
+from .profiles import PrinterProfile
 from .raster import rasterize_copper
 
 #: Diameter of the center mark that guides the drill (mode "center"), in mm.
@@ -34,26 +34,19 @@ def punch_holes(no_copper: Image.Image, board: Board, px_mm: float, mode: str) -
         draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=255)
 
 
-def draw_border(mask: Image.Image, printer: PrinterProfile, plate: Plate) -> None:
-    """Closed white frame of ``printer.border_mm`` along the outer edge of the plate, in place (before mirroring)."""
+def draw_border(mask: Image.Image, printer: PrinterProfile) -> None:
+    """Closed white frame of ``printer.border_mm`` along the outer edge of the whole display, in place."""
     if printer.border_mm <= 0:
         return
-    pixel = printer.pixel_mm
-    left = round(printer.frame_left_mm / pixel)
-    right = round((printer.frame_left_mm + plate.width_mm) / pixel) - 1
-    top = round((printer.display_height_mm - printer.frame_bottom_mm - plate.height_mm) / pixel)
-    bottom = round((printer.display_height_mm - printer.frame_bottom_mm) / pixel) - 1
-    width = max(1, round(printer.border_mm / pixel))
-    ImageDraw.Draw(mask).rectangle([left, top, right, bottom], outline=255, width=width)
+    width = max(1, round(printer.border_mm / printer.pixel_mm))
+    ImageDraw.Draw(mask).rectangle([0, 0, mask.width - 1, mask.height - 1], outline=255, width=width)
 
 
-def build_mask(
-    placements: list[Placement], printer: PrinterProfile, holes: str = "full", plate: Plate | None = None
-) -> Image.Image:
+def build_mask(placements: list[Placement], printer: PrinterProfile, holes: str = "full") -> Image.Image:
     """Full display image (mode ``1``): boards on a black background, mirrored if the profile says so.
 
-    ``holes`` controls how drill holes appear in the pads, see :func:`punch_holes`. The plate border is described
-    in :func:`draw_border`.
+    ``holes`` controls how drill holes appear in the pads, see :func:`punch_holes`. The border around the display is
+    described in :func:`draw_border`.
     """
     pixel = printer.pixel_mm
     mask = Image.new("L", (printer.resolution_x, printer.resolution_y), 0)
@@ -70,7 +63,7 @@ def build_mask(
             (printer.display_height_mm - printer.frame_bottom_mm - placement.y_mm - placement.board.height_mm) / pixel
         )
         mask.paste(cache[key], (left, top))
-    draw_border(mask, printer, plate or Plate())
+    draw_border(mask, printer)
     if printer.mirror_x:
         mask = ImageOps.mirror(mask)
     return mask.point(lambda v: 255 if v >= 128 else 0).convert("1")

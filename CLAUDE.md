@@ -79,6 +79,5 @@ docs/             architecture and roadmap
 
 ## Exposure border
 - Photon Workshop only slices an image that has a closed outer contour. The mask therefore gets an exposed (white)
-  frame along the outer edge of the plate; its width is `PrinterProfile.border_mm` (1.0 mm, 0 = off). The frame lies
-  on the plate area (160 × 100 mm), not on the whole display. Assumption from the owner's wording, to be confirmed in
-  Photon Workshop.
+  frame along the outer edge of the whole display (4096 × 2560 px), also outside the plate; its width is
+  `PrinterProfile.border_mm` (1.0 mm, 0 = off). It only exists to make slicing work. Confirm in Photon Workshop.
