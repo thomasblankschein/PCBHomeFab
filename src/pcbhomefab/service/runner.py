@@ -65,7 +65,7 @@ def run_job(job_dir: Path, params: dict[str, Any]) -> list[dict[str, Any]]:
     files: list[Path] = []
 
     if params["exposure"]:
-        mask = build_mask(placements, printer, holes=params["holes"])
+        mask = build_mask(placements, printer, holes=params["holes"], plate=plate)
         mask_path = output / "mask.png"
         mask.save(mask_path, dpi=(25.4 / printer.pixel_mm,) * 2)
         files.append(mask_path)

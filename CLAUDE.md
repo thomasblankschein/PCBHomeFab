@@ -76,3 +76,9 @@ docs/             architecture and roadmap
 - The tool library is data: `src/pcbhomefab/data/tools.toml`, parsed by `tools.py`. The owner has drills 0.6–1.2 mm in
   0.1 mm steps and end mills 1 mm and 2 mm; holes larger than 1.2 mm are milled. Cutting values in the file are
   starting values, to be tuned on the real mill.
+
+## Exposure border
+- Photon Workshop only slices an image that has a closed outer contour. The mask therefore gets an exposed (white)
+  frame along the outer edge of the plate; its width is `PrinterProfile.border_mm` (1.0 mm, 0 = off). The frame lies
+  on the plate area (160 × 100 mm), not on the whole display. Assumption from the owner's wording, to be confirmed in
+  Photon Workshop.

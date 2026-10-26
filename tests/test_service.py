@@ -146,6 +146,7 @@ def test_queue_limit(settings: Settings) -> None:
 def test_profiles_endpoint(client: TestClient) -> None:
     data = client.get("/api/profiles").json()
     assert data["printers"]["photon-m3"]["resolution"] == [4096, 2560]
+    assert data["printers"]["photon-m3"]["border_mm"] == 1.0
     assert data["mills"]["3018pro"]["max_spindle_rpm"] == 20000
     tools = client.get("/api/tools").json()
     assert [t["diameter_mm"] for t in tools["tools"] if t["kind"] == "drill"] == [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]

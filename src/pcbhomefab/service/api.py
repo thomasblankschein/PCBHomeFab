@@ -140,6 +140,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "frame_left_mm": p.frame_left_mm,
                     "frame_bottom_mm": p.frame_bottom_mm,
                     "mirror_x": p.mirror_x,
+                    "border_mm": p.border_mm,
                     "default_exposure_s": p.default_exposure_s,
                 }
                 for key, p in PRINTERS.items()
