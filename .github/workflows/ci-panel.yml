@@ -1,0 +1,42 @@
+name: CI panel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/panel/**"
+      - "contracts/**"
+      - ".github/workflows/ci-panel.yml"
+  pull_request:
+    paths:
+      - "services/panel/**"
+      - "contracts/**"
+      - ".github/workflows/ci-panel.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: services/panel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: services/panel/pyproject.toml
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+      - run: pytest
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t pcbhomefab-panel services/panel

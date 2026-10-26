@@ -8,92 +8,78 @@ Turn the Gerber files of a single-sided PCB into everything you need to make it 
 - **Panelizing:** several boards (and copies of a board) are packed onto one blank, so one exposure and one
   milling run makes the whole batch.
 
-The project is meant to run as a small web service that many users can use at the same time, with anonymous
-sessions and a link per job. It can also be used as a plain Python library and command line tool.
+PCBHomeFab is a small web service that many users can use at the same time, with anonymous sessions and a link per
+job. It consists of independent services that talk to each other only through REST APIs.
 
-> **Status:** early development. The conversion core (Gerber ZIP, panelizing, exposure mask, `.pm3`, G-code) and a
-> command line tool work; the web service is next. See [docs/roadmap.md](docs/roadmap.md).
+> **Status:** early development. Gerber ZIP in, `.pm3` and G-code out works end to end. A real frontend and the
+> calibration on the real printer and mill are next. See [docs/roadmap.md](docs/roadmap.md).
 
 ## How it works
 
 ```
-Gerber ZIP ──▶ parse (B.Cu, Edge.Cuts, Excellon) ──▶ panelize ──▶ raster mask (40 µm/px)
-                                                          │              │
-                                                          │              └──▶ .pm3 (Photon M3)
-                                                          └──▶ G-code (drill bits, end mill, outline with tabs)
+Browser ─▶ gateway ─┬─▶ frontend   static pages
+                    └─▶ jobs ──┬─▶ ingest     Gerber ZIP  ─▶ canonical board package
+                               ├─▶ panel      boards + counts ─▶ placements on the blank
+                               ├─▶ exposure   packages + placements ─▶ mask PNG, .pm3
+                               └─▶ mill       packages + placements ─▶ G-code programs
 ```
+
+Each service lives in `services/<name>/` with its own code, tests and `Dockerfile`. The agreements between them
+are the contracts in [contracts/](contracts/) (OpenAPI files, JSON schemas, error codes). There is no shared
+code. Details and reasons: [docs/architecture.md](docs/architecture.md).
 
 Mask polarity: **white = exposed = copper is etched away**, black = copper stays. A copper pour is kept
 automatically.
 
-## Command line
+## Run it
 
 ```bash
-# exposure mask (PNG) and .pm3 for the Photon M3; ":15" puts 15 copies of a board on the plate
-pcbhomefab exposure base.zip node.zip:15 --pm3 --exposure 120 --template reference.pm3 -o out --name panel
-
-# drill and mill G-code (GRBL) plus an SVG preview, same board order as for the mask
-pcbhomefab mill base.zip node.zip:15 -o out --name panel
+cp .env.example .env            # set PCBHOMEFAB_IP_SALT (openssl rand -hex 32)
+docker compose up -d --build
+scripts/smoke_test.sh http://localhost
 ```
 
-The `.pm3` file is written natively, no other tool is needed. The machine table in it is the one Photon Workshop
-writes for the Photon M3 (it refuses files with an unknown printer name). `--template` takes a `.pm3` file written by
-Photon Workshop and copies its lift/retract parameters and machine table. Boards must be given in the same order for
-`exposure` and `mill` so that the masks and the holes line up.
+Open `http://localhost/`, choose a Gerber ZIP and create a job. The job page shows the exposure mask and the files
+to download (`exposure.pm3`, G-code per tool). Without accounts, every job gets a random id and the job link
+`/jobs/<id>` is the only credential. Jobs and files are deleted after seven days.
 
-## Tool library
-
-Drill bits and end mills with their cutting data live in a TOML file (`src/pcbhomefab/data/tools.toml`):
+The same through the REST API (the gateway publishes the `jobs` service under `/api`):
 
 ```bash
-pcbhomefab tools                          # show the library in use
-pcbhomefab tools --export my-tools.toml   # copy the built-in library as a starting point
-pcbhomefab mill boards.zip --tools my-tools.toml
+curl -F boards=@base.zip -F boards=@node.zip -F counts=1 -F counts=15 -F exposure_s=120 http://localhost/api/v1/jobs
+# {"id":"...","status":"queued"}
+curl http://localhost/api/v1/jobs/<id>                       # status and file list
+curl -O http://localhost/api/v1/jobs/<id>/files/exposure.pm3
 ```
 
-Set `PCBHOMEFAB_TOOLS_FILE` to use your own file in the web service. `GET /api/tools` returns the library in use.
+Other options of `POST /api/v1/jobs`: `exposure`, `mill_gcode` (choose the outputs), `holes`, `gap_mm`, `margin_mm`,
+`flip`, `thickness_mm`, `tabs`, `printer`, `mill`, `frame_left_mm`, `frame_bottom_mm`, `mirror_x`.
+`GET /api/v1/profiles` lists printers, mills and limits, `GET /api/v1/tools` the tool library.
 
-## Web service
-
-```bash
-pip install -e ".[web]"
-pcbhomefab serve --port 8000        # web service with one embedded worker
-```
-
-Open `http://localhost:8000/` for a minimal form, `/docs` for the API. Without accounts, every job gets a random id and
-the job link `/jobs/<id>` is the only credential. Jobs and files are deleted after seven days.
-
-```bash
-curl -F boards=@base.zip -F boards=@node.zip -F counts=1 -F counts=15 -F exposure_s=120 http://localhost:8000/api/jobs
-# {"id":"...","status":"queued","page":"/jobs/...","api":"/api/jobs/..."}
-curl http://localhost:8000/api/jobs/<id>                     # status and file list
-curl -O http://localhost:8000/api/jobs/<id>/files/exposure.pm3
-```
-
-Other options of `POST /api/jobs`: `exposure`, `mill_gcode` (choose the outputs), `holes`, `gap_mm`, `margin_mm`, `flip`,
-`thickness_mm`, `tabs`, `frame_left_mm`, `frame_bottom_mm`, `mirror_x`. `GET /api/profiles` lists printers, mills and limits.
-
-Configuration through environment variables (all optional): `PCBHOMEFAB_DATA_DIR`, `PCBHOMEFAB_MAX_UPLOAD_MB`,
-`PCBHOMEFAB_MAX_FILES`, `PCBHOMEFAB_MAX_BOARDS`, `PCBHOMEFAB_JOB_TTL_HOURS`, `PCBHOMEFAB_JOB_TIMEOUT_S`,
-`PCBHOMEFAB_RATE_LIMIT_PER_HOUR`, `PCBHOMEFAB_MAX_QUEUED`, `PCBHOMEFAB_EMBEDDED_WORKERS`, `PCBHOMEFAB_TRUST_PROXY=1`
-(only behind a trusted reverse proxy) and `PCBHOMEFAB_IP_SALT` (set it to a random secret). To run workers as separate
-processes set `PCBHOMEFAB_EMBEDDED_WORKERS=0` for the web process and start `pcbhomefab worker` as often as you like.
-
-Container setup with workers and HTTPS proxy (Docker Compose), Proxmox homelab notes and the move to a root server:
+Compose file, limits, own tool library, Proxmox homelab notes and the move to a root server:
 [docs/deployment.md](docs/deployment.md).
 
 ## Development
 
+Each service is a small Python project (Python 3.12 or newer):
+
 ```bash
 python -m venv .venv
 .venv/Scripts/activate          # Windows; use .venv/bin/activate elsewhere
-pip install -e ".[dev]"
-pytest
-ruff check .
+pip install -e "services/panel[dev]"
+scripts/check_service.sh panel  # ruff, mypy and pytest of one service
 ```
 
-Requires Python 3.12 or newer. See [CLAUDE.md](CLAUDE.md) for the project conventions and
-[docs/architecture.md](docs/architecture.md) for the design decisions.
+Checks for the whole repository:
+
+```bash
+python scripts/check_contracts.py     # schemas, OpenAPI files and examples are valid
+python scripts/check_boundaries.py    # no code shared between services, one volume per service, ports
+PCBHOMEFAB_URL=http://localhost pytest tests/e2e   # a running stack gives the golden outputs
+```
+
+See [CLAUDE.md](CLAUDE.md) for the project conventions and [contracts/README.md](contracts/README.md) for how to
+change a contract.
 
 ## License
 

@@ -6,7 +6,7 @@ Conversations with the maintainer are in German.
 
 ## Goal
 
-A small web service (and Python library / CLI) that turns the Gerber files of a **single-sided PCB** into
+A small web service (independent services behind one gateway) that turns the Gerber files of a **single-sided PCB** into
 home-fabrication files:
 
 1. UV exposure file `.pm3` for an Anycubic Photon M3 resin printer used as a UV mask for photoresist boards.
@@ -19,18 +19,19 @@ They are the reference for behaviour until the port is finished.
 
 ## Decisions (made with the maintainer)
 
-- Name **PCBHomeFab**, public repository, **MIT** license, Python package `pcbhomefab`.
+- Name **PCBHomeFab**, public repository, **MIT** license.
 - Input: **Gerber ZIP** first (B.Cu, Edge.Cuts, Excellon drill files). KiCad `.kicad_pcb` input is a later option.
 - Users: **anonymous sessions**, every job has a link. No accounts for now.
 - Hosting: first on the maintainer's Proxmox homelab (Docker), later possibly a root server on the internet.
   Everything must therefore be stateless per request, limits on uploads/CPU time from day one.
-- Stack: FastAPI, jobs queued in SQLite (no broker, workers claim jobs atomically, one process per job with a time
-  limit), small SPA frontend later, Docker Compose.
+- Stack: FastAPI, jobs queued in SQLite inside `jobs` (no broker, worker threads claim jobs atomically), every
+  request to a processing service runs in its own process with a time limit, small SPA frontend later, Docker Compose.
 - **Architecture (ADR-001, 2026-10-26, see `docs/architecture.md` and `docs/migration.md`):** independent services
   (`gateway`, `frontend`, `jobs`, `ingest`, `panel`, `exposure`, `mill`) that talk only through REST, **no shared
   code** between services, contracts in `contracts/`, only `jobs` holds state, calls between services are
-  synchronous. The CLI and the importable library `pcbhomefab` are dropped. This is being migrated step by step;
-  until the steps are done the package layout below is what exists. Do not add new cross-service imports.
+  synchronous. The CLI and the importable library `pcbhomefab` are gone. Migration done on 2026-10-26, tag
+  `pre-services` is the last commit of the single-package code. Keep it that way: `scripts/check_boundaries.py`
+  enforces it in CI.
 
 ## Domain knowledge to keep
 
@@ -42,8 +43,8 @@ They are the reference for behaviour until the port is finished.
 - The image is mirrored in X before it goes to the printer (copper side faces the LCD).
 - `.pm3` (Anycubic format, version 516): Photon Workshop rejects files whose machine table names an unknown printer
   ("Unknown"). The MACHINE table (156 bytes) of a file Photon Workshop wrote for the M3 is stored in the profile
-  values (`PHOTON_M3`) and in `tests/data/photon_m3_machine_table.bin`; the name is `Anycubic Photon M3`. The writer is
-  native (`pm3.py`). Layer images are run length encoded: black/white runs as two bytes (`nibble << 12 | length`,
+  values (`PHOTON_M3`) and in `services/exposure/tests/data/photon_m3_machine_table.bin`; the name is `Anycubic Photon M3`. The writer is
+  native (`services/exposure/src/exposure/pm3.py`). Layer images are run length encoded: black/white runs as two bytes (`nibble << 12 | length`,
   at most 4095). UVtools 7.1 cannot convert a single image and cannot edit a finished `.pm3`, which is why the
   first version of the writer used a long detour; it is no longer needed.
 - GRBL: no canned drill cycles, write explicit moves. `$30` must match the `S` value (20,000 rpm needs `$30=20000`).
@@ -51,37 +52,54 @@ They are the reference for behaviour until the port is finished.
 
 ## Conventions
 
-- Python >= 3.12 (gerbonara 1.6 requires it), type hints everywhere, `ruff` for lint/format rules, `mypy --strict` on `src`.
-- Tests with `pytest`; every output format gets a reference test (pixel comparison, drill list, G-code bounds,
-  `.pm3` round trip). Test data lives in `tests/data` and must be small.
+- Python >= 3.12 (gerbonara 1.6 requires it), type hints everywhere, `ruff` for lint and format, `mypy --strict` on
+  each service's `src`. One command per service: `scripts/check_service.sh <service>`.
+- Tests with `pytest` inside each service (contract tests against `contracts/`); every output format has a reference
+  test (pixel comparison, drill list, G-code bounds, `.pm3` round trip). Test data lives next to the service tests and
+  must be small. `tests/e2e` compares a running stack with `tests/golden`.
+- A change of an API or a JSON format starts in `contracts/` (see `contracts/README.md`). `services/*/src/*/common.py`
+  are identical copies on purpose; change all five or none.
 - Commits: author Thomas Blankschein using the GitHub noreply address (public repo), messages in English,
   imperative mood, short first line.
 - No secrets, no uploaded user data, no generated `.pm3`/`.nc` files in the repository.
 
 ## State (2026-10-26)
 
-Milestones 1 to 4 are done (API with 42 tests): `pcbhomefab exposure|mill` produces the mask PNG, the `.pm3` (native writer, 29 tests
-green) and G-code. Photon Workshop opens the native `.pm3` file and shows the correct mask (confirmed by the maintainer).
-Open: frontend, deployment (Compose, TLS), calibration of mirroring and frame offsets on the real printer.
-The reference for the output is the old scripts; tests compare against their results (`tests/data/reference_*`).
+Milestones 1 to 4 and 8 are done. The system runs as seven containers (`docker-compose.yaml`): Gerber ZIP in, mask PNG,
+`.pm3` (native writer) and G-code out; the outputs equal the golden outputs of the old single-package code
+(`tests/e2e`). 122 service tests are green (ingest 21, panel 14, exposure 27, mill 34, jobs 26). Photon Workshop opens
+the native `.pm3` file and shows the correct mask (confirmed by the maintainer).
+Open: a real frontend, calibration of mirroring and frame offsets on the real printer, monitoring.
+A test instance of the new stack ran on the maintainer's WSL (Ubuntu-26.04, `~/pcbhomefab-new`, project
+`pcbhomefab-new`, port 8081) next to the older instance (`~/PCBHomeFab`, ports 80/443); switching over is open.
+The reference for the output is the old scripts; tests compare against their results
+(`services/mill/tests/data/reference_*`, `services/exposure/tests/data/reference_mask_fbh.png`).
 
 ## Repository layout
 
 ```
-src/pcbhomefab/   board (Gerber ZIP ingest), raster, panel, mask, pm3, gcode, profiles, cli
-src/pcbhomefab/service/   web service: config, store (SQLite queue), runner, worker, api (FastAPI)
-tests/            pytest tests and small test data (Gerber ZIPs of two real boards)
-docs/             architecture and roadmap
+contracts/        OpenAPI files, JSON schemas, error codes, examples: the only thing services share
+services/
+  gateway/        Caddy: TLS, routing (/ -> frontend, /api -> jobs)
+  frontend/       static pages (Caddy)
+  jobs/           uploads, job store (SQLite), workflow, worker threads, downloads
+  ingest/         Gerber ZIP -> canonical board package (copper.gbr + board.json)
+  panel/          packing of boards on the plate
+  exposure/       raster, mask, .pm3 writer, printer profiles
+  mill/           G-code, tool library (data/tools.toml), mill profiles
+tests/            e2e (golden test against a running stack), golden (hashes), data (two real boards)
+scripts/          check_service.sh, check_contracts.py, check_boundaries.py, smoke_test.sh, make_golden.py (old code, tag
+                  pre-services), make_package_fixtures.py
+docs/             architecture (ADR-001), migration, deployment, roadmap
+docker-compose.yaml
 ```
 
-`web/` (frontend) and deployment files are added in later milestones, see `docs/roadmap.md`.
-
 ## Tools (mill)
-- The tool library is data: `src/pcbhomefab/data/tools.toml`, parsed by `tools.py`. The owner has drills 0.6–1.2 mm in
+- The tool library is data: `services/mill/src/mill/data/tools.toml`, parsed by `tools.py`. The owner has drills 0.6–1.2 mm in
   0.1 mm steps and end mills 1 mm and 2 mm; holes larger than 1.2 mm are milled. Cutting values in the file are
   starting values, to be tuned on the real mill.
 
 ## Exposure border
 - Photon Workshop only slices an image that has a closed outer contour. The mask therefore gets an exposed (white)
   frame along the outer edge of the whole display (4096 × 2560 px), also outside the plate; its width is
-  `PrinterProfile.border_mm` (1.0 mm, 0 = off). It only exists to make slicing work. Confirm in Photon Workshop.
+  `PrinterProfile.border_mm` in `services/exposure` (1.0 mm, 0 = off). It only exists to make slicing work. Confirm in Photon Workshop.

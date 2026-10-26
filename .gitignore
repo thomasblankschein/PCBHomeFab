@@ -23,4 +23,7 @@ Thumbs.db
 *.pm3
 
 # Reference G-code of the old scripts is test data
-!tests/data/*.nc
+!services/mill/tests/data/*.nc
+
+# Secrets and local settings
+.env

@@ -1,0 +1,44 @@
+name: CI stack
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/**"
+      - "contracts/**"
+      - "docker-compose.yaml"
+      - "tests/e2e/**"
+      - "tests/golden/**"
+      - "scripts/smoke_test.sh"
+      - ".github/workflows/ci-stack.yml"
+  pull_request:
+    paths:
+      - "services/**"
+      - "contracts/**"
+      - "docker-compose.yaml"
+      - "tests/e2e/**"
+      - "tests/golden/**"
+      - "scripts/smoke_test.sh"
+      - ".github/workflows/ci-stack.yml"
+
+jobs:
+  stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Start all services
+        run: |
+          echo "PCBHOMEFAB_IP_SALT=ci" > .env
+          echo "SITE_ADDRESS=:80" >> .env
+          docker compose up -d --build --wait
+      - name: Smoke test through the gateway
+        run: scripts/smoke_test.sh http://localhost || (docker compose logs; exit 1)
+      - name: Outputs equal the golden outputs
+        run: |
+          pip install httpx pytest pillow
+          PCBHOMEFAB_URL=http://localhost pytest tests/e2e -q || (docker compose logs; exit 1)
+      - run: docker compose down -v
+        if: always()

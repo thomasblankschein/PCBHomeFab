@@ -1,0 +1,24 @@
+name: CI architecture
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml jsonschema
+      - name: Contracts are valid (schemas, OpenAPI, examples)
+        run: python scripts/check_contracts.py
+      - name: No cross-service code, one volume per service, only the gateway is published
+        run: python scripts/check_boundaries.py
+      - name: Compose file is valid
+        run: |
+          echo "PCBHOMEFAB_IP_SALT=ci" > .env
+          docker compose config -q

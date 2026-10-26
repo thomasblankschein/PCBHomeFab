@@ -6,10 +6,10 @@
 | 2 | Core port | Gerber ZIP ingest, direct rasterizing, panelizing, mask with correct polarity, G-code. Reference tests for each | done, CLI included |
 | 3 | `.pm3` output | Native writer (no UVtools) with round-trip test and a cross-check against UVtools | done, file opens in Photon Workshop (confirmed 2026-10-26) |
 | 4 | API and jobs | Upload, parameters, job status, download, upload/CPU limits, rate limit | done |
-| 5 | Frontend | Panel editor (counts, spacing, order), previews of mask and tool paths, profile selection, download | open |
-| 6 | Operation | Anonymous sessions with job links, expiry cleanup, Docker Compose with TLS, monitoring | Compose, proxy and smoke test done (first run on the homelab open), monitoring open |
+| 5 | Frontend | Panel editor (counts, spacing, order), previews of mask and tool paths, profile selection, download | open; `services/frontend` serves a minimal upload and job page |
+| 6 | Operation | Anonymous sessions with job links, expiry cleanup, Docker Compose with TLS, monitoring | Compose with gateway, services, smoke and golden test done and run on the WSL test host; monitoring open |
 | 7 | Calibration and quality | Test pattern job for printer and mill alignment (mirroring, frame offset, zero point), user docs | open |
-| 8 | Service split | Independent services that talk only through REST, contracts first ([ADR-001](architecture.md), [plan](migration.md)) | planned, no feature changes |
+| 8 | Service split | Independent services that talk only through REST, contracts first ([ADR-001](architecture.md), [plan](migration.md)) | done 2026-10-26, no feature changes; outputs equal the golden outputs |
 
 Out of scope for now: double-sided boards, accounts, other printers and controllers (the profile model leaves
 room for them), KiCad `.kicad_pcb` input.

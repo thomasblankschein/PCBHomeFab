@@ -1,0 +1,42 @@
+name: CI exposure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/exposure/**"
+      - "contracts/**"
+      - ".github/workflows/ci-exposure.yml"
+  pull_request:
+    paths:
+      - "services/exposure/**"
+      - "contracts/**"
+      - ".github/workflows/ci-exposure.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    defaults:
+      run:
+        working-directory: services/exposure
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: services/exposure/pyproject.toml
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+      - run: pytest
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t pcbhomefab-exposure services/exposure
