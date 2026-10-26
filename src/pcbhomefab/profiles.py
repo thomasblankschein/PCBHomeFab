@@ -64,28 +64,16 @@ PHOTON_M3 = PrinterProfile(
 
 
 @dataclass(frozen=True)
-class Tool:
-    """A drill bit or an end mill."""
-
-    diameter_mm: float
-    kind: str  # "drill" or "endmill"
-
-
-@dataclass(frozen=True)
 class MillProfile:
     """GRBL hobby mill."""
 
     name: str
-    spindle_rpm: int
-    drills: tuple[float, ...]
-    endmill_mm: float
+    #: Highest spindle speed of the machine (S value); tools may not ask for more.
+    max_spindle_rpm: int
+    #: End mill (diameter in the tool library) that cuts the board outlines. Tools and cutting data: see ``tools.py``.
+    outline_endmill_mm: float = 1.0
     safe_z_mm: float = 3.0
     spindle_spinup_s: float = 3.0
-    drill_feed: float = 100.0
-    mill_feed: float = 150.0
-    plunge_feed: float = 40.0
-    mill_step_mm: float = 0.4
-    peck_mm: float = 0.7
     drill_overshoot_mm: float = 0.4
     mill_overshoot_mm: float = 0.15
     tab_width_mm: float = 2.0
@@ -101,9 +89,8 @@ class MillProfile:
 
 MILL_3018PRO = MillProfile(
     name="3018Pro (GRBL)",
-    spindle_rpm=20000,
-    drills=(0.8, 1.0),
-    endmill_mm=1.0,
+    max_spindle_rpm=20000,
+    outline_endmill_mm=1.0,
 )
 
 #: Profiles by the name used in the API.

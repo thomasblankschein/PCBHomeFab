@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from .errors import LayoutError
 from .panel import Placement
 from .profiles import MillProfile, Plate
+from .tools import Tool, ToolLibrary, load_tools
 
 Point = tuple[float, float]
 Rect = tuple[float, float, float, float]
@@ -26,6 +27,7 @@ class Program:
     code: str
     holes: int = 0
     outlines: int = 0
+    tool: str = ""
 
 
 @dataclass(frozen=True)
@@ -82,15 +84,20 @@ def _nearest_order(points: list[Point]) -> list[Point]:
 
 
 class _Writer:
-    def __init__(self, title: str, mill: MillProfile, tool_message: str) -> None:
+    def __init__(self, title: str, mill: MillProfile, tool: Tool, tool_message: str) -> None:
+        if tool.spindle_rpm > mill.max_spindle_rpm:
+            raise LayoutError(
+                f"{tool.label} asks for {tool.spindle_rpm} rpm, the machine allows {mill.max_spindle_rpm} rpm."
+            )
         self.mill = mill
+        self.tool = tool
         self.z = mill.safe_z_mm
         self.lines = [
             f"({title})",
             "(GRBL, X0 Y0 = lower left corner of the plate, copper side up, Z0 = plate surface)",
             "G21 G90 G17 G94",
             f"G0 Z{mill.safe_z_mm:g}",
-            f"M3 S{mill.spindle_rpm}",
+            f"M3 S{tool.spindle_rpm}",
             f"G4 P{mill.spindle_spinup_s:g}",
             f"(MSG, {tool_message})",
         ]
@@ -123,14 +130,15 @@ class _Writer:
 
 
 def _drill(writer: _Writer, holes: list[Point], plate: Plate, mill: MillProfile) -> None:
+    tool = writer.tool
     depth = plate.thickness_mm + mill.drill_overshoot_mm
     for x, y in _nearest_order(holes):
         writer.rapid(x, y)
         writer.up(1.0)
         reached = 0.0
         while reached < depth:
-            reached = min(reached + mill.peck_mm, depth) if mill.peck_mm > 0 else depth
-            writer.down(-reached, mill.drill_feed)
+            reached = min(reached + tool.peck_mm, depth) if tool.peck_mm > 0 else depth
+            writer.down(-reached, tool.plunge_feed)
             writer.up(1.0)
             if reached < depth:
                 writer.add(f"G0 Z{-reached + 0.3:.3f}")
@@ -139,26 +147,23 @@ def _drill(writer: _Writer, holes: list[Point], plate: Plate, mill: MillProfile)
 
 def _mill_hole(writer: _Writer, x: float, y: float, diameter: float, plate: Plate, mill: MillProfile) -> None:
     """Circle a hole out with the end mill (path inside the hole edge)."""
-    radius = (diameter - mill.endmill_mm) / 2
-    if radius < 0.05:
-        raise LayoutError(
-            f"A {diameter} mm hole is too small for the {mill.endmill_mm} mm end mill "
-            "and no drill of that size is listed."
-        )
+    tool = writer.tool
+    radius = (diameter - tool.diameter_mm) / 2
     depth = plate.thickness_mm + mill.mill_overshoot_mm
     writer.rapid(x + radius, y)
     writer.up(0.5)
     z = 0.0
     while z < depth:
-        z = min(z + mill.mill_step_mm, depth)
-        writer.down(-z, mill.plunge_feed)
-        writer.add(f"G3 X{x + radius:.3f} Y{y:.3f} I{-radius:.3f} J0 F{mill.mill_feed:g}")
+        z = min(z + tool.step_down_mm, depth)
+        writer.down(-z, tool.plunge_feed)
+        writer.add(f"G3 X{x + radius:.3f} Y{y:.3f} I{-radius:.3f} J0 F{tool.feed:g}")
     writer.up()
 
 
 def _mill_outline(writer: _Writer, rect: Rect, plate: Plate, mill: MillProfile) -> None:
     """Walk around the board counter-clockwise (climb milling), outside the outline, with tabs."""
-    r = mill.endmill_mm / 2
+    tool = writer.tool
+    r = tool.diameter_mm / 2
     x0, y0, x1, y1 = rect[0] - r, rect[1] - r, rect[2] + r, rect[3] + r
     corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1), (x0, y0)]
     depth = plate.thickness_mm + mill.mill_overshoot_mm
@@ -180,49 +185,69 @@ def _mill_outline(writer: _Writer, rect: Rect, plate: Plate, mill: MillProfile) 
     writer.up(0.5)
     z = 0.0
     while z < depth:
-        z = min(z + mill.mill_step_mm, depth)
-        writer.down(-z, mill.plunge_feed)
+        z = min(z + tool.step_down_mm, depth)
+        writer.down(-z, tool.plunge_feed)
         for _ax, _ay, bx, by, is_tab in sections:
             target = max(-z, tab_z) if is_tab else -z
             if abs(writer.z - target) > 1e-6:
-                writer.down(target, mill.plunge_feed)
-            writer.line(bx, by, mill.mill_feed)
+                writer.down(target, tool.plunge_feed)
+            writer.line(bx, by, tool.feed)
     writer.up()
 
 
-def generate(placements: list[Placement], plate: Plate, mill: MillProfile) -> list[Program]:
-    """Programs in tool order: one per drill size, then the end mill (large holes and outlines)."""
+def generate(
+    placements: list[Placement], plate: Plate, mill: MillProfile, tools: ToolLibrary | None = None
+) -> list[Program]:
+    """Programs in tool order: one per drill bit, then one per end mill (large holes and outlines)."""
+    tools = tools or load_tools()
     layout = build_layout(placements, plate, mill)
-    programs: list[Program] = []
-    milled: dict[float, list[Point]] = {}
+    outline_tool = tools.endmill(mill.outline_endmill_mm)
+    drilled: dict[str, tuple[Tool, list[Point]]] = {}
+    milled: dict[str, tuple[Tool, dict[float, list[Point]]]] = {outline_tool.id: (outline_tool, {})}
     for diameter in sorted(layout.holes):
         holes = layout.holes[diameter]
-        if any(abs(diameter - d) < 0.01 for d in mill.drills):
-            title = f"Drill {diameter:.1f} mm, {len(holes)} holes"
-            writer = _Writer(title, mill, f"Insert the {diameter:.1f} mm drill and set Z0 to the plate surface")
-            _drill(writer, holes, plate, mill)
-            name = f"{len(programs) + 1}_drill_{diameter:.1f}mm.nc"
-            programs.append(Program(name, title, writer.finish(), holes=len(holes)))
+        drill = tools.find_drill(diameter)
+        if drill is not None:
+            drilled.setdefault(drill.id, (drill, []))[1].extend(holes)
+        elif diameter > tools.largest_drill():
+            cutter = tools.mill_for_hole(diameter, outline_tool.diameter_mm)
+            milled.setdefault(cutter.id, (cutter, {}))[1][diameter] = holes
         else:
-            milled[diameter] = holes
+            sizes = ", ".join(f"{t.diameter_mm:g}" for t in tools.drills())
+            raise LayoutError(f"No drill for a {diameter:g} mm hole (drills in the library: {sizes} mm).")
 
-    title = f"Mill with {mill.endmill_mm:.1f} mm end mill: large holes and outlines"
-    writer = _Writer(title, mill, f"Insert the {mill.endmill_mm:.1f} mm end mill and set Z0 to the plate surface")
-    for diameter, holes in milled.items():
-        for x, y in _nearest_order(holes):
-            _mill_hole(writer, x, y, diameter, plate, mill)
-    for rect in layout.outlines:
-        _mill_outline(writer, rect, plate, mill)
-    name = f"{len(programs) + 1}_mill_{mill.endmill_mm:.1f}mm.nc"
-    programs.append(
-        Program(
-            name,
-            title,
-            writer.finish(),
-            holes=sum(len(h) for h in milled.values()),
-            outlines=len(layout.outlines),
+    programs: list[Program] = []
+    for drill, holes in sorted(drilled.values(), key=lambda entry: entry[0].diameter_mm):
+        title = f"Drill {drill.diameter_mm:.1f} mm, {len(holes)} holes"
+        message = f"Insert the {drill.diameter_mm:.1f} mm drill and set Z0 to the plate surface"
+        writer = _Writer(title, mill, drill, message)
+        _drill(writer, holes, plate, mill)
+        name = f"{len(programs) + 1}_drill_{drill.diameter_mm:.1f}mm.nc"
+        programs.append(Program(name, title, writer.finish(), holes=len(holes), tool=drill.id))
+
+    for cutter, by_diameter in milled.values():
+        is_outline = cutter.id == outline_tool.id
+        scope = "large holes and outlines" if is_outline else "large holes"
+        title = f"Mill with {cutter.diameter_mm:.1f} mm end mill: {scope}"
+        message = f"Insert the {cutter.diameter_mm:.1f} mm end mill and set Z0 to the plate surface"
+        writer = _Writer(title, mill, cutter, message)
+        for diameter, holes in by_diameter.items():
+            for x, y in _nearest_order(holes):
+                _mill_hole(writer, x, y, diameter, plate, mill)
+        if is_outline:
+            for rect in layout.outlines:
+                _mill_outline(writer, rect, plate, mill)
+        name = f"{len(programs) + 1}_mill_{cutter.diameter_mm:.1f}mm.nc"
+        programs.append(
+            Program(
+                name,
+                title,
+                writer.finish(),
+                holes=sum(len(h) for h in by_diameter.values()),
+                outlines=len(layout.outlines) if is_outline else 0,
+                tool=cutter.id,
+            )
         )
-    )
     return programs
 
 

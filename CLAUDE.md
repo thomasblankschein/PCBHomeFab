@@ -71,3 +71,8 @@ docs/             architecture and roadmap
 ```
 
 `web/` (frontend) and deployment files are added in later milestones, see `docs/roadmap.md`.
+
+## Tools (mill)
+- The tool library is data: `src/pcbhomefab/data/tools.toml`, parsed by `tools.py`. The owner has drills 0.6–1.2 mm in
+  0.1 mm steps and end mills 1 mm and 2 mm; holes larger than 1.2 mm are milled. Cutting values in the file are
+  starting values, to be tuned on the real mill.

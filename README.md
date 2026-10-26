@@ -41,6 +41,18 @@ writes for the Photon M3 (it refuses files with an unknown printer name). `--tem
 Photon Workshop and copies its lift/retract parameters and machine table. Boards must be given in the same order for
 `exposure` and `mill` so that the masks and the holes line up.
 
+## Tool library
+
+Drill bits and end mills with their cutting data live in a TOML file (`src/pcbhomefab/data/tools.toml`):
+
+```bash
+pcbhomefab tools                          # show the library in use
+pcbhomefab tools --export my-tools.toml   # copy the built-in library as a starting point
+pcbhomefab mill boards.zip --tools my-tools.toml
+```
+
+Set `PCBHOMEFAB_TOOLS_FILE` to use your own file in the web service. `GET /api/tools` returns the library in use.
+
 ## Web service
 
 ```bash

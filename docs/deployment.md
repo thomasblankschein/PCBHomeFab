@@ -30,6 +30,13 @@ scripts/smoke_test.sh http://localhost      # creates a job and checks the resul
 | `pcbhomefab.example.org` | public name, Caddy gets a Let's Encrypt certificate (ports 80 and 443 must be reachable) |
 | `pcbhomefab.home.arpa` with `CADDY_TLS=tls internal` | HTTPS in the homelab with Caddy's own CA (import its root certificate into the browsers, it is in the `caddy_data` volume under `pki/authorities/local/root.crt`) |
 
+## Own tool library
+
+The built-in tool library (drills 0.6–1.2 mm, end mills 1 and 2 mm) can be replaced: copy it out with
+`docker compose run --rm web pcbhomefab tools --export /data/tools.toml`, edit the file in the `data` volume and set
+`PCBHOMEFAB_TOOLS_FILE=/data/tools.toml` in `.env`. The file is read for each job, so changes apply to the next job
+without a restart. Check it with `docker compose run --rm web pcbhomefab tools --tools /data/tools.toml`.
+
 ## Homelab on Proxmox
 
 Run the compose project in a VM, or in an LXC container with Docker:

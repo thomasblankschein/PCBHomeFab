@@ -16,6 +16,7 @@ from ..mask import build_mask
 from ..panel import pack
 from ..pm3 import write_pm3
 from ..profiles import MILLS, PRINTERS, Plate
+from ..tools import load_tools
 
 CONTENT_TYPES = {
     ".png": "image/png",
@@ -79,7 +80,7 @@ def run_job(job_dir: Path, params: dict[str, Any]) -> list[dict[str, Any]]:
     if params["mill_gcode"]:
         mill_dir = output / "mill"
         mill_dir.mkdir(exist_ok=True)
-        programs = gcode.generate(placements, plate, mill)
+        programs = gcode.generate(placements, plate, mill, load_tools())
         archive = io.BytesIO()
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:
             for program in programs:

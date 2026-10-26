@@ -39,8 +39,16 @@ frontend (SPA)  ──HTTP──▶  api (FastAPI)  ──queue──▶  worker
 
 - **Printer profile:** display resolution and size, frame offsets (calibration), mirror mode, machine name and
   machine table template, default exposure.
-- **Mill profile:** controller dialect (GRBL), spindle S range, feeds, tool list (drills, end mill), material
-  thickness, tab size, work area.
+- **Mill profile:** controller dialect (GRBL), highest spindle speed, outline end mill, safe height, tab size,
+  flip mode, work area.
+- **Tool library** (`src/pcbhomefab/data/tools.toml`, `tools.py`): every drill bit and end mill with its cutting data
+  (spindle rpm, feeds, peck / step down). TOML was chosen because it is readable, diffable, needs no extra
+  dependency (`tomllib`) and fits a git repository or a Docker volume. `[defaults.drill]` and `[defaults.endmill]`
+  hold shared values, each `[[tool]]` overrides them; `enabled = false` hides a tool. A user file
+  (`PCBHOMEFAB_TOOLS_FILE`, `pcbhomefab mill --tools`) replaces the built-in library as a whole.
+  Hole rules: a hole gets the drill of the same diameter (tolerance 0.02 mm); holes larger than the largest drill
+  are milled with the outline end mill (or a smaller one if it does not fit); anything in between is an error that
+  lists the available drills. One G-code program per tool, spindle speed per tool, limited by the machine.
 
 ## `.pm3` writer
 

@@ -10,11 +10,12 @@ from pathlib import Path
 
 from . import gcode
 from .board import Board, load_board
-from .errors import PCBHomeFabError
+from .errors import InputError, PCBHomeFabError
 from .mask import build_mask
 from .panel import Placement, pack
 from .pm3 import write_pm3
 from .profiles import MILL_3018PRO, PHOTON_M3, Plate
+from .tools import default_text, load_tools
 
 
 def _boards(specs: list[str]) -> list[Board]:
@@ -54,10 +55,28 @@ def _mill(args: argparse.Namespace) -> None:
     mill = replace(MILL_3018PRO, flip=args.flip, tabs=not args.no_tabs)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    for program in gcode.generate(placements, plate, mill):
+    for program in gcode.generate(placements, plate, mill, load_tools(args.tools)):
         (out / f"{args.name}_{program.filename}").write_text(program.code, encoding="ascii", errors="replace")
         print(f"{args.name}_{program.filename}: {program.title}")
     (out / f"{args.name}_preview.svg").write_text(gcode.preview_svg(placements, plate, mill), encoding="utf-8")
+
+
+def _tools(args: argparse.Namespace) -> None:
+    if args.export:
+        target = Path(args.export)
+        if target.exists():
+            raise InputError(f"{target} exists already, it is not overwritten.")
+        target.write_text(default_text(), encoding="utf-8")
+        print(f"Wrote the default tool library to {target}. Edit it and use it with --tools or PCBHOMEFAB_TOOLS_FILE.")
+        return
+    library = load_tools(args.tools)
+    print(f"Tool library: {library.source}")
+    print(f"{'id':<14}{'kind':<9}{'dia mm':>7}{'rpm':>7}{'feed':>6}{'plunge':>7}{'peck':>6}{'step':>6}  state")
+    for tool in library.tools:
+        print(
+            f"{tool.id:<14}{tool.kind:<9}{tool.diameter_mm:>7g}{tool.spindle_rpm:>7}{tool.feed:>6g}"
+            f"{tool.plunge_feed:>7g}{tool.peck_mm:>6g}{tool.step_down_mm:>6g}  {'on' if tool.enabled else 'off'}"
+        )
 
 
 def _serve(args: argparse.Namespace) -> None:
@@ -106,7 +125,13 @@ def main(argv: list[str] | None = None) -> int:
     mill.add_argument("--flip", choices=["x", "y", "none"], default="x", help="how the plate is turned over")
     mill.add_argument("--thickness", type=float, default=1.5, help="material thickness in mm")
     mill.add_argument("--no-tabs", action="store_true")
+    mill.add_argument("--tools", help="tool library (TOML), default: PCBHOMEFAB_TOOLS_FILE or the built-in one")
     mill.set_defaults(run=_mill)
+
+    tools = sub.add_parser("tools", help="show the tool library or export the default one for editing")
+    tools.add_argument("--tools", help="tool library (TOML) to show")
+    tools.add_argument("--export", metavar="FILE", help="write the built-in library to FILE as a starting point")
+    tools.set_defaults(run=_tools)
 
     serve = sub.add_parser("serve", help="run the web service (needs the 'web' extra)")
     serve.add_argument("--host", default="127.0.0.1")

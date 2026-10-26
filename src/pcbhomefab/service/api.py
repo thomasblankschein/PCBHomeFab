@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 
 from ..board import MAX_UNPACKED_BYTES, MAX_ZIP_FILES
 from ..profiles import MILLS, PRINTERS
+from ..tools import load_tools
 from .config import Settings
 from .store import DONE, FAILED, QUEUED, RUNNING, JobRecord, JobStore
 from .worker import worker_loop
@@ -125,6 +126,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def healthz() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/api/tools")
+    async def tool_library() -> dict[str, Any]:
+        return load_tools().to_dict()
+
     @app.get("/api/profiles")
     async def profiles() -> dict[str, Any]:
         return {
@@ -142,9 +147,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "mills": {
                 key: {
                     "name": m.name,
-                    "spindle_rpm": m.spindle_rpm,
-                    "drills": list(m.drills),
-                    "endmill_mm": m.endmill_mm,
+                    "max_spindle_rpm": m.max_spindle_rpm,
+                    "outline_endmill_mm": m.outline_endmill_mm,
                     "flip": m.flip,
                 }
                 for key, m in MILLS.items()
