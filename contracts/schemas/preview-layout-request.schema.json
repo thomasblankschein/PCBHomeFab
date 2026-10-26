@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "preview-layout-request.schema.json",
+  "title": "Layout preview request (jobs)",
+  "description": "Boards, copies and spacing of a job. The plate is added by the jobs service.",
+  "type": "object",
+  "required": ["boards"],
+  "properties": {
+    "gap_mm": {"type": "number", "minimum": 0.5, "maximum": 20, "default": 3.0},
+    "margin_mm": {"type": "number", "minimum": 0, "maximum": 20, "default": 3.0},
+    "boards": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["id", "width_mm", "height_mm", "count"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,40}$"},
+          "width_mm": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000},
+          "height_mm": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000},
+          "count": {"type": "integer", "minimum": 1, "maximum": 1000}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

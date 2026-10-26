@@ -331,3 +331,55 @@ def test_worker_threads_end_to_end(settings: Settings, services: Services) -> No
 
 def test_contract_examples_are_valid() -> None:
     validate("layout", json.loads((CONTRACTS / "examples" / "layout.json").read_text()))
+
+
+def test_board_info_returns_board_json(client: TestClient) -> None:
+    response = client.post("/v1/boards", files={"file": ("my board.zip", ZIP, "application/zip")})
+    assert response.status_code == 200
+    board = response.json()
+    validate("board", board)
+    assert board["name"] == "my_board" and (board["width_mm"], board["height_mm"]) == (10.0, 26.0)
+
+
+def test_board_info_errors(client: TestClient, downstream: Downstream) -> None:
+    _problem(client.post("/v1/boards", files={"file": ("a.zip", b"not a zip")}), 422, "ingest.invalid_zip")
+    _problem(
+        client.post("/v1/boards", files={"file": ("a.zip", b"x" * (2 * 1024 * 1024))}), 413, "jobs.upload_too_large"
+    )
+    _problem(client.post("/v1/boards"), 422, "common.invalid_request")
+
+    def down(_request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused")
+
+    downstream.override["ingest"] = down
+    _problem(client.post("/v1/boards", files={"file": ("a.zip", ZIP)}), 503, "jobs.upstream_unavailable")
+
+
+def test_layout_preview_asks_the_panel_service(client: TestClient) -> None:
+    request = json.loads((CONTRACTS / "examples" / "preview-layout-request.json").read_text())
+    validate("preview-layout-request", request)
+    response = client.post("/v1/layouts", json=request)
+    assert response.status_code == 200
+    layout = response.json()
+    validate("layout", layout)
+    assert layout["plate"] == {"width_mm": 160.0, "height_mm": 100.0}
+    assert len(layout["placements"]) == 16
+
+
+def test_layout_preview_errors(client: TestClient, downstream: Downstream) -> None:
+    board = {"id": "a", "width_mm": 10, "height_mm": 10, "count": 1}
+    _problem(client.post("/v1/layouts", json={"boards": []}), 422, "common.invalid_request")
+    _problem(client.post("/v1/layouts", json={"boards": [board], "gap_mm": 0}), 422, "common.invalid_request")
+    _problem(client.post("/v1/layouts", json={"boards": [{**board, "count": 60}] * 2}), 422, "jobs.invalid_upload")
+    downstream.override["panel"] = lambda _r: problem(422, "panel.does_not_fit", "The boards do not fit on the plate.")
+    response = client.post("/v1/layouts", json={"boards": [board]})
+    _problem(response, 422, "panel.does_not_fit")
+
+
+def test_previews_have_their_own_rate_limit(settings: Settings, services: Services) -> None:
+    limited = replace(settings, preview_limit_per_hour=3)
+    with TestClient(create_app(limited, services)) as client:
+        body = {"boards": [{"id": "a", "width_mm": 10, "height_mm": 10, "count": 1}]}
+        codes = [client.post("/v1/layouts", json=body).status_code for _ in range(4)]
+        assert codes == [200, 200, 200, 429]
+        assert _post(client, ("n.zip", ZIP)).status_code == 201  # jobs are not affected

@@ -38,6 +38,61 @@ paths:
             application/json:
               schema:
                 type: object
+  /v1/boards:
+    post:
+      operationId: getBoardInfo
+      description: >
+        Size, holes and real contour of one Gerber ZIP (the board.json of the canonical package), for the layout
+        preview of the user interface. Nothing is stored. Limited per client.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary}
+      responses:
+        "200":
+          description: board.json
+          content:
+            application/json:
+              schema:
+                $ref: schemas/board.schema.json
+        "413":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "429":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+  /v1/layouts:
+    post:
+      operationId: previewLayout
+      description: >
+        Where the boards would sit on the plate, as the panel service places them. Nothing is stored. Limited per
+        client.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: schemas/preview-layout-request.schema.json
+      responses:
+        "200":
+          description: The placements.
+          content:
+            application/json:
+              schema:
+                $ref: schemas/layout.schema.json
+        "422":
+          $ref: "#/components/responses/Problem"
+        "429":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
   /v1/jobs:
     post:
       operationId: createJob

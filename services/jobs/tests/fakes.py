@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import zipfile
 from collections.abc import Callable
 from typing import Any
@@ -51,10 +52,8 @@ class Downstream:
         body = request.read()
         if b"not a zip" in body:
             return problem(422, "ingest.invalid_zip", "The upload is not a valid ZIP file.")
-        name = "board"
-        for part in body.split(b"\r\n"):
-            if part.startswith(b"name") or part == b"":
-                continue
+        match = re.search(rb'name="name"\r\n\r\n(.*?)\r\n--', body, re.S)
+        name = match.group(1).decode() if match else "board"
         board = {
             "schema_version": 1,
             "name": name,

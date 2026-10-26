@@ -33,6 +33,8 @@ class Settings:
     call_timeout_s: float = 150.0
     #: Jobs one client may create per hour.
     rate_limit_per_hour: int = 30
+    #: Board and layout previews one client may ask for per hour (they cost a call to ingest or panel).
+    preview_limit_per_hour: int = 300
     #: Jobs waiting in the queue, a new job is refused above this number.
     max_queued: int = 100
     #: Worker threads that run jobs.
@@ -59,6 +61,7 @@ class Settings:
             job_timeout_s=env_float("JOB_TIMEOUT_S", 300),
             call_timeout_s=env_float("CALL_TIMEOUT_S", 150),
             rate_limit_per_hour=env_int("RATE_LIMIT_PER_HOUR", 30),
+            preview_limit_per_hour=env_int("PREVIEW_LIMIT_PER_HOUR", 300),
             max_queued=env_int("MAX_QUEUED", 100),
             workers=env_int("WORKERS", 2),
             trust_proxy=os.environ.get("TRUST_PROXY", "") == "1",

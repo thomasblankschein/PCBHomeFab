@@ -12,7 +12,9 @@ import json
 import re
 import secrets
 import threading
+import time
 import zipfile
+from collections import defaultdict, deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -20,6 +22,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from starlette.concurrency import run_in_threadpool
 
 from . import common
@@ -33,6 +36,23 @@ JOB_ID = re.compile(r"^[A-Za-z0-9_-]{20,32}$")
 SAFE_NAME = re.compile(r"[^A-Za-z0-9_-]+")
 INLINE_TYPES = {"image/png", "image/svg+xml", "text/plain; charset=utf-8"}
 PROFILE_ID = r"^[a-z0-9-]{1,40}$"
+
+
+class PreviewBoard(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,40}$")]
+    width_mm: float = Field(gt=0, le=1000)
+    height_mm: float = Field(gt=0, le=1000)
+    count: int = Field(ge=1, le=1000)
+
+
+class PreviewLayoutRequest(BaseModel):
+    """Boards, copies and spacing of a job, without the plate (the plate belongs to the installation)."""
+
+    model_config = ConfigDict(extra="forbid")
+    boards: list[PreviewBoard] = Field(min_length=1, max_length=50)
+    gap_mm: float = Field(default=3.0, ge=0.5, le=20)
+    margin_mm: float = Field(default=3.0, ge=0, le=20)
 
 
 def _unavailable() -> Problem:
@@ -106,6 +126,23 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app = FastAPI(title="PCBHomeFab jobs", version="1.0.0", lifespan=lifespan, root_path=settings.root_path)
     common.install(app, "jobs")
     app.state.store = store
+    previews: dict[str, deque[float]] = defaultdict(deque)
+    preview_lock = threading.Lock()
+
+    def check_preview_rate(request: Request) -> None:
+        """Previews cost a call to ingest or panel, so they get a limit of their own (kept in memory)."""
+        client = _client_hash(request, settings)
+        now = time.monotonic()
+        with preview_lock:
+            window = previews[client]
+            while window and window[0] < now - 3600:
+                window.popleft()
+            if len(window) >= settings.preview_limit_per_hour:
+                raise Problem(429, "jobs.rate_limited", "Too many requests. Try again later.", {"Retry-After": "600"})
+            window.append(now)
+            if len(previews) > 10000:  # forget clients that have been quiet for an hour
+                for key in [k for k, w in previews.items() if not w or w[-1] < now - 3600]:
+                    del previews[key]
 
     @app.get("/v1/tools")
     def tool_library() -> dict[str, Any]:
@@ -132,6 +169,48 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
                 "job_ttl_hours": settings.job_ttl_s / 3600,
             },
         }
+
+    @app.post("/v1/boards")
+    async def board_info(request: Request, file: Annotated[UploadFile, File()]) -> dict[str, Any]:
+        """Size, holes and contour of one uploaded Gerber ZIP, for the layout preview. Nothing is stored."""
+        check_preview_rate(request)
+        try:
+            data = await common.read_limited(file, settings.max_upload_bytes)
+        except Problem as exc:
+            raise Problem(413, "jobs.upload_too_large", exc.detail) from exc
+        [name] = _unique_names([file.filename or ""])
+        try:
+            package = await run_in_threadpool(services.ingest, data, name, f"{secrets.token_hex(6)}-ingest")
+            with zipfile.ZipFile(io.BytesIO(package)) as archive:
+                board: dict[str, Any] = json.loads(archive.read("board.json"))
+        except UserError as exc:
+            raise Problem(422, exc.code, exc.message) from exc
+        except (Unavailable, zipfile.BadZipFile, KeyError, ValueError) as exc:
+            raise _unavailable() from exc
+        return board
+
+    @app.post("/v1/layouts")
+    def layout_preview(request: Request, body: PreviewLayoutRequest) -> dict[str, Any]:
+        """Where the boards would sit on the plate. Asks the panel service, stores nothing."""
+        check_preview_rate(request)
+        if sum(b.count for b in body.boards) > settings.max_boards:
+            raise Problem(422, "jobs.invalid_upload", f"At most {settings.max_boards} boards fit in one job.")
+        from .workflow import PLATE
+
+        try:
+            return services.panel(
+                {
+                    "plate": PLATE,
+                    "gap_mm": body.gap_mm,
+                    "margin_mm": body.margin_mm,
+                    "boards": [b.model_dump() for b in body.boards],
+                },
+                f"{secrets.token_hex(6)}-panel",
+            )
+        except UserError as exc:
+            raise Problem(422, exc.code, exc.message) from exc
+        except Unavailable as exc:
+            raise _unavailable() from exc
 
     @app.post("/v1/jobs", status_code=201)
     async def post_job(

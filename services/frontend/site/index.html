@@ -3,21 +3,112 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PCBHomeFab</title>
+<meta name="color-scheme" content="light dark">
+<title>New job - PCBHomeFab</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+<header class="top">
+  <a class="brand" href="/">PCBHomeFab</a>
+  <nav aria-label="Main">
+    <a href="/" aria-current="page">New job</a>
+    <a href="/tools">Tools</a>
+  </nav>
+</header>
 <main>
-<h1>PCBHomeFab</h1>
-<p>Gerber ZIP in, exposure file (<code>.pm3</code>) and drill/mill G-code out.</p>
-<form id="upload">
-  <p><label>Gerber ZIP <input type="file" name="boards" accept=".zip" required></label></p>
-  <p><label>Copies <input type="number" name="counts" value="1" min="1" max="200"></label></p>
-  <p><label>Exposure time (s) <input type="number" name="exposure_s" value="120" min="1" max="3600"></label></p>
-  <p><button type="submit">Create job</button></p>
-  <p id="error" class="error" role="alert" hidden></p>
-</form>
+<h1>New job</h1>
+<p class="lead">Gerber ZIP in, exposure file (<code>.pm3</code>) and drill/mill G-code out. Add one or more boards, set how many
+copies you want, check the plate and create the job.</p>
+<p id="load-error" class="error" role="alert"></p>
+
+<div id="editor" class="editor" hidden>
+  <div class="column">
+    <section class="panel" aria-labelledby="boards-title">
+      <h2 id="boards-title">Boards</h2>
+      <div id="drop" class="drop">
+        <p>Drop Gerber ZIP files here or
+          <label class="button">choose files<input id="files" type="file" accept=".zip,application/zip" multiple></label>
+        </p>
+        <p id="limits" class="muted"></p>
+      </div>
+      <p id="empty" class="muted">No boards yet. Export B.Cu, Edge.Cuts and the drill files from KiCad into one ZIP per board.</p>
+      <table class="boards">
+        <thead><tr><th class="num">#</th><th>Board</th><th>Copies</th><th><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p class="muted">The order of the list is the order on the plate and in the G-code.</p>
+    </section>
+
+    <form id="settings" class="panel" hidden novalidate>
+      <h2>Settings</h2>
+      <fieldset>
+        <legend>Outputs</legend>
+        <label class="inline"><input type="checkbox" name="exposure" checked> Exposure file (<code>.pm3</code>, mask)</label>
+        <label class="inline"><input type="checkbox" name="mill_gcode" checked> Drill and mill G-code</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Plate</legend>
+        <div class="grid">
+          <label>Gap between boards (mm)<input type="number" name="gap_mm" value="3" min="0.5" max="20" step="0.5"></label>
+          <label>Margin to the edge (mm)<input type="number" name="margin_mm" value="3" min="0" max="20" step="0.5"></label>
+          <label>Material thickness (mm)<input type="number" name="thickness_mm" value="1.5" min="0.4" max="3.2" step="0.1"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Exposure</legend>
+        <div class="grid">
+          <label>Printer<select name="printer"></select></label>
+          <label>Exposure time (s)<input type="number" name="exposure_s" value="120" min="1" max="3600"></label>
+          <label>Drill holes in the mask
+            <select name="holes">
+              <option value="full">Full diameter (pads open up)</option>
+              <option value="center">Center mark only</option>
+              <option value="none">Pads stay solid</option>
+            </select>
+          </label>
+        </div>
+        <details>
+          <summary>Calibration</summary>
+          <div class="grid">
+            <label>Plate offset from the left (mm)<input type="number" name="frame_left_mm" step="0.1" min="0" max="20"></label>
+            <label>Plate offset from the bottom (mm)<input type="number" name="frame_bottom_mm" step="0.1" min="0" max="20"></label>
+            <label class="inline"><input type="checkbox" name="mirror_x"> Mirror the image in X</label>
+          </div>
+          <p class="muted">Values of your printer profile. Change them only after measuring a test exposure.</p>
+        </details>
+      </fieldset>
+
+      <fieldset>
+        <legend>Milling</legend>
+        <div class="grid">
+          <label>Mill<select name="mill"></select></label>
+          <label>How the plate is turned over
+            <select name="flip">
+              <option value="x">Around the Y axis (mirror X)</option>
+              <option value="y">Around the X axis (mirror Y)</option>
+              <option value="none">Not turned</option>
+            </select>
+          </label>
+          <label class="inline"><input type="checkbox" name="tabs" checked> Tabs hold the boards in the plate</label>
+        </div>
+      </fieldset>
+
+      <p><button id="submit" type="submit" class="primary" disabled>Create job</button></p>
+      <p id="submit-error" class="error" role="alert"></p>
+    </form>
+  </div>
+
+  <section class="panel sticky" aria-labelledby="plate-title">
+    <h2 id="plate-title">Plate</h2>
+    <p class="muted">Design view as in KiCad, copper side up. Holes are coloured by diameter.</p>
+    <svg id="plate" class="plate-view" role="img" aria-label="Boards on the plate" viewBox="-2 -2 164 104"></svg>
+    <div id="summary" aria-live="polite"></div>
+    <p id="layout-error" class="error" role="alert" hidden></p>
+  </section>
+</div>
 </main>
-<script src="/index.js"></script>
+<script type="module" src="/js/editor.js"></script>
 </body>
 </html>

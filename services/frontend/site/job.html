@@ -3,17 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PCBHomeFab job</title>
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<title>Job - PCBHomeFab</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+<header class="top">
+  <a class="brand" href="/">PCBHomeFab</a>
+  <nav aria-label="Main">
+    <a href="/">New job</a>
+    <a href="/tools">Tools</a>
+  </nav>
+</header>
 <main>
-<h1 id="title">Job</h1>
-<p id="state">Loading ...</p>
-<p id="preview" hidden><img id="mask" alt="Exposure mask"></p>
-<ul id="files"></ul>
-<p><a href="/">New job</a></p>
+<h1>Job</h1>
+<p id="state" class="state" role="status" aria-live="polite">Loading ...</p>
+<div id="result" hidden></div>
 </main>
-<script src="/job.js"></script>
+<script type="module" src="/js/job.js"></script>
 </body>
 </html>

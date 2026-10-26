@@ -16,6 +16,7 @@ EXAMPLES = {
     "board-basisplatine.json": "board",
     "board-fuehlerknoten.json": "board",
     "layout-request.json": "layout-request",
+    "preview-layout-request.json": "preview-layout-request",
     "layout.json": "layout",
     "exposure-settings.json": "exposure-settings",
     "mill-settings.json": "mill-settings",

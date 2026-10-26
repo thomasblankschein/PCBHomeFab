@@ -21,5 +21,8 @@
 	@job path_regexp job ^/jobs/[A-Za-z0-9_-]+$
 	rewrite @job /job.html
 
+	@tools path /tools
+	rewrite @tools /tools.html
+
 	file_server
 }

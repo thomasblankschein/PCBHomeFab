@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Tools - PCBHomeFab</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">PCBHomeFab</a>
+  <nav aria-label="Main">
+    <a href="/">New job</a>
+    <a href="/tools" aria-current="page">Tools</a>
+  </nav>
+</header>
+<main>
+<h1>Tool library</h1>
+<p class="lead">Drill bits and end mills the G-code is made for. A hole gets the drill of the same diameter; larger holes are
+milled with the end mill. Cutting values are starting values, tune them on your mill.</p>
+<p id="source" class="muted"></p>
+<p id="load-error" class="error" role="alert"></p>
+<div class="table-wrap">
+<table id="tools" class="tools" hidden>
+  <thead>
+    <tr><th>Tool</th><th>Kind</th><th class="num">Diameter</th><th class="num">Spindle (rpm)</th><th class="num">Feed (mm/min)</th><th class="num">Plunge (mm/min)</th><th class="num">Peck / step (mm)</th><th>State</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+</div>
+</main>
+<script type="module" src="/js/tools.js"></script>
+</body>
+</html>
