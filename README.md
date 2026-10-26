@@ -51,7 +51,7 @@ pytest
 ruff check .
 ```
 
-Requires Python 3.11 or newer. See [CLAUDE.md](CLAUDE.md) for the project conventions and
+Requires Python 3.12 or newer. See [CLAUDE.md](CLAUDE.md) for the project conventions and
 [docs/architecture.md](docs/architecture.md) for the design decisions.
 
 ## License

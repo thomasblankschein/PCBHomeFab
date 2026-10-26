@@ -45,7 +45,7 @@ They are the reference for behaviour until the port is finished.
 
 ## Conventions
 
-- Python >= 3.11, type hints everywhere, `ruff` for lint/format rules, `mypy --strict` on `src`.
+- Python >= 3.12 (gerbonara 1.6 requires it), type hints everywhere, `ruff` for lint/format rules, `mypy --strict` on `src`.
 - Tests with `pytest`; every output format gets a reference test (pixel comparison, drill list, G-code bounds,
   `.pm3` round trip). Test data lives in `tests/data` and must be small.
 - Commits: author Thomas Blankschein using the GitHub noreply address (public repo), messages in English,
