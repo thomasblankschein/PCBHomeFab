@@ -1,0 +1,60 @@
+{
+  "params": {
+    "printer": "photon-m3",
+    "mill": "3018pro",
+    "exposure": true,
+    "mill_gcode": true,
+    "exposure_s": 60.0,
+    "holes": "full",
+    "gap_mm": 3.0,
+    "margin_mm": 3.0,
+    "flip": "x",
+    "thickness_mm": 1.5,
+    "tabs": true,
+    "frame_left_mm": 1.8,
+    "frame_bottom_mm": 0.8,
+    "mirror_x": true,
+    "boards": [
+      {
+        "file": "basisplatine.zip",
+        "name": "basisplatine",
+        "count": 1
+      },
+      {
+        "file": "fuehlerknoten.zip",
+        "name": "fuehlerknoten",
+        "count": 15
+      }
+    ]
+  },
+  "files": {
+    "mask.png": {
+      "sha256": "36483e44aeb0840ce16f1e835316529e55f8c6fe69aabeca2c5c156339a12846",
+      "size": 38238
+    },
+    "mask_preview.png": {
+      "sha256": "eaccb3efe3b7f69540c86554c6ead0da80b9b7f4c5fb45bd515252ff9a953a53",
+      "size": 18496
+    },
+    "exposure.pm3": {
+      "sha256": "5ffb7fc0ab0c6e08d6843f3be93ce0289acc63eeb1ffdde93ba8cf4d1588cd75",
+      "size": 289738
+    },
+    "mill/1_drill_0.8mm.nc": {
+      "sha256": "b9759cbe5f4076c7b92d9c3f01274c1702f6871b9d13e273c02b674abd1143e9",
+      "size": 15288
+    },
+    "mill/2_drill_1.0mm.nc": {
+      "sha256": "9510078d6a288c6b743baeb81d4aeb86d6ca75689b5ab7cbd6fd77d2939f0470",
+      "size": 8070
+    },
+    "mill/3_mill_1.0mm.nc": {
+      "sha256": "e9effb0a9a2f0a15d9715a98d331b760d4a2454959d1c357a412663cdde52f6b",
+      "size": 33248
+    },
+    "mill_preview.svg": {
+      "sha256": "562c9d0bc0e590360cebb5d7b3034e94a499662650bb5dc2d63382278699c90b",
+      "size": 10753
+    }
+  }
+}
