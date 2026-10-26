@@ -41,9 +41,10 @@ frontend (SPA)  ──HTTP──▶  api (FastAPI)  ──queue──▶  worker
 
 ## `.pm3` writer
 
-Phase 1 calls UVtools in the worker container (route: Generic ZIP → UVJ → `.pm3`, plus machine table patch).
-Phase 2 replaces it with a native writer, verified by reading the file back with UVtools. UVtools is GPL-3.0,
-a native writer keeps the container and the repository free of it.
+Native, in `pcbhomefab/pm3.py` (format version 516). It follows the layout of the open source UVtools implementation
+and is checked three ways: reading the file back with its own reader (pixel-exact), reading it with UVtools
+(optional test) and comparing the MACHINE table with a file written by Photon Workshop. No UVtools, .NET or GPL
+code is needed at run time, so the worker container stays small.
 
 ## Deployment
 

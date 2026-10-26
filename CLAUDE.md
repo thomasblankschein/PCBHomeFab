@@ -35,11 +35,12 @@ They are the reference for behaviour until the port is finished.
 - Mask polarity for positive photoresist: **white = exposed = copper is etched away**, black = copper stays.
   A copper pour in the Gerber must stay black. (An early version inverted this by mistake, keep a test for it.)
 - The image is mirrored in X before it goes to the printer (copper side faces the LCD).
-- `.pm3` (Anycubic format, version 516): Photon Workshop rejects files whose machine table names an unknown
-  printer ("Unknown"). The machine table (156 bytes, table name `MACHINE`) must be copied from a file Photon
-  Workshop produced; the name is `Anycubic Photon M3`. UVtools 7.1 cannot convert a single image, and cannot edit a
-  finished `.pm3` ("partial decoded"). The working route was: Generic ZIP (`1.png` + `manifest.uvtools`) → `.uvj`
-  (set exposure parameters) → `.pm3`, then patch the machine table. A native writer is planned to drop UVtools.
+- `.pm3` (Anycubic format, version 516): Photon Workshop rejects files whose machine table names an unknown printer
+  ("Unknown"). The MACHINE table (156 bytes) of a file Photon Workshop wrote for the M3 is stored in the profile
+  values (`PHOTON_M3`) and in `tests/data/photon_m3_machine_table.bin`; the name is `Anycubic Photon M3`. The writer is
+  native (`pm3.py`). Layer images are run length encoded: black/white runs as two bytes (`nibble << 12 | length`,
+  at most 4095). UVtools 7.1 cannot convert a single image and cannot edit a finished `.pm3`, which is why the
+  first version of the writer used a long detour; it is no longer needed.
 - GRBL: no canned drill cycles, write explicit moves. `$30` must match the `S` value (20,000 rpm needs `$30=20000`).
 - Drill file (KiCad Excellon): Y is negative of the KiCad Y, absolute origin, metric.
 
@@ -54,8 +55,8 @@ They are the reference for behaviour until the port is finished.
 
 ## State (2026-10-26)
 
-Milestones 1 and 2 are done, milestone 3 phase 1 works locally: `pcbhomefab exposure|mill` produces the mask PNG,
-`.pm3` (through UVtools, 24 tests green) and G-code. Open: container for UVtools, native `.pm3` writer, API, frontend.
+Milestones 1 to 3 are done: `pcbhomefab exposure|mill` produces the mask PNG, the `.pm3` (native writer, 29 tests
+green) and G-code. Still to confirm: that Photon Workshop opens the native file. Open: API, frontend, deployment.
 The reference for the output is the old scripts; tests compare against their results (`tests/data/reference_*`).
 
 ## Repository layout

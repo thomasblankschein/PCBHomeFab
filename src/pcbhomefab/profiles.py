@@ -35,6 +35,16 @@ class PrinterProfile:
     #: The image is mirrored in X because the copper side faces the LCD.
     mirror_x: bool = True
     default_exposure_s: float = 120.0
+    #: Lift/retract parameters written to the slice file.
+    lift_height_mm: float = 6.0
+    lift_speed_mms: float = 3.0
+    retract_speed_mms: float = 4.0
+    #: Values of the MACHINE table as Photon Workshop writes them (display width differs slightly).
+    machine_properties: int = 7
+    machine_display_width_mm: float = 163.92
+    machine_display_height_mm: float = 102.4
+    machine_z_mm: float = 180.0
+    machine_background: int = 4150478593
 
     @property
     def pixel_mm(self) -> float:

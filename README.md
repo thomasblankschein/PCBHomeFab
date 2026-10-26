@@ -36,10 +36,10 @@ pcbhomefab exposure base.zip node.zip:15 --pm3 --exposure 120 --template referen
 pcbhomefab mill base.zip node.zip:15 -o out --name panel
 ```
 
-The `.pm3` file needs [UVtools](https://github.com/sn4k3/UVtools) (`UVtoolsCmd`) for now. `--template` takes a `.pm3`
-file written by Photon Workshop; its machine table and print parameters are copied, which Photon Workshop requires
-(it refuses files with an unknown printer name). Boards must be given in the same order for `exposure` and `mill` so
-that the masks and the holes line up.
+The `.pm3` file is written natively, no other tool is needed. The machine table in it is the one Photon Workshop
+writes for the Photon M3 (it refuses files with an unknown printer name). `--template` takes a `.pm3` file written by
+Photon Workshop and copies its lift/retract parameters and machine table. Boards must be given in the same order for
+`exposure` and `mill` so that the masks and the holes line up.
 
 ## Development
 

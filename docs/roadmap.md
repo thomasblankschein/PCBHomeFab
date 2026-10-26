@@ -4,7 +4,7 @@
 |---|---|---|---|
 | 1 | Foundation | Repository, MIT license, project layout, CI, `CLAUDE.md`, docs | done |
 | 2 | Core port | Gerber ZIP ingest, direct rasterizing, panelizing, mask with correct polarity, G-code. Reference tests for each | done, CLI included |
-| 3 | `.pm3` output | Phase 1 via UVtools in a container with round-trip test; phase 2 native writer | phase 1 works locally, container and native writer open |
+| 3 | `.pm3` output | Native writer (no UVtools) with round-trip test and a cross-check against UVtools | done, still to confirm with Photon Workshop |
 | 4 | API and jobs | Upload, parameters, job status, download, upload/CPU limits, rate limit | open |
 | 5 | Frontend | Panel editor (counts, spacing, order), previews of mask and tool paths, profile selection, download | open |
 | 6 | Operation | Anonymous sessions with job links, expiry cleanup, Docker Compose with TLS, monitoring | open |
