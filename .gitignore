@@ -21,3 +21,6 @@ Thumbs.db
 /data/
 *.nc
 *.pm3
+
+# Reference G-code of the old scripts is test data
+!tests/data/*.nc
