@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editors and system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Generated output and local data
+/out/
+/data/
+*.nc
+*.pm3
