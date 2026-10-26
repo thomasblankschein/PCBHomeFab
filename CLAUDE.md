@@ -56,7 +56,8 @@ They are the reference for behaviour until the port is finished.
 ## State (2026-10-26)
 
 Milestones 1 to 3 are done: `pcbhomefab exposure|mill` produces the mask PNG, the `.pm3` (native writer, 29 tests
-green) and G-code. Still to confirm: that Photon Workshop opens the native file. Open: API, frontend, deployment.
+green) and G-code. Photon Workshop opens the native `.pm3` file and shows the correct mask (confirmed by the maintainer).
+Open: API, frontend, deployment, calibration of mirroring and frame offsets on the real printer.
 The reference for the output is the old scripts; tests compare against their results (`tests/data/reference_*`).
 
 ## Repository layout
