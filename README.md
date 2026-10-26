@@ -39,9 +39,13 @@ docker compose up -d --build
 scripts/smoke_test.sh http://localhost
 ```
 
-Open `http://localhost/`, choose a Gerber ZIP and create a job. The job page shows the exposure mask and the files
-to download (`exposure.pm3`, G-code per tool). Without accounts, every job gets a random id and the job link
-`/jobs/<id>` is the only credential. Jobs and files are deleted after seven days.
+Open `http://localhost/`. In the editor you add one or more Gerber ZIPs (drag and drop), see size, holes and board
+shape of each, set the copies, the order and the spacing, and watch the boards on the plate (design view, holes coloured
+by diameter). Printer, mill, exposure time, hole mode, tabs, flip and the calibration of the printer are in the settings;
+they are remembered in the browser. "Create job" leads to the job page with the exposure mask, the mill preview and
+the files to download (`exposure.pm3`, one G-code program per tool, all programs as ZIP). `/tools` shows the tool
+library. Without accounts, every job gets a random id and the job link `/jobs/<id>` is the only credential. Jobs and
+files are deleted after seven days.
 
 The same through the REST API (the gateway publishes the `jobs` service under `/api`):
 
@@ -54,7 +58,9 @@ curl -O http://localhost/api/v1/jobs/<id>/files/exposure.pm3
 
 Other options of `POST /api/v1/jobs`: `exposure`, `mill_gcode` (choose the outputs), `holes`, `gap_mm`, `margin_mm`,
 `flip`, `thickness_mm`, `tabs`, `printer`, `mill`, `frame_left_mm`, `frame_bottom_mm`, `mirror_x`.
-`GET /api/v1/profiles` lists printers, mills and limits, `GET /api/v1/tools` the tool library.
+`GET /api/v1/profiles` lists printers, mills and limits, `GET /api/v1/tools` the tool library. For previews the editor
+uses `POST /api/v1/boards` (shape, size and holes of one ZIP) and `POST /api/v1/layouts` (placement on the plate); both
+store nothing.
 
 Compose file, limits, own tool library, Proxmox homelab notes and the move to a root server:
 [docs/deployment.md](docs/deployment.md).
@@ -75,6 +81,7 @@ Checks for the whole repository:
 ```bash
 python scripts/check_contracts.py     # schemas, OpenAPI files and examples are valid
 python scripts/check_boundaries.py    # no code shared between services, one volume per service, ports
+node --test services/frontend/tests/geometry.test.mjs   # geometry of the plate preview (Node 20 or newer)
 PCBHOMEFAB_URL=http://localhost pytest tests/e2e   # a running stack gives the golden outputs
 ```
 

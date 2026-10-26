@@ -95,3 +95,34 @@ def test_contour_with_cutout_is_milled(client: httpx.Client) -> None:
 
     preview = client.get(f"/api/v1/jobs/{job_id}/files/mill_preview.svg").text
     assert "<path" in preview
+
+
+def test_preview_endpoints_for_the_editor(client: httpx.Client) -> None:
+    """The editor asks for the board shape and the layout before a job exists."""
+    info = client.post("/api/v1/boards", files={"file": ("round.zip", _board_zip(), "application/zip")})
+    assert info.status_code == 200, info.text
+    board = info.json()
+    assert (board["width_mm"], board["height_mm"]) == (30.0, 20.0)
+    assert len(board["contour"]["cutouts"]) == 1 and len(board["contour"]["outer"]) > 30
+
+    layout = client.post(
+        "/api/v1/layouts",
+        json={"gap_mm": 3, "margin_mm": 3, "boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 4}]},
+    )
+    assert layout.status_code == 200, layout.text
+    assert [(p["x_mm"], p["y_mm"]) for p in layout.json()["placements"]] == [(3, 3), (36, 3), (69, 3), (102, 3)]
+
+    too_many = client.post(
+        "/api/v1/layouts",
+        json={"boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 100}]},
+    )
+    assert too_many.status_code == 422 and too_many.json()["code"] == "panel.does_not_fit"
+
+
+def test_static_pages_and_scripts(client: httpx.Client) -> None:
+    for path, marker in (("/", "editor.js"), ("/tools", "tools.js")):
+        response = client.get(path)
+        assert response.status_code == 200 and marker in response.text, path
+    assert client.get("/js/geometry.js").status_code == 200
+    headers = client.get("/").headers
+    assert "default-src 'self'" in headers["content-security-policy"]

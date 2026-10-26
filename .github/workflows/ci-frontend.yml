@@ -1,0 +1,37 @@
+name: CI frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/frontend/**"
+      - "services/gateway/**"
+      - ".github/workflows/ci-frontend.yml"
+  pull_request:
+    paths:
+      - "services/frontend/**"
+      - "services/gateway/**"
+      - ".github/workflows/ci-frontend.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax of the scripts
+        run: for f in site/js/*.js; do node --check "$f"; done
+      - name: Unit tests of the geometry
+        run: node --test tests/geometry.test.mjs
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t pcbhomefab-frontend services/frontend
+      - run: docker build -t pcbhomefab-gateway services/gateway

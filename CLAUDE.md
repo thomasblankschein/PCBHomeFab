@@ -67,11 +67,14 @@ They are the reference for behaviour until the port is finished.
 
 Milestones 1 to 4 and 8 are done. The system runs as seven containers (`docker-compose.yaml`): Gerber ZIP in, mask PNG,
 `.pm3` (native writer) and G-code out; the outputs equal the golden outputs of the old single-package code
-(`tests/e2e`). 141 service tests are green (ingest 27, panel 14, exposure 27, mill 47, jobs 26).
+(`tests/e2e`). 146 service tests are green (ingest 27, panel 14, exposure 27, mill 47, jobs 31) plus 9 frontend tests
+(`node --test`).
 The outline is milled along the real Edge.Cuts contour (ingest extracts it, mill offsets it); panelizing still uses
 each board's box. Photon Workshop opens
 the native `.pm3` file and shows the correct mask (confirmed by the maintainer).
-Open: a real frontend, calibration of mirroring and frame offsets on the real printer, monitoring.
+The frontend (milestone 5) is done as plain ES modules without a build step: editor with live plate preview, job page,
+tool library. Open: manual positioning and rotation of boards, calibration of mirroring and frame offsets on the real
+printer, monitoring.
 A test instance of the new stack ran on the maintainer's WSL (Ubuntu-26.04, `~/pcbhomefab-new`, project
 `pcbhomefab-new`, port 8081) next to the older instance (`~/PCBHomeFab`, ports 80/443); switching over is open.
 The reference for the output is the old scripts; tests compare against their results
@@ -83,7 +86,7 @@ The reference for the output is the old scripts; tests compare against their res
 contracts/        OpenAPI files, JSON schemas, error codes, examples: the only thing services share
 services/
   gateway/        Caddy: TLS, routing (/ -> frontend, /api -> jobs)
-  frontend/       static pages (Caddy)
+  frontend/       static pages and ES modules (Caddy), tests with `node --test`; no inline styles (CSP default-src 'self')
   jobs/           uploads, job store (SQLite), workflow, worker threads, downloads
   ingest/         Gerber ZIP -> canonical board package (copper.gbr + board.json)
   panel/          packing of boards on the plate

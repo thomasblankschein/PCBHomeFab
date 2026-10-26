@@ -45,7 +45,7 @@ Browser ─▶ gateway (Caddy: TLS, size limits, routing)
 | Service | Task | Owns | State |
 |---|---|---|---|
 | `gateway` | TLS, request size limits, routing | Caddy config | none |
-| `frontend` | user interface | static files | none |
+| `frontend` | user interface: editor with plate preview, job page, tool library (plain ES modules, no build step) | static files | none |
 | `jobs` | accept uploads, run the workflow (ingest → panel → exposure / mill), store results, expire jobs, give anonymous job links, rate limits | job database, job files | **yes** |
 | `ingest` | unpack a ZIP safely, detect the layers, build the canonical board package | ZIP and layer rules | none |
 | `panel` | place boards (with counts) on the blank | packing rules | none |
@@ -90,6 +90,7 @@ Endpoints (the OpenAPI files are authoritative):
 | `mill` | `GET /v1/profiles`, `GET /v1/tools` | mill profiles, tool library |
 | `mill` | `POST /v1/programs` | packages, layout, settings in; ZIP with one `.nc` per tool, `preview.svg`, `programs.json` out |
 | `jobs` | `POST /v1/jobs`, `GET /v1/jobs/{id}`, `GET /v1/jobs/{id}/files/{name}`, `GET /v1/profiles`, `GET /v1/tools` | what the browser uses (behind `/api` at the gateway) |
+| `jobs` | `POST /v1/boards`, `POST /v1/layouts` | previews for the editor: board info from `ingest`, placement from `panel`; nothing is stored, limited per client |
 
 ### Consequences
 

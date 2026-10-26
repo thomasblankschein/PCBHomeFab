@@ -16,6 +16,18 @@ export function boardShape(board) {
   };
 }
 
+/** Whether the board is a plain rectangle: no contour, or a four point contour along its box without cutouts. */
+export function isRectangle(board) {
+  if (!board.contour) return true;
+  const { outer, cutouts } = board.contour;
+  if (cutouts.length > 0 || outer.length !== 4) return false;
+  const eps = 1e-3;
+  return outer.every(
+    ([x, y]) =>
+      (Math.abs(x) < eps || Math.abs(x - board.width_mm) < eps) && (Math.abs(y) < eps || Math.abs(y - board.height_mm) < eps),
+  );
+}
+
 const move = (points, dx, dy) => points.map(([x, y]) => [x + dx, y + dy]);
 
 /**

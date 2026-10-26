@@ -3,7 +3,7 @@
 import { ApiError, createJob, getBoardInfo, getProfiles, previewLayout } from "./api.js";
 import { fill, h } from "./dom.js";
 import { mm } from "./format.js";
-import { holeColors, holeSummary, placedBoards, plateUsage, polygonPath, previewId, validCount } from "./geometry.js";
+import { holeColors, holeSummary, isRectangle, placedBoards, plateUsage, polygonPath, previewId, validCount } from "./geometry.js";
 
 const STORAGE_KEY = "pcbhomefab.settings";
 const SAVED_FIELDS = ["printer", "mill", "holes", "gap_mm", "margin_mm", "flip", "thickness_mm", "tabs", "exposure", "mill_gcode"];
@@ -139,7 +139,7 @@ function describe(info) {
   const holes = diameters.length
     ? `${info.holes.length} holes (${diameters.map(([d, n]) => `${n}×${d}`).join(", ")} mm)`
     : "no holes";
-  const shape = info.contour ? (info.contour.cutouts.length ? "contour with cutouts" : "contour") : "rectangle";
+  const shape = isRectangle(info) ? "rectangle" : info.contour.cutouts.length ? "board contour with cutouts" : "board contour";
   return `${mm(info.width_mm)} × ${mm(info.height_mm)}, ${holes}, ${shape}`;
 }
 

@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   boardShape,
   holeColors,
+  isRectangle,
   holeSummary,
   placedBoards,
   plateUsage,
@@ -102,4 +103,13 @@ test("preview ids and counts", () => {
   assert.match(previewId(12), /^[A-Za-z0-9_-]{1,40}$/);
   assert.ok(validCount(1, 200) && validCount(200, 200));
   assert.ok(!validCount(0, 200) && !validCount(201, 200) && !validCount(1.5, 200) && !validCount(NaN, 200));
+});
+
+test("rectangles are told from real contours", () => {
+  const rect = { width_mm: 10, height_mm: 20, contour: { outer: [[0, 0], [10, 0], [10, 20], [0, 20]], cutouts: [] } };
+  assert.ok(isRectangle(node));
+  assert.ok(isRectangle(rect));
+  assert.ok(!isRectangle(round));
+  assert.ok(!isRectangle({ ...rect, contour: { ...rect.contour, cutouts: [[[1, 1], [2, 1], [2, 2]]] } }));
+  assert.ok(!isRectangle({ ...rect, contour: { outer: [[0, 0], [10, 0], [10, 20], [5, 25]], cutouts: [] } }));
 });
