@@ -132,5 +132,26 @@
   "tools.kind_endmill": "End mill",
   "tools.one_go": "one go",
   "tools.on": "on",
-  "tools.off": "off"
+  "tools.off": "off",
+
+  "sim.title": "3D simulation of the drill and mill paths",
+  "sim.hint": "Drag to turn the view, mouse wheel or the buttons to zoom. With the view in focus: arrow keys turn, + and - zoom, space starts and stops.",
+  "sim.loading": "Loading the programs ...",
+  "sim.load_failed": "The programs could not be loaded.",
+  "sim.aria": "3D view of the plate with the tool paths",
+  "sim.scrub": "Position in the program",
+  "sim.play": "Play",
+  "sim.pause": "Pause",
+  "sim.restart": "From the start",
+  "sim.program": "Show",
+  "sim.all_programs": "All programs in order",
+  "sim.speed": "Speed",
+  "sim.zscale": "Depth exaggeration",
+  "sim.rapids": "Show rapid moves",
+  "sim.view_iso": "Oblique view",
+  "sim.view_top": "From above",
+  "sim.zoom_in": "Zoom in",
+  "sim.zoom_out": "Zoom out",
+  "sim.position": "Tool at X {x}, Y {y}, Z {z} mm",
+  "sim.note": "The time is estimated from the feed rates of the programs; rapid moves are assumed at {rapid} mm/min. The depth is exaggerated so that it can be seen. Dark lines show where material is cut away."
 }

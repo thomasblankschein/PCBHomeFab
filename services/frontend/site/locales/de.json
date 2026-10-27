@@ -132,5 +132,26 @@
   "tools.kind_endmill": "Fräser",
   "tools.one_go": "in einem Zug",
   "tools.on": "an",
-  "tools.off": "aus"
+  "tools.off": "aus",
+
+  "sim.title": "3D-Simulation der Bohr- und Fräsbahnen",
+  "sim.hint": "Ziehen dreht die Ansicht, Mausrad oder die Knöpfe zoomen. Mit Fokus auf der Ansicht: Pfeiltasten drehen, + und - zoomen, Leertaste startet und stoppt.",
+  "sim.loading": "Programme werden geladen ...",
+  "sim.load_failed": "Die Programme konnten nicht geladen werden.",
+  "sim.aria": "3D-Ansicht der Platte mit den Werkzeugbahnen",
+  "sim.scrub": "Position im Programm",
+  "sim.play": "Abspielen",
+  "sim.pause": "Pause",
+  "sim.restart": "Von vorn",
+  "sim.program": "Anzeigen",
+  "sim.all_programs": "Alle Programme nacheinander",
+  "sim.speed": "Geschwindigkeit",
+  "sim.zscale": "Tiefe überhöht",
+  "sim.rapids": "Eilgänge zeigen",
+  "sim.view_iso": "Schrägansicht",
+  "sim.view_top": "Von oben",
+  "sim.zoom_in": "Hineinzoomen",
+  "sim.zoom_out": "Herauszoomen",
+  "sim.position": "Werkzeug bei X {x}, Y {y}, Z {z} mm",
+  "sim.note": "Die Zeit ist aus den Vorschüben der Programme geschätzt, Eilgänge mit {rapid} mm/min angenommen. Die Tiefe ist überhöht, damit man sie sieht. Dunkle Linien zeigen, wo Material abgetragen wird."
 }

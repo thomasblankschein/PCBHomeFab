@@ -10,12 +10,17 @@ export function mm(value) {
   return `${Number(value.toFixed(2))} mm`;
 }
 
-/** Human title of a G-code file name such as `mill/2_drill_1.0mm.nc`. */
-export function programTitle(name) {
+/** Step, kind and tool diameter of a G-code file name such as `mill/2_drill_1.0mm.nc`, or null. */
+export function programInfo(name) {
   const match = /(\d+)_(drill|mill)_([\d.]+)mm\.nc$/.exec(name);
-  if (!match) return name;
-  const [, step, kind, diameter] = match;
-  return t(kind === "drill" ? "job.program_drill" : "job.program_mill", { step, diameter });
+  return match ? { step: match[1], kind: match[2], diameter: match[3] } : null;
+}
+
+/** Human title of a G-code file name. */
+export function programTitle(name) {
+  const info = programInfo(name);
+  if (!info) return name;
+  return t(info.kind === "drill" ? "job.program_drill" : "job.program_mill", { step: info.step, diameter: info.diameter });
 }
 
 export function daysLeft(expires) {

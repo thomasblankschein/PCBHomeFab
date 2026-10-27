@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0 - 2026-10-27
+
+- 3D simulation of the drill and mill paths on the job page: turn and zoom, play the programs with the tool moving along the
+  paths, show one program or all, estimated machine time. Plain canvas, no library.
+
 ## 0.2.0 - 2026-10-27
 
 - The frontend shows the version of the release in the footer (`site/version.json`, kept equal to this file by a test).

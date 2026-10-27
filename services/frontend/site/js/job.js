@@ -41,6 +41,30 @@ function summaryOf(job) {
   ]);
 }
 
+// The simulation section is made once, so that it keeps its state when the page is drawn again after a language change.
+let simulationSection = null;
+
+function simulationPanel(job, programs) {
+  if (simulationSection) return simulationSection;
+  const body = h("div", { class: "sim" });
+  const details = h("details", { class: "panel" }, h("summary", { "data-i18n": "sim.title" }, t("sim.title")), body);
+  let started = false;
+  details.addEventListener("toggle", async () => {
+    if (!details.open || started) return;
+    started = true;
+    fill(body, h("p", { class: "muted", "data-i18n": "sim.loading" }, t("sim.loading")));
+    try {
+      const simulation = await import("./simulation.js");
+      simulation.createSimulation(body, await simulation.loadPrograms(job.id, programs), job.params.thickness_mm);
+    } catch {
+      started = false;
+      fill(body, h("p", { class: "error", role: "alert", "data-i18n": "sim.load_failed" }, t("sim.load_failed")));
+    }
+  });
+  simulationSection = details;
+  return details;
+}
+
 function showDone(job) {
   setState("job.done", { count: daysLeft(job.expires) }, "ok");
   const files = new Map(job.files.map((f) => [f.name, f]));
@@ -89,6 +113,8 @@ function showDone(job) {
       ),
     );
   }
+
+  if (programs.length) sections.push(simulationPanel(job, programs));
 
   sections.push(
     h(
