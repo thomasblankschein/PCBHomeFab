@@ -1,8 +1,9 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageOps
 
 from exposure.boards import Board, Placement, load_board
 from exposure.mask import build_mask
@@ -66,3 +67,66 @@ def test_hole_modes_change_mask(base: Board) -> None:
     assert full.tobytes() != none.tobytes()
     with pytest.raises(ValueError):
         build_mask(_one(base), PHOTON_M3, holes="bogus")
+
+
+def _mark_mask(voids: str, base: Board) -> tuple[Image.Image, float, float]:
+    """A mask with a single mark on an empty plate (no boards), and the pixel position of its centre."""
+    from exposure.boards import Mark
+
+    mark = Mark(20.0, 30.0, voids)
+    mask = build_mask([], replace(PHOTON_M3, mirror_x=False), marks=[mark])
+    cx = (PHOTON_M3.frame_left_mm + mark.x_mm) / PHOTON_M3.pixel_mm
+    cy = (PHOTON_M3.display_height_mm - PHOTON_M3.frame_bottom_mm - mark.y_mm) / PHOTON_M3.pixel_mm
+    return mask.convert("L"), cx, cy
+
+
+def test_mark_has_copper_pad_free_quadrants_and_free_ring(base: Board) -> None:
+    mask, cx, cy = _mark_mask("tl-br", base)
+    x, y = round(cx), round(cy)
+    d = 15  # pixels from the centre, well inside a quadrant (a quadrant is about 26 px)
+    assert mask.getpixel((x - d, y - d)) == 255 and mask.getpixel((x + d, y + d)) == 255  # free quadrants
+    assert mask.getpixel((x + d, y - d)) == 0 and mask.getpixel((x - d, y + d)) == 0  # copper quadrants
+    ring = round((2.4 / 2 + 0.25) / PHOTON_M3.pixel_mm)  # in the free ring around the pad
+    assert mask.getpixel((x + ring, y)) == 255 and mask.getpixel((x, y - ring)) == 255
+    far = round(2.4 / PHOTON_M3.pixel_mm)  # outside the ring the plate is copper
+    assert mask.getpixel((x + far, y)) == 0 and mask.getpixel((x, y + far)) == 0
+
+
+def test_other_mark_pattern_swaps_the_quadrants(base: Board) -> None:
+    mask, cx, cy = _mark_mask("tr-bl", base)
+    x, y = round(cx), round(cy)
+    assert mask.getpixel((x + 15, y - 15)) == 255 and mask.getpixel((x - 15, y + 15)) == 255
+    assert mask.getpixel((x - 15, y - 15)) == 0 and mask.getpixel((x + 15, y + 15)) == 0
+
+
+def test_mark_centre_stays_where_it_is_when_too_much_is_etched(base: Board) -> None:
+    """Both free squares touch at the centre. Etching a little too much grows them equally, so the middle of the part
+    where they overlap is still the centre."""
+    from PIL import ImageFilter
+
+    mask, cx, cy = _mark_mask("tl-br", base)
+    grown = mask.filter(ImageFilter.MaxFilter(7))  # every free area grows by 3 pixels all around
+    x, y = round(cx), round(cy)
+    box = grown.crop((x - 12, y - 12, x + 12, y + 12))
+    # the copper quadrants shrink, the centre of the remaining copper cross sections stays on the mark centre
+    xs, ys = [], []
+    for py in range(24):
+        for px in range(24):
+            if box.getpixel((px, py)) == 255 and mask.crop((x - 12, y - 12, x + 12, y + 12)).getpixel((px, py)) == 0:
+                xs.append(px)
+                ys.append(py)
+    # the area that was copper and is now free lies symmetric around the centre (12, 12) of the crop
+    assert abs(sum(xs) / len(xs) - 11.5) < 1.0 and abs(sum(ys) / len(ys) - 11.5) < 1.0
+
+
+def test_mark_is_mirrored_with_the_display() -> None:
+    from exposure.boards import Mark
+
+    mark = Mark(20.0, 30.0, "tl-br")
+    plain = build_mask([], replace(PHOTON_M3, mirror_x=False), marks=[mark])
+    mirrored = build_mask([], replace(PHOTON_M3, mirror_x=True), marks=[mark])
+    assert ImageOps.mirror(plain.convert("L")).tobytes() == mirrored.convert("L").tobytes()
+
+
+def test_no_marks_no_change(base: Board) -> None:
+    assert build_mask(_one(base), PHOTON_M3).tobytes() == build_mask(_one(base), PHOTON_M3, marks=None).tobytes()

@@ -51,6 +51,7 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
 
     entries = params["boards"]
     plate = params.get("plate") or LEGACY_PLATE
+    marks = params["marks"]["points"] if params.get("marks") else None
     packages = {e["name"]: (job_dir / "input" / e["file"]).read_bytes() for e in entries}
 
     layout = services.panel(
@@ -77,6 +78,8 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
             "exposure_s": params["exposure_s"],
             "outputs": ["mask", "preview", "pm3", "copper"],
         }
+        if marks:
+            settings["marks"] = marks
         for key in ("frame_left_mm", "frame_bottom_mm", "mirror_x"):
             if params.get(key) is not None:
                 settings[key] = params[key]
@@ -89,7 +92,13 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
             copper = services.exposure(
                 packages,
                 layout,
-                {"printer": params["printer"], "holes": "full", "exposure_s": 1, "outputs": ["copper"]},
+                {
+                    "printer": params["printer"],
+                    "holes": "full",
+                    "exposure_s": 1,
+                    "outputs": ["copper"],
+                    **({"marks": marks} if marks else {}),
+                },
                 step("copper"),
             )
         except (UserError, Unavailable):
@@ -106,6 +115,7 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
                 "flip": params["flip"],
                 "tabs": params["tabs"],
                 "thickness_mm": params["thickness_mm"],
+                **({"marks": marks} if marks else {}),
             },
             step("mill"),
         )

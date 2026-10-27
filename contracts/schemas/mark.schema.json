@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mark.schema.json",
+  "title": "Positioning mark",
+  "description": "A mark on the copper layer that shows the position and the rotation of the plate on the mill. Two of them stand diagonally opposite, just outside the area of the boards. Position of the centre in the coordinates of the layout (design view, origin at the lower left corner of the plate). `exposure` draws the mark, `mill` uses the one that lies at the lower left after turning the plate as X0 Y0.",
+  "type": "object",
+  "required": ["x_mm", "y_mm"],
+  "properties": {
+    "x_mm": {"type": "number"},
+    "y_mm": {"type": "number"},
+    "voids": {
+      "enum": ["tl-br", "tr-bl"],
+      "default": "tl-br",
+      "description": "Which two quadrants of the mark are etched free (top left and bottom right, or top right and bottom left), in the design view."
+    }
+  },
+  "additionalProperties": false
+}

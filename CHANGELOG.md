@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.0 - 2026-10-27
+
+- Positioning marks: the copper layer gets two marks diagonally opposite in the margin (a copper square with two diagonal
+  quadrants etched free; the centre stays put when too much is etched). The mark at the lower left after turning the plate
+  over is X0 Y0 of all G-code programs; the other one is named in the program headers, in `programs.json` and on the job page
+  (upper right: X 156, Y 96 mm on a 160 x 100 mm plate). Switchable with `marks` (default on); needs a margin of at least
+  4.5 mm (the editor default is now 5 mm). Marks are also in the copper picture of the 3D view.
+- **Breaking:** `POST /api/v1/jobs` with the default `marks` refuses a margin below 4.5 mm (`jobs.invalid_marks`); send `marks=false`
+  for the old behaviour.
+
 ## 0.9.0 - 2026-10-27
 
 - 3D simulation: the copper of the boards is shown faintly on the plate and can be switched off ("Show copper"). `exposure`

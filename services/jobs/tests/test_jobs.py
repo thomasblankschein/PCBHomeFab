@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from conftest import CONTRACTS, contract_operations, normalize, validate
-from fakes import Downstream, make_zip, problem
+from fakes import Downstream, _form_field, make_zip, problem
 from jobs.config import Settings
 from jobs.main import create_app
 from jobs.services import Services
@@ -52,7 +52,7 @@ def client(settings: Settings, services: Services) -> Iterator[TestClient]:
 
 def _post(client: TestClient, *uploads: tuple[str, bytes], counts: list[str] | None = None, **fields: str) -> Any:
     files = [("boards", (name, data, "application/zip")) for name, data in uploads]
-    data: dict[str, Any] = {"plate": "160x100", **fields}
+    data: dict[str, Any] = {"plate": "160x100", "marks": "false", **fields}
     if counts is not None:
         data["counts"] = counts
     return client.post("/v1/jobs", files=files, data=data)
@@ -457,3 +457,48 @@ def test_the_layout_preview_uses_the_plate(client: TestClient) -> None:
     board = {"id": "a", "width_mm": 10, "height_mm": 10, "count": 1}
     layout = client.post("/v1/layouts", json={"plate": "100x75", "boards": [board]}).json()
     assert layout["plate"] == {"width_mm": 100.0, "height_mm": 75.0}
+
+
+def _spy_settings(services: Services, downstream: Downstream) -> dict[str, dict[str, Any]]:
+    seen: dict[str, dict[str, Any]] = {}
+    original = downstream.handle
+
+    def spy(request: httpx.Request) -> httpx.Response:
+        if request.url.path in ("/v1/masks", "/v1/programs"):
+            seen[request.url.host or ""] = _form_field(request, "settings")
+        return original(request)
+
+    services.client = httpx.Client(transport=httpx.MockTransport(spy))
+    return seen
+
+
+def test_positioning_marks_reach_exposure_and_mill(
+    client: TestClient, services: Services, downstream: Downstream
+) -> None:
+    seen = _spy_settings(services, downstream)
+    job = _post(client, ("a.zip", ZIP), marks="true", margin_mm="5", flip="x").json()
+    process_next(JobStore(services.settings), services)
+    params = client.get(f"/v1/jobs/{job['id']}").json()["params"]
+    expected = [{"x_mm": 2.0, "y_mm": 98.0, "voids": "tr-bl"}, {"x_mm": 158.0, "y_mm": 2.0, "voids": "tr-bl"}]
+    assert params["marks"]["points"] == expected
+    assert params["marks"]["second_mm"] == {"x_mm": 156.0, "y_mm": 96.0}
+    assert params["marks"]["plate_origin_mm"] == {"x_mm": -2.0, "y_mm": -2.0}
+    assert seen["exposure"]["marks"] == expected and seen["mill"]["marks"] == expected
+
+
+def test_marks_depend_on_how_the_plate_is_turned(client: TestClient) -> None:
+    job = _post(client, ("a.zip", ZIP), marks="true", margin_mm="5", flip="none").json()
+    points = client.get(f"/v1/jobs/{job['id']}").json()["params"]["marks"]["points"]
+    assert [(p["x_mm"], p["y_mm"], p["voids"]) for p in points] == [(2.0, 2.0, "tl-br"), (158.0, 98.0, "tl-br")]
+
+
+def test_no_marks_no_settings(client: TestClient, services: Services, downstream: Downstream) -> None:
+    seen = _spy_settings(services, downstream)
+    job = _post(client, ("a.zip", ZIP)).json()
+    process_next(JobStore(services.settings), services)
+    assert "marks" not in seen["exposure"] and "marks" not in seen["mill"]
+    assert client.get(f"/v1/jobs/{job['id']}").json()["params"]["marks"] is None
+
+
+def test_marks_need_room(client: TestClient) -> None:
+    _problem(_post(client, ("a.zip", ZIP), marks="true", margin_mm="3"), 422, "jobs.invalid_marks")

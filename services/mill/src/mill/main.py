@@ -22,12 +22,20 @@ from .tools import load_tools
 _ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 
 
+class MarkModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    x_mm: float
+    y_mm: float
+    voids: Literal["tl-br", "tr-bl"] = "tl-br"
+
+
 class MillSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
     mill: str
     flip: Literal["x", "y", "none"] | None = None
     tabs: bool | None = None
     thickness_mm: float = Field(default=1.5, ge=0.4, le=3.2)
+    marks: list[MarkModel] | None = Field(default=None, min_length=2, max_length=2)
 
 
 @dataclass(frozen=True)
@@ -92,13 +100,16 @@ def _programs(boards: dict[str, Board], layout: dict[str, Any], settings: dict[s
                 (list(board.contour.outer), [list(c) for c in board.contour.cutouts]) if board.contour else None,
             )
         )
-    programs = gcode.generate(placements, plate, mill, load_tools())
+    second_mark = None
+    if settings.get("marks"):
+        mill, second_mark = gcode.origin_of_marks(plate, mill, [(m["x_mm"], m["y_mm"]) for m in settings["marks"]])
+    programs = gcode.generate(placements, plate, mill, load_tools(), second_mark)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         for program in programs:
             _zip_entry(archive, program.filename, program.code.encode("ascii", errors="replace"))
         _zip_entry(archive, "preview.svg", gcode.preview_svg(placements, plate, mill))
-        index = {
+        index: dict[str, Any] = {
             "programs": [
                 {
                     "filename": p.filename,
@@ -110,6 +121,8 @@ def _programs(boards: dict[str, Board], layout: dict[str, Any], settings: dict[s
                 for p in programs
             ]
         }
+        if second_mark is not None:
+            index["marks"] = {"second_x_mm": round(second_mark[0], 3), "second_y_mm": round(second_mark[1], 3)}
         _zip_entry(archive, "programs.json", json.dumps(index, indent=1))
     return buffer.getvalue()
 

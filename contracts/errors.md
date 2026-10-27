@@ -35,12 +35,14 @@ its own prefix, plus `common.*`.
 | `mill.spindle_too_fast` | 422 | a tool asks for more rpm than the machine allows |
 | `mill.invalid_tools` | 422 | the tool library file is invalid |
 | `mill.cutout_too_small` | 422 | a cutout in the board outline is too small for the end mill |
+| `mill.invalid_marks` | 422 | the two positioning marks do not stand diagonally opposite |
 | `jobs.not_found` | 404 | no such job (or it expired) |
 | `jobs.rate_limited` | 429 | too many jobs from this client |
 | `jobs.queue_full` | 503 | the queue is full |
 | `jobs.upstream_unavailable` | 503 | a service that the job needs cannot be reached |
 | `jobs.invalid_upload` | 422 | bad upload (count of files, counts, no output selected) |
 | `jobs.invalid_plate` | 422 | the plate size is missing or not in the list of plate sizes |
+| `jobs.invalid_marks` | 422 | positioning marks asked for, but the margin is too small for them or the plate is too small |
 | `jobs.upload_too_large` | 413 | a file is larger than the limit |
 
 `jobs` stores the `detail` of a failing downstream call as the error text of the job when the status was 4xx.

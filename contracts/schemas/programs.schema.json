@@ -6,6 +6,16 @@
   "type": "object",
   "required": ["programs"],
   "properties": {
+    "marks": {
+      "type": "object",
+      "description": "Only with positioning marks: where the second mark is, relative to the first one (X0 Y0).",
+      "required": ["second_x_mm", "second_y_mm"],
+      "properties": {
+        "second_x_mm": {"type": "number"},
+        "second_y_mm": {"type": "number"}
+      },
+      "additionalProperties": false
+    },
     "programs": {
       "type": "array",
       "items": {

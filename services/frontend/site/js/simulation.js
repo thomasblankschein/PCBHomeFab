@@ -38,12 +38,18 @@ export async function loadPrograms(jobId, files) {
  * Builds the simulation inside `container` for programs from `loadPrograms`.
  * `options.copperUrl` is the picture of the copper (copper.png of the job), `options.flip` how the plate is turned over for
  * milling ("x", "y" or "none"): the paths are in machine coordinates, so the picture is turned the same way.
+ * `options.plateOrigin` is where the lower left corner of the plate lies in these coordinates (not 0, 0 with positioning marks).
  */
 export function createSimulation(container, programs, thickness, plateSize, options = {}) {
-  const PLATE = { width: plateSize.width_mm, height: plateSize.height_mm };
+  const PLATE = {
+    width: plateSize.width_mm,
+    height: plateSize.height_mm,
+    x0: options.plateOrigin?.x_mm ?? 0,
+    y0: options.plateOrigin?.y_mm ?? 0,
+  };
   const all = programs.flatMap((program) => program.moves);
   const state = {
-    camera: makeCamera({ target: [PLATE.width / 2, PLATE.height / 2, 0], distance: 330 }),
+    camera: makeCamera({ target: [PLATE.x0 + PLATE.width / 2, PLATE.y0 + PLATE.height / 2, 0], distance: 330 }),
     zScale: 3,
     rapids: true,
     selected: -1,
@@ -210,7 +216,7 @@ export function createSimulation(container, programs, thickness, plateSize, opti
 
   function drawPlate(ctx, basis, width, height) {
     const depth = thickness * state.zScale;
-    const corner = (x, y, z) => project([x * PLATE.width, y * PLATE.height, z], basis, width, height);
+    const corner = (x, y, z) => project([PLATE.x0 + x * PLATE.width, PLATE.y0 + y * PLATE.height, z], basis, width, height);
     const faces = [
       { points: [[0, 0, -depth], [1, 0, -depth], [1, 1, -depth], [0, 1, -depth]], shade: 0.35 },
       { points: [[0, 0, -depth], [1, 0, -depth], [1, 0, 0], [0, 0, 0]], shade: 0.2 },
@@ -255,7 +261,9 @@ export function createSimulation(container, programs, thickness, plateSize, opti
     const screen = (px, py) => {
       const x = (px / iw) * PLATE.width;
       const y = (1 - py / ih) * PLATE.height; // the picture is the design view: its top is the high Y
-      return project([flip === "x" ? PLATE.width - x : x, flip === "y" ? PLATE.height - y : y, 0], basis, width, height);
+      const gx = flip === "x" ? PLATE.width - x : x;
+      const gy = flip === "y" ? PLATE.height - y : y;
+      return project([PLATE.x0 + gx, PLATE.y0 + gy, 0], basis, width, height);
     };
     const columns = 24;
     const rows = 15;

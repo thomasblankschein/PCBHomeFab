@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from . import common
-from .boards import Board, LayoutModel, Placement, board_id_of, load_board
+from .boards import Board, LayoutModel, Mark, MarkModel, Placement, board_id_of, load_board
 from .common import Isolation, Problem
 from .mask import build_copper, build_mask
 from .pm3 import build_pm3
@@ -33,6 +33,7 @@ class ExposureSettings(BaseModel):
     frame_left_mm: float | None = Field(default=None, ge=0, le=20)
     frame_bottom_mm: float | None = Field(default=None, ge=0, le=20)
     mirror_x: bool | None = None
+    marks: list[MarkModel] | None = Field(default=None, min_length=2, max_length=2)
     outputs: list[Literal["mask", "preview", "pm3", "copper"]] = Field(default=["mask", "preview", "pm3"], min_length=1)
 
 
@@ -83,15 +84,17 @@ def _masks(packages: dict[str, bytes], layout: dict[str, Any], settings: dict[st
     placements = [Placement(boards[p["board_id"]], p["x_mm"], p["y_mm"]) for p in layout["placements"]]
 
     outputs = settings["outputs"]
-    mask = (
-        build_mask(placements, printer, holes=settings["holes"]) if {"mask", "preview", "pm3"} & set(outputs) else None
-    )
+    marks = [Mark(m["x_mm"], m["y_mm"], m["voids"]) for m in settings["marks"]] if settings.get("marks") else None
+    wants_mask = {"mask", "preview", "pm3"} & set(outputs)
+    mask = build_mask(placements, printer, holes=settings["holes"], marks=marks) if wants_mask else None
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         if "copper" in outputs:
             plate = layout["plate"]
             png = io.BytesIO()
-            build_copper(placements, plate["width_mm"], plate["height_mm"]).save(png, format="PNG", optimize=True)
+            build_copper(placements, plate["width_mm"], plate["height_mm"], marks).save(
+                png, format="PNG", optimize=True
+            )
             _zip_entry(archive, "copper.png", png.getvalue())
         if mask is not None and "mask" in outputs:
             png = io.BytesIO()

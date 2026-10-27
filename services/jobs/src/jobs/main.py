@@ -28,6 +28,7 @@ from starlette.concurrency import run_in_threadpool
 from . import common
 from .common import Problem
 from .config import Settings
+from .marks import MIN_MARGIN_MM, MIN_PLATE_MM, alignment_marks
 from .plates import PlateSize, load_plates
 from .services import Services, Unavailable, UserError
 from .store import DONE, JobRecord, JobStore
@@ -245,6 +246,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         frame_bottom_mm: Annotated[float | None, Form(ge=0, le=20)] = None,
         mirror_x: Annotated[bool | None, Form()] = None,
         plate: Annotated[str | None, Form()] = None,
+        marks: Annotated[bool, Form()] = True,
     ) -> JSONResponse:
         client = _client_hash(request, settings)
         if store.recent_count(client) >= settings.rate_limit_per_hour:
@@ -261,6 +263,12 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         if not exposure and not mill_gcode:
             raise Problem(422, "jobs.invalid_upload", "Select at least one output (exposure or mill_gcode).")
         chosen_plate = find_plate(plate)
+        if marks and margin_mm < MIN_MARGIN_MM:
+            raise Problem(
+                422, "jobs.invalid_marks", f"Positioning marks need a margin of at least {MIN_MARGIN_MM:g} mm."
+            )
+        if marks and min(chosen_plate.width_mm, chosen_plate.height_mm) < MIN_PLATE_MM:
+            raise Problem(422, "jobs.invalid_marks", f"Positioning marks need a plate of at least {MIN_PLATE_MM:g} mm.")
 
         uploads: list[bytes] = []
         for upload in boards:
@@ -305,6 +313,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             "frame_bottom_mm": frame_bottom_mm,
             "mirror_x": mirror_x,
             "plate": {"id": chosen_plate.id, "width_mm": chosen_plate.width_mm, "height_mm": chosen_plate.height_mm},
+            "marks": alignment_marks(chosen_plate.width_mm, chosen_plate.height_mm, flip) if marks else None,
             "boards": entries,
         }
         record = store.create(job_id, params, client)

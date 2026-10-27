@@ -127,6 +127,8 @@ Endpoints (the OpenAPI files are authoritative):
 
 - **Printer profile** (`exposure`): display resolution and size, frame offsets (calibration), mirror mode,
   machine name and machine table template, default exposure. The job can override the calibration values.
+- **Positioning marks:** `jobs` decides where they go (`marks.py`), `exposure` draws them into the mask and into `copper.png`,
+  `mill` shifts X0 Y0 to the lower left mark (contract `mark.schema.json`).
 - **Mill profile** (`mill`): controller dialect (GRBL), highest spindle speed, outline end mill, safe height, tool change height, tab
   size, flip mode, work area.
 - **Tool library** (`mill`, `tools.toml`): every drill bit and end mill with its cutting data (spindle rpm, feeds,

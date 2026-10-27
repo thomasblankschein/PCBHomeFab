@@ -15,6 +15,7 @@
     "frame_bottom_mm": 0.8,
     "mirror_x": true,
     "plate": "160x100",
+    "marks": false,
     "boards": [
       {
         "file": "basisplatine.zip",

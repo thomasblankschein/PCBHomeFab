@@ -70,7 +70,11 @@ def client() -> httpx.Client:
 
 
 def test_contour_with_cutout_is_milled(client: httpx.Client) -> None:
-    created = client.post("/api/v1/jobs", files=[("boards", ("round.zip", _board_zip(), "application/zip"))], data={"plate": "160x100"})
+    created = client.post(
+        "/api/v1/jobs",
+        files=[("boards", ("round.zip", _board_zip(), "application/zip"))],
+        data={"plate": "160x100", "marks": "false"},
+    )
     assert created.status_code == 201, created.text
     job_id = created.json()["id"]
     state: dict = {}
@@ -80,15 +84,29 @@ def test_contour_with_cutout_is_milled(client: httpx.Client) -> None:
             break
         time.sleep(1)
     assert state["status"] == "done", state
-    assert state["params"]["boards"][0]["width_mm"] == 30.0 and state["params"]["boards"][0]["height_mm"] == 20.0
+    assert (
+        state["params"]["boards"][0]["width_mm"] == 30.0
+        and state["params"]["boards"][0]["height_mm"] == 20.0
+    )
 
-    program = next(f["name"] for f in state["files"] if f["name"].endswith("_mill_1.0mm.nc"))
+    program = next(
+        f["name"] for f in state["files"] if f["name"].endswith("_mill_1.0mm.nc")
+    )
     code = client.get(f"/api/v1/jobs/{job_id}/files/{program}").text
-    moves = [(float(x), float(y)) for x, y in re.findall(r"^G1 X(-?[\d.]+) Y(-?[\d.]+) F", code, re.M)]
-    assert len(moves) > 150  # the arcs of the corners and of the cutout are many short moves
+    moves = [
+        (float(x), float(y))
+        for x, y in re.findall(r"^G1 X(-?[\d.]+) Y(-?[\d.]+) F", code, re.M)
+    ]
+    assert (
+        len(moves) > 150
+    )  # the arcs of the corners and of the cutout are many short moves
 
     # the board is placed at x 3..33, y 3..23 and mirrored in X on the mill (flip x): x 127..157
-    cutout = [p for p in moves if 127 + 15 - 3 < p[0] < 127 + 15 + 3 and 13 - 3 < p[1] < 13 + 3]
+    cutout = [
+        p
+        for p in moves
+        if 127 + 15 - 3 < p[0] < 127 + 15 + 3 and 13 - 3 < p[1] < 13 + 3
+    ]
     assert cutout, "no moves inside the cutout"
     cut_radii = {round(((x - 142) ** 2 + (y - 13) ** 2) ** 0.5, 1) for x, y in cutout}
     assert cut_radii == {2.5}  # 3 mm cutout radius minus 0.5 mm tool radius
@@ -99,7 +117,9 @@ def test_contour_with_cutout_is_milled(client: httpx.Client) -> None:
 
 def test_preview_endpoints_for_the_editor(client: httpx.Client) -> None:
     """The editor asks for the board shape and the layout before a job exists."""
-    info = client.post("/api/v1/boards", files={"file": ("round.zip", _board_zip(), "application/zip")})
+    info = client.post(
+        "/api/v1/boards", files={"file": ("round.zip", _board_zip(), "application/zip")}
+    )
     assert info.status_code == 200, info.text
     board = info.json()
     assert (board["width_mm"], board["height_mm"]) == (30.0, 20.0)
@@ -107,16 +127,31 @@ def test_preview_endpoints_for_the_editor(client: httpx.Client) -> None:
 
     layout = client.post(
         "/api/v1/layouts",
-        json={"plate": "160x100", "gap_mm": 3, "margin_mm": 3, "boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 4}]},
+        json={
+            "plate": "160x100",
+            "gap_mm": 3,
+            "margin_mm": 3,
+            "boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 4}],
+        },
     )
     assert layout.status_code == 200, layout.text
-    assert [(p["x_mm"], p["y_mm"]) for p in layout.json()["placements"]] == [(3, 3), (36, 3), (69, 3), (102, 3)]
+    assert [(p["x_mm"], p["y_mm"]) for p in layout.json()["placements"]] == [
+        (3, 3),
+        (36, 3),
+        (69, 3),
+        (102, 3),
+    ]
 
     too_many = client.post(
         "/api/v1/layouts",
-        json={"plate": "160x100", "boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 100}]},
+        json={
+            "plate": "160x100",
+            "boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 100}],
+        },
     )
-    assert too_many.status_code == 422 and too_many.json()["code"] == "panel.does_not_fit"
+    assert (
+        too_many.status_code == 422 and too_many.json()["code"] == "panel.does_not_fit"
+    )
 
 
 def test_static_pages_and_scripts(client: httpx.Client) -> None:

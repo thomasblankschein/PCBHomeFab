@@ -10,7 +10,7 @@ import warnings
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from gerbonara import GerberFile
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError
@@ -51,6 +51,13 @@ class BoardModel(BaseModel):
     width_mm: float = Field(gt=0)
     height_mm: float = Field(gt=0)
     holes: list[HoleModel]
+
+
+class MarkModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    x_mm: float
+    y_mm: float
+    voids: Literal["tl-br", "tr-bl"] = "tl-br"
 
 
 class PlateModel(BaseModel):
@@ -112,6 +119,15 @@ class Placement:
     board: Board
     x_mm: float
     y_mm: float
+
+
+@dataclass(frozen=True)
+class Mark:
+    """A positioning mark: centre in plate coordinates and which two quadrants are etched free."""
+
+    x_mm: float
+    y_mm: float
+    voids: str = "tl-br"
 
 
 def board_id_of(filename: str) -> str:

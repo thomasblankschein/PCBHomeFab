@@ -1,13 +1,15 @@
 """Drill and mill G-code for a GRBL hobby mill.
 
 Coordinates: X0 Y0 is the lower left corner of the plate (``MillProfile.offset_*`` shifts it), copper side up,
-Z0 is the plate surface. One program per tool so the tool can be changed by hand between the programs.
+Z0 is the plate surface. With positioning marks X0 Y0 is the centre of the mark that lies at the lower left (the
+offset is chosen accordingly, see :func:`origin_of_marks`). One program per tool so the tool can be changed by hand
+between the programs.
 """
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from shapely.geometry import MultiPolygon, Polygon
 
@@ -106,7 +108,9 @@ def _nearest_order(points: list[Point]) -> list[Point]:
 
 
 class _Writer:
-    def __init__(self, title: str, mill: MillProfile, tool: Tool, tool_message: str) -> None:
+    def __init__(
+        self, title: str, mill: MillProfile, tool: Tool, tool_message: str, second_mark: Point | None = None
+    ) -> None:
         if tool.spindle_rpm > mill.max_spindle_rpm:
             raise Problem(
                 422,
@@ -116,9 +120,18 @@ class _Writer:
         self.mill = mill
         self.tool = tool
         self.z = mill.safe_z_mm
+        if second_mark is None:
+            zero = "(GRBL, X0 Y0 = lower left corner of the plate, copper side up, Z0 = plate surface)"
+        else:
+            zero = "(GRBL, X0 Y0 = centre of the lower left positioning mark, copper side up, Z0 = plate surface)"
         self.lines = [
             f"({title})",
-            "(GRBL, X0 Y0 = lower left corner of the plate, copper side up, Z0 = plate surface)",
+            zero,
+            *(
+                [f"(Second positioning mark, upper right: X{second_mark[0]:.3f} Y{second_mark[1]:.3f})"]
+                if second_mark
+                else []
+            ),
             "G21 G90 G17 G94",
             # tool change position: spindle off, up, to X0 Y0, then wait (M0) until the user resumes
             "M5",
@@ -305,10 +318,33 @@ def _mill_outline(writer: _Writer, path: list[Point], with_tabs: bool, plate: Pl
     writer.up()
 
 
+def origin_of_marks(plate: Plate, mill: MillProfile, marks: list[Point]) -> tuple[MillProfile, Point]:
+    """Use the lower left of two positioning marks (plate coordinates of their centres) as X0 Y0.
+
+    Returns the mill profile with the plate offset moved so that this mark is the origin, and the position of the other
+    mark relative to it. Raises ``mill.invalid_marks`` if the marks do not stand diagonally opposite.
+    """
+    frame = _Frame(plate, mill)
+    first, second = sorted((frame.point(x, y) for x, y in marks), key=lambda p: p[0] + p[1])
+    dx, dy = second[0] - first[0], second[1] - first[1]
+    if dx < 1.0 or dy < 1.0:
+        raise Problem(
+            422, "mill.invalid_marks", "The two positioning marks must stand diagonally opposite, at least 1 mm apart."
+        )
+    shifted = replace(mill, offset_x_mm=mill.offset_x_mm - first[0], offset_y_mm=mill.offset_y_mm - first[1])
+    return shifted, (dx, dy)
+
+
 def generate(
-    placements: list[Placement], plate: Plate, mill: MillProfile, tools: ToolLibrary | None = None
+    placements: list[Placement],
+    plate: Plate,
+    mill: MillProfile,
+    tools: ToolLibrary | None = None,
+    second_mark: Point | None = None,
 ) -> list[Program]:
-    """Programs in tool order: one per drill bit, then one per end mill (large holes and outlines)."""
+    """Programs in tool order: one per drill bit, then one per end mill (large holes and outlines).
+
+    ``second_mark`` (from :func:`origin_of_marks`) is named in the program headers."""
     tools = tools or load_tools()
     layout = build_layout(placements, plate, mill)
     outline_tool = tools.endmill(mill.outline_endmill_mm)
@@ -332,7 +368,7 @@ def generate(
     for drill, holes in sorted(drilled.values(), key=lambda entry: entry[0].diameter_mm):
         title = f"Drill {drill.diameter_mm:.1f} mm, {len(holes)} holes"
         message = f"Insert the {drill.diameter_mm:.1f} mm drill and set Z0 to the plate surface"
-        writer = _Writer(title, mill, drill, message)
+        writer = _Writer(title, mill, drill, message, second_mark)
         _drill(writer, holes, plate, mill)
         name = f"{len(programs) + 1}_drill_{drill.diameter_mm:.1f}mm.nc"
         programs.append(Program(name, title, writer.finish(), holes=len(holes), tool=drill.id))
@@ -342,7 +378,7 @@ def generate(
         scope = "large holes and outlines" if is_outline else "large holes"
         title = f"Mill with {cutter.diameter_mm:.1f} mm end mill: {scope}"
         message = f"Insert the {cutter.diameter_mm:.1f} mm end mill and set Z0 to the plate surface"
-        writer = _Writer(title, mill, cutter, message)
+        writer = _Writer(title, mill, cutter, message, second_mark)
         for diameter, holes in by_diameter.items():
             for x, y in _nearest_order(holes):
                 _mill_hole(writer, x, y, diameter, plate, mill)

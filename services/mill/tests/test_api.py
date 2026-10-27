@@ -134,3 +134,22 @@ def test_isolated_request() -> None:
     isolated = TestClient(create_app(Settings(isolate=True)))
     assert _post(isolated).status_code == 200
     _problem(_post(isolated, settings={"mill": "nope"}), 422, "mill.unknown_mill")
+
+
+def test_positioning_marks(client: TestClient) -> None:
+    marks = [{"x_mm": 2.0, "y_mm": 98.0, "voids": "tr-bl"}, {"x_mm": 158.0, "y_mm": 2.0, "voids": "tr-bl"}]
+    validate("mill-settings", {**SETTINGS, "marks": marks})
+    response = _post(client, settings={**SETTINGS, "marks": marks})
+    assert response.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        index = json.loads(archive.read("programs.json"))
+        code = archive.read("1_drill_0.8mm.nc").decode()
+    validate("programs", index)
+    assert index["marks"] == {"second_x_mm": 156.0, "second_y_mm": 96.0}
+    assert "(Second positioning mark, upper right: X156.000 Y96.000)" in code
+
+
+def test_marks_that_do_not_stand_diagonally_are_refused(client: TestClient) -> None:
+    marks = [{"x_mm": 2.0, "y_mm": 2.0}, {"x_mm": 158.0, "y_mm": 2.0}]
+    _problem(_post(client, settings={**SETTINGS, "marks": marks}), 422, "mill.invalid_marks")
+    _problem(_post(client, settings={**SETTINGS, "marks": marks[:1]}), 422, "common.invalid_request")

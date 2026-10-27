@@ -194,5 +194,13 @@
   "machines.col_name": "Name",
   "machines.col_width": "Breite",
   "machines.col_height": "Höhe",
-  "machines.col_id": "Kennung"
+  "machines.col_id": "Kennung",
+
+  "settings.marks": "Positionsmarken auf der Kupferschicht",
+  "settings.marks_hint": "Zwei diagonal gegenüberliegende Marken im Rand zeigen Lage und Drehung der Platte an der Fräse. Die Marke unten links ist X0 Y0 des G-Codes. Braucht einen Rand von mindestens 4,5 mm.",
+  "plate.marks_margin": "Positionsmarken brauchen einen Rand von mindestens {min} mm.",
+  "job.marks": "Positionsmarken",
+  "job.marks_off": "keine",
+  "job.marks_on": "Marke unten links = X0 Y0, Marke oben rechts bei X {x}, Y {y} mm",
+  "job.marks_hint": "Positionsmarken: Mittelpunkt der Marke unten links suchen (dort, wo die beiden freigeätzten Quadrate sich berühren), dort X0 Y0 setzen und den Mittelpunkt der Marke oben rechts bei X {x}, Y {y} mm prüfen. Weicht er ab, liegt die Platte verdreht: so lange drehen, bis beide passen."
 }

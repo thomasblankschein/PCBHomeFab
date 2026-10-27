@@ -40,6 +40,8 @@ function summaryOf(job) {
     h("dd", {}, boards),
     h("dt", {}, t("job.outputs")),
     h("dd", {}, outputs.join(", ")),
+    h("dt", {}, t("job.marks")),
+    h("dd", {}, p.marks ? t("job.marks_on", { x: p.marks.second_mm.x_mm, y: p.marks.second_mm.y_mm }) : t("job.marks_off")),
     h("dt", {}, t("job.plate")),
     h("dd", {}, t("job.plate_summary", { size: `${plate.width_mm} × ${plate.height_mm} mm`, gap: mm(p.gap_mm), margin: mm(p.margin_mm), thickness: mm(p.thickness_mm) })),
   ]);
@@ -64,7 +66,7 @@ function simulationPanel(job, programs) {
         await simulation.loadPrograms(job.id, programs),
         job.params.thickness_mm,
         job.params.plate ?? LEGACY_PLATE,
-        { copperUrl: job.files.some((f) => f.name === "copper.png") ? fileUrl(job.id, "copper.png") : null, flip: job.params.flip },
+        { copperUrl: job.files.some((f) => f.name === "copper.png") ? fileUrl(job.id, "copper.png") : null, flip: job.params.flip, plateOrigin: job.params.marks?.plate_origin_mm },
       );
     } catch {
       started = false;
@@ -114,6 +116,9 @@ function showDone(job) {
           ? h("figure", {}, h("img", { src: fileUrl(job.id, "mill_preview.svg"), alt: t("job.mill_alt"), class: "mill-preview" }), h("figcaption", {}, t("job.mill_caption")))
           : null,
         h("p", { class: "muted" }, t("job.programs_hint")),
+        job.params.marks
+          ? h("p", { class: "muted" }, t("job.marks_hint", { x: job.params.marks.second_mm.x_mm, y: job.params.marks.second_mm.y_mm }))
+          : null,
         h(
           "ul",
           { class: "files" },

@@ -150,6 +150,7 @@ paths:
                 flip: {type: string, enum: [x, y, none], default: x}
                 thickness_mm: {type: number, minimum: 0.4, maximum: 3.2, default: 1.5}
                 tabs: {type: boolean, default: true}
+                marks: {type: boolean, default: true, description: Add positioning marks to the copper layer; X0 Y0 of the G-code is then the centre of the lower left mark. Needs a margin of at least 4.5 mm.}
                 frame_left_mm: {type: number, minimum: 0, maximum: 20}
                 frame_bottom_mm: {type: number, minimum: 0, maximum: 20}
                 mirror_x: {type: boolean}

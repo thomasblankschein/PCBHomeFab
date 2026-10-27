@@ -108,6 +108,14 @@ docker-compose.yaml
   0.1 mm steps and end mills 1 mm and 2 mm; holes larger than 1.2 mm are milled. Cutting values in the file are
   starting values, to be tuned on the real mill.
 
+## Positioning marks
+- The plate is not always at the same place on the mill and not exactly square. With `marks` (default on, margin of at least
+  4.5 mm) the copper layer gets two marks diagonally opposite in the margin (`services/exposure/src/exposure/mask.py`:
+  copper square, two diagonal quadrants etched free, free ring around it; the centre is where the two free squares touch, so
+  it stays put when too much is etched). `jobs` (`marks.py`) places them so that, after turning the plate over (`flip`), one
+  is at the lower left and one at the upper right. `mill` makes the lower left mark X0 Y0 of every program and names the
+  other one in the header and in `programs.json`; `jobs` stores the same position as `params.marks.second_mm`.
+
 ## Exposure mask
 - The mask has no frame around the display (an earlier version drew an exposed border of 1 mm so that Photon Workshop could
   slice the image; removed on 2026-10-27 at the maintainer's request). The `.pm3` file is not opened in Photon Workshop at

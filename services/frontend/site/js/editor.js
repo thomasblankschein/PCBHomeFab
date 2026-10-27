@@ -7,7 +7,7 @@ import { initI18n, onLanguageChange, t } from "./i18n.js";
 import { holeColors, holeSummary, isRectangle, placedBoards, plateUsage, polygonPath, previewId, validCount } from "./geometry.js";
 
 const STORAGE_KEY = "pcbhomefab.settings";
-const SAVED_FIELDS = ["plate", "printer", "mill", "holes", "gap_mm", "margin_mm", "flip", "thickness_mm", "tabs", "exposure", "mill_gcode"];
+const SAVED_FIELDS = ["plate", "marks", "printer", "mill", "holes", "gap_mm", "margin_mm", "flip", "thickness_mm", "tabs", "exposure", "mill_gcode"];
 
 const form = document.getElementById("settings");
 const rowsBody = document.getElementById("rows");
@@ -70,6 +70,13 @@ function restoreSettings() {
 /** The plate size chosen in the settings (the first one while the list is still empty). */
 function currentPlate() {
   return state.plates.find((plate) => plate.id === value("plate")) ?? state.plates[0] ?? { width_mm: 160, height_mm: 100 };
+}
+
+// Positioning marks sit in the margin of the plate; the jobs service refuses a smaller margin.
+const MARKS_MIN_MARGIN_MM = 4.5;
+
+function marksNeedMargin() {
+  return value("marks") && !(number("margin_mm") >= MARKS_MIN_MARGIN_MM);
 }
 
 function applyPrinter() {
@@ -239,7 +246,7 @@ async function refreshLayout() {
     const layout = await previewLayout(request, previewAbort.signal);
     if (sequence !== previewSequence) return;
     state.layout = layout;
-    state.layoutError = "";
+    state.layoutError = marksNeedMargin() ? { key: "plate.marks_margin", params: { min: MARKS_MIN_MARGIN_MM } } : "";
   } catch (error) {
     if (error.name === "AbortError" || sequence !== previewSequence) return;
     state.layout = null;
@@ -310,7 +317,7 @@ function renderSubmit() {
   const reading = state.rows.some((row) => row.status === "reading");
   const countsOk = rows.every((row) => validCount(row.count, limits().max_boards));
   const output = value("exposure") || value("mill_gcode");
-  submit.disabled = state.creating || reading || !rows.length || !countsOk || !state.layout || !output || !form.checkValidity();
+  submit.disabled = marksNeedMargin() || state.creating || reading || !rows.length || !countsOk || !state.layout || !output || !form.checkValidity();
   submit.textContent = t(state.creating ? "settings.creating" : "settings.submit");
 }
 
@@ -324,6 +331,7 @@ function jobFormData() {
   const printer = state.profiles.printers[value("printer")];
   const entries = {
     plate: value("plate"),
+    marks: value("marks"),
     printer: value("printer"),
     mill: value("mill"),
     exposure: value("exposure"),
@@ -407,7 +415,7 @@ function wire() {
     saveSettings();
     renderSubmit();
   });
-  for (const name of ["plate", "gap_mm", "margin_mm"]) field(name).addEventListener("input", onLayoutInputsChanged);
+  for (const name of ["plate", "marks", "gap_mm", "margin_mm"]) field(name).addEventListener("input", onLayoutInputsChanged);
   form.addEventListener("submit", onSubmit);
 }
 

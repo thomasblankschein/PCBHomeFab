@@ -34,7 +34,14 @@ def client() -> httpx.Client:
 def job(client: httpx.Client) -> dict:
     params = GOLDEN["params"]
     files = [
-        ("boards", (f"{b['name']}.zip", (ROOT / "tests" / "data" / b["file"]).read_bytes(), "application/zip"))
+        (
+            "boards",
+            (
+                f"{b['name']}.zip",
+                (ROOT / "tests" / "data" / b["file"]).read_bytes(),
+                "application/zip",
+            ),
+        )
         for b in params["boards"]
     ]
     data: dict[str, object] = {"counts": [str(b["count"]) for b in params["boards"]]}
@@ -58,7 +65,9 @@ def _fingerprint(name: str, content: bytes) -> str:
     if name.endswith(".png"):  # PNG bytes depend on the encoder, compare the pixels
         content = Image.open(io.BytesIO(content)).convert("L").tobytes()
     else:
-        content = content.replace(b"\r\n", b"\n")  # the golden files were made on Windows
+        content = content.replace(
+            b"\r\n", b"\n"
+        )  # the golden files were made on Windows
     return hashlib.sha256(content).hexdigest()
 
 
@@ -73,7 +82,9 @@ def test_output_equals_golden(client: httpx.Client, job: dict, name: str) -> Non
 def test_gcode_bundle_has_all_programs(client: httpx.Client, job: dict) -> None:
     import zipfile
 
-    bundle = zipfile.ZipFile(io.BytesIO(client.get(f"/api/v1/jobs/{job['id']}/files/mill_gcode.zip").content))
+    bundle = zipfile.ZipFile(
+        io.BytesIO(client.get(f"/api/v1/jobs/{job['id']}/files/mill_gcode.zip").content)
+    )
     expected = sorted(Path(n).name for n in GOLDEN["files"] if n.endswith(".nc"))
     assert sorted(bundle.namelist()) == expected
 

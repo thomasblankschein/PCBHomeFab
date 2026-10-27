@@ -11,6 +11,13 @@
     "frame_left_mm": {"type": "number", "minimum": 0, "maximum": 20, "description": "Calibration, default from the profile."},
     "frame_bottom_mm": {"type": "number", "minimum": 0, "maximum": 20, "description": "Calibration, default from the profile."},
     "mirror_x": {"type": "boolean", "description": "Default from the profile."},
+    "marks": {
+      "type": "array",
+      "items": {"$ref": "mark.schema.json"},
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "Positioning marks to draw (about 3.4 mm square each, with a free ring around them). Without it no marks are drawn."
+    },
     "outputs": {
       "type": "array",
       "items": {"enum": ["mask", "preview", "pm3", "copper"]},

@@ -173,3 +173,22 @@ def test_isolated_request() -> None:
     files = [("packages", ("basisplatine.zip", (DATA / "basisplatine.zip").read_bytes()))]
     layout = {**LAYOUT, "placements": LAYOUT["placements"][:1]}
     assert _post(isolated, layout=layout, files=files).status_code == 200
+
+
+MARKS = [{"x_mm": 2.0, "y_mm": 98.0, "voids": "tr-bl"}, {"x_mm": 158.0, "y_mm": 2.0, "voids": "tr-bl"}]
+
+
+def test_positioning_marks_are_drawn_in_mask_and_copper_picture(client: TestClient) -> None:
+    validate("exposure-settings", {**SETTINGS, "marks": MARKS})
+    plain = _post(client, settings={**SETTINGS, "outputs": ["copper"]})
+    marked = _post(client, settings={**SETTINGS, "outputs": ["copper"], "marks": MARKS})
+    with zipfile.ZipFile(io.BytesIO(plain.content)) as a, zipfile.ZipFile(io.BytesIO(marked.content)) as b:
+        without, with_marks = (Image.open(io.BytesIO(z.read("copper.png"))) for z in (a, b))
+    # at 10 px/mm the pad (2.4 mm) around (2, 98) is copper in one of its quadrants, and nothing was there before
+    assert without.getpixel((30, 30))[3] == 0
+    assert with_marks.getpixel((20 - 6, 20 - 6))[3] == 255  # copper quadrant (top left for "tr-bl")
+    assert with_marks.getpixel((20 + 6, 20 - 6))[3] == 0  # free quadrant (top right)
+
+
+def test_two_marks_are_needed(client: TestClient) -> None:
+    _problem(_post(client, settings={**SETTINGS, "marks": MARKS[:1]}), 422, "common.invalid_request")

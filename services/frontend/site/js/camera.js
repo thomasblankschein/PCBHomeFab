@@ -7,7 +7,8 @@ const MIN_PITCH = (-10 * Math.PI) / 180;
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
 export function makeCamera({ target = [80, 50, 0], distance = 300, yaw = (-35 * Math.PI) / 180, pitch = (40 * Math.PI) / 180 } = {}) {
-  return { target, distance, yaw, pitch };
+  // `home` is where the two standard views look at: the middle of the plate
+  return { target, home: target, distance, yaw, pitch };
 }
 
 export function eyeOf(camera) {
@@ -69,5 +70,5 @@ export function zoom(camera, factor) {
 }
 
 // The two views also bring the plate back to the middle.
-export const topView = (camera) => ({ ...camera, target: makeCamera().target, yaw: 0, pitch: MAX_PITCH });
-export const isoView = (camera) => ({ ...camera, target: makeCamera().target, yaw: makeCamera().yaw, pitch: makeCamera().pitch });
+export const topView = (camera) => ({ ...camera, target: camera.home, yaw: 0, pitch: MAX_PITCH });
+export const isoView = (camera) => ({ ...camera, target: camera.home, yaw: makeCamera().yaw, pitch: makeCamera().pitch });

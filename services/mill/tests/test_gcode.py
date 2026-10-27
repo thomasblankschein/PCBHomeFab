@@ -102,3 +102,49 @@ def test_every_program_starts_with_a_tool_change(programs: list[gcode.Program]) 
         assert lines[start + 4] == "M0"  # pause: tool change and Z0, then resume
         assert lines.index("M0") < lines.index("M3 S20000")  # the spindle only starts after the tool change
         assert lines[start + 5] == "G0 Z3"
+
+
+MARKS_X_FLIP = [(2.0, 98.0), (158.0, 2.0)]  # design view; with flip "x" they lie at the upper right and lower left
+
+
+def test_lower_left_mark_becomes_the_origin() -> None:
+    plain = gcode.generate(_example_placements(), Plate(), MILL_3018PRO)
+    mill, second = gcode.origin_of_marks(Plate(), MILL_3018PRO, MARKS_X_FLIP)
+    assert second == pytest.approx((156.0, 96.0))
+    marked = gcode.generate(_example_placements(), Plate(), mill, second_mark=second)
+    for before, after in zip(plain, marked, strict=True):
+        moves = (_coordinates(before.code, "G1") | _coordinates(before.code, "G0")) - {
+            (0.0, 0.0)
+        }  # (0, 0): tool change
+        moved = (_coordinates(after.code, "G1") | _coordinates(after.code, "G0")) - {(0.0, 0.0)}
+        assert {(round(x - 2.0, 3), round(y - 2.0, 3)) for x, y in moves} == moved
+
+
+def test_marks_are_named_in_the_headers() -> None:
+    mill, second = gcode.origin_of_marks(Plate(), MILL_3018PRO, MARKS_X_FLIP)
+    for program in gcode.generate(_example_placements(), Plate(), mill, second_mark=second):
+        lines = program.code.splitlines()
+        assert "centre of the lower left positioning mark" in lines[1]
+        assert lines[2] == "(Second positioning mark, upper right: X156.000 Y96.000)"
+    plain = gcode.generate(_example_placements(), Plate(), MILL_3018PRO)
+    assert "Second positioning mark" not in plain[0].code
+
+
+@pytest.mark.parametrize(
+    ("flip", "marks"),
+    [
+        ("x", [(2.0, 98.0), (158.0, 2.0)]),
+        ("y", [(2.0, 98.0), (158.0, 2.0)]),
+        ("none", [(2.0, 2.0), (158.0, 98.0)]),
+    ],
+)
+def test_the_second_mark_is_always_the_far_corner(flip: str, marks: list[tuple[float, float]]) -> None:
+    mill, second = gcode.origin_of_marks(Plate(), replace(MILL_3018PRO, flip=flip), marks)
+    assert second == pytest.approx((156.0, 96.0))
+    assert gcode.build_layout([], Plate(), mill).holes == {}
+
+
+def test_marks_on_one_line_are_refused() -> None:
+    with pytest.raises(Problem) as caught:
+        gcode.origin_of_marks(Plate(), MILL_3018PRO, [(2.0, 2.0), (158.0, 2.0)])
+    assert caught.value.code == "mill.invalid_marks"
