@@ -67,8 +67,8 @@ They are the reference for behaviour until the port is finished.
 
 Milestones 1 to 4 and 8 are done. The system runs as seven containers (`docker-compose.yaml`): Gerber ZIP in, mask PNG,
 `.pm3` (native writer) and G-code out; the outputs equal the golden outputs of the old single-package code
-(`tests/e2e`). 146 service tests are green (ingest 27, panel 14, exposure 27, mill 47, jobs 31) plus 9 frontend tests
-(`node --test`).
+(`tests/e2e`). 146 service tests are green (ingest 27, panel 14, exposure 27, mill 47, jobs 31) plus the frontend tests
+(`node --test`: geometry, language files).
 The outline is milled along the real Edge.Cuts contour (ingest extracts it, mill offsets it); panelizing still uses
 each board's box. Photon Workshop opens
 the native `.pm3` file and shows the correct mask (confirmed by the maintainer).

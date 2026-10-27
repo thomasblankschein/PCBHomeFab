@@ -62,6 +62,11 @@ Other options of `POST /api/v1/jobs`: `exposure`, `mill_gcode` (choose the outpu
 uses `POST /api/v1/boards` (shape, size and holes of one ZIP) and `POST /api/v1/layouts` (placement on the plate); both
 store nothing.
 
+The pages come in English and German; the language switch is in the header (the choice is remembered in the browser, the first
+visit follows the browser language). Texts live in `services/frontend/site/locales/<code>.json`; to add a language copy
+`en.json`, translate it and add one line to `locales/index.json`. A test checks that every language has all keys and
+placeholders. Error messages that come from the services (for example a refused Gerber file) stay in English.
+
 Compose file, limits, own tool library, Proxmox homelab notes and the move to a root server:
 [docs/deployment.md](docs/deployment.md).
 
@@ -81,7 +86,7 @@ Checks for the whole repository:
 ```bash
 python scripts/check_contracts.py     # schemas, OpenAPI files and examples are valid
 python scripts/check_boundaries.py    # no code shared between services, one volume per service, ports
-node --test services/frontend/tests/geometry.test.mjs   # geometry of the plate preview (Node 20 or newer)
+node --test services/frontend/tests/*.test.mjs   # plate geometry and language files (Node 20 or newer)
 PCBHOMEFAB_URL=http://localhost pytest tests/e2e   # a running stack gives the golden outputs
 ```
 

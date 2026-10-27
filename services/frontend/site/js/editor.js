@@ -3,6 +3,7 @@
 import { ApiError, createJob, getBoardInfo, getProfiles, previewLayout } from "./api.js";
 import { fill, h } from "./dom.js";
 import { mm } from "./format.js";
+import { initI18n, onLanguageChange, t } from "./i18n.js";
 import { holeColors, holeSummary, isRectangle, placedBoards, plateUsage, polygonPath, previewId, validCount } from "./geometry.js";
 
 const STORAGE_KEY = "pcbhomefab.settings";
@@ -20,6 +21,8 @@ const submit = document.getElementById("submit");
 const submitError = document.getElementById("submit-error");
 
 const state = { profiles: null, rows: [], nextKey: 1, layout: null, layoutError: "", creating: false };
+// A row error or the layout error is a message of the server (text) or one of ours ({ key, params }).
+const messageText = (message) => (typeof message === "string" ? message : message ? t(message.key, message.params) : "");
 let previewTimer = 0;
 let previewSequence = 0;
 let previewAbort = null;
@@ -97,11 +100,11 @@ function addFiles(files) {
   for (const file of files) {
     const row = { key: state.nextKey++, file, status: "reading", info: null, error: "", count: 1 };
     if (!/\.zip$/i.test(file.name)) {
-      Object.assign(row, { status: "error", error: "Only Gerber ZIP files are accepted." });
+      Object.assign(row, { status: "error", error: { key: "boards.only_zip" } });
     } else if (file.size > limits().max_upload_mb * 1024 * 1024) {
-      Object.assign(row, { status: "error", error: `The file is larger than ${limits().max_upload_mb} MB.` });
+      Object.assign(row, { status: "error", error: { key: "boards.too_large", params: { mb: limits().max_upload_mb } } });
     } else if (state.rows.length >= limits().max_files) {
-      Object.assign(row, { status: "error", error: `At most ${limits().max_files} files per job.` });
+      Object.assign(row, { status: "error", error: { key: "boards.files_limit", params: { max: limits().max_files } } });
     }
     state.rows.push(row);
     if (row.status === "reading") readBoard(row);
@@ -137,9 +140,9 @@ function remove(row) {
 function describe(info) {
   const diameters = holeSummary([{ id: "x", count: 1 }], { x: info });
   const holes = diameters.length
-    ? `${info.holes.length} holes (${diameters.map(([d, n]) => `${n}×${d}`).join(", ")} mm)`
-    : "no holes";
-  const shape = isRectangle(info) ? "rectangle" : info.contour.cutouts.length ? "board contour with cutouts" : "board contour";
+    ? t("boards.holes", { count: info.holes.length, detail: diameters.map(([d, n]) => `${n}×${d}`).join(", ") })
+    : t("boards.holes_none");
+  const shape = t(isRectangle(info) ? "boards.shape_rectangle" : info.contour.cutouts.length ? "boards.shape_contour_cutouts" : "boards.shape_contour");
   return `${mm(info.width_mm)} × ${mm(info.height_mm)}, ${holes}, ${shape}`;
 }
 
@@ -157,15 +160,15 @@ function renderRows() {
           "td",
           {},
           h("strong", {}, row.file.name),
-          h("div", { class: "muted" }, row.status === "reading" ? "Reading ..." : row.status === "error" ? "" : describe(row.info)),
-          row.error ? h("div", { class: "error", role: "alert" }, row.error) : null,
+          h("div", { class: "muted" }, row.status === "reading" ? t("boards.reading") : row.status === "error" ? "" : describe(row.info)),
+          row.error ? h("div", { class: "error", role: "alert" }, messageText(row.error)) : null,
         ),
         h(
           "td",
           {},
           row.status === "ok"
             ? [
-                h("label", { class: "sr-only", for: countId }, `Copies of ${row.file.name}`),
+                h("label", { class: "sr-only", for: countId }, t("boards.copies_of", { name: row.file.name })),
                 h("input", {
                   id: countId,
                   type: "number",
@@ -185,9 +188,9 @@ function renderRows() {
         h(
           "td",
           { class: "actions" },
-          h("button", { type: "button", class: "icon", title: "Move up", "aria-label": `Move ${row.file.name} up`, disabled: index === 0, onclick: () => move(row, -1) }, "↑"),
-          h("button", { type: "button", class: "icon", title: "Move down", "aria-label": `Move ${row.file.name} down`, disabled: index === state.rows.length - 1, onclick: () => move(row, 1) }, "↓"),
-          h("button", { type: "button", class: "icon", title: "Remove", "aria-label": `Remove ${row.file.name}`, onclick: () => remove(row) }, "✕"),
+          h("button", { type: "button", class: "icon", title: t("boards.move_up"), "aria-label": t("boards.move_up_label", { name: row.file.name }), disabled: index === 0, onclick: () => move(row, -1) }, "↑"),
+          h("button", { type: "button", class: "icon", title: t("boards.move_down"), "aria-label": t("boards.move_down_label", { name: row.file.name }), disabled: index === state.rows.length - 1, onclick: () => move(row, 1) }, "↓"),
+          h("button", { type: "button", class: "icon", title: t("boards.remove"), "aria-label": t("boards.remove_label", { name: row.file.name }), onclick: () => remove(row) }, "✕"),
         ),
       );
     }),
@@ -221,7 +224,7 @@ async function refreshLayout() {
   const sequence = ++previewSequence;
   if (!request) {
     state.layout = null;
-    state.layoutError = readyRows().length ? "Check the copies, the gap and the margin." : "";
+    state.layoutError = readyRows().length ? { key: "plate.check_inputs" } : "";
     renderPlate();
     return;
   }
@@ -261,7 +264,7 @@ function renderPlate() {
         h(
           "g",
           {},
-          h("title", {}, `${board.name}: ${mm(board.width)} × ${mm(board.height)} at ${mm(board.x)}, ${mm(board.y)}`),
+          h("title", {}, t("plate.board_title", { name: board.name, width: mm(board.width), height: mm(board.height), x: mm(board.x), y: mm(board.y) })),
           h("path", { class: "board", "fill-rule": "evenodd", d: polygonPath([board.outer, ...board.cutouts], toX, toY) }),
           board.holes.map((hole) =>
             h("circle", { class: "hole", cx: hole.x, cy: toY(hole.y), r: Math.max(hole.diameter / 2, 0.35), fill: colors.get(hole.diameter) }),
@@ -272,19 +275,19 @@ function renderPlate() {
   }
   fill(plate, parts);
 
-  layoutError.textContent = state.layoutError;
+  layoutError.textContent = messageText(state.layoutError);
   layoutError.hidden = !state.layoutError;
   const total = rows.reduce((sum, row) => sum + (validCount(row.count, limits().max_boards) ? row.count : 0), 0);
   fill(
     summary,
     layout
       ? [
-          h("p", {}, `${total} board${total === 1 ? "" : "s"} on a ${width} × ${height} mm plate, ${Math.round(plateUsage(layout, byId) * 100)} % of the area used.`),
+          h("p", {}, t("plate.summary", { count: total, width, height, usage: Math.round(plateUsage(layout, byId) * 100) })),
           diameters.length
             ? h(
                 "ul",
                 { class: "holes" },
-                diameters.map(([d, n]) => h("li", {}, h("span", { class: "chip", "data-color": colors.get(d) }), `${n} × ${d} mm`)),
+                diameters.map(([d, n]) => h("li", {}, h("span", { class: "chip", "data-color": colors.get(d) }), t("plate.hole_line", { count: n, diameter: d }))),
               )
             : null,
         ]
@@ -302,7 +305,7 @@ function renderSubmit() {
   const countsOk = rows.every((row) => validCount(row.count, limits().max_boards));
   const output = value("exposure") || value("mill_gcode");
   submit.disabled = state.creating || reading || !rows.length || !countsOk || !state.layout || !output || !form.checkValidity();
-  submit.textContent = state.creating ? "Creating ..." : "Create job";
+  submit.textContent = t(state.creating ? "settings.creating" : "settings.submit");
 }
 
 function jobFormData() {
@@ -343,7 +346,7 @@ async function onSubmit(event) {
     const job = await createJob(jobFormData());
     window.location.assign(`/jobs/${encodeURIComponent(job.id)}`);
   } catch (error) {
-    submitError.textContent = error instanceof ApiError ? error.message : "Could not create the job.";
+    submitError.textContent = error instanceof ApiError ? error.message : t("settings.create_failed");
     state.creating = false;
     renderSubmit();
   }
@@ -355,6 +358,16 @@ function render() {
   renderRows();
   onLayoutInputsChanged();
   renderPlate();
+}
+
+function renderLimits() {
+  const l = limits();
+  document.getElementById("limits").textContent = t("boards.limits", {
+    files: l.max_files,
+    mb: l.max_upload_mb,
+    boards: l.max_boards,
+    count: Math.round(l.job_ttl_hours / 24),
+  });
 }
 
 function wire() {
@@ -392,10 +405,11 @@ function wire() {
 }
 
 async function start() {
+  await initI18n();
   try {
     state.profiles = await getProfiles();
   } catch (error) {
-    document.getElementById("load-error").textContent = `${error.message} Reload the page to try again.`;
+    document.getElementById("load-error").textContent = t("editor.load_failed", { message: error.message });
     return;
   }
   fillSelect(field("printer"), state.profiles.printers);
@@ -404,7 +418,12 @@ async function start() {
   applyMill();
   restoreSettings();
   wire();
-  document.getElementById("limits").textContent = `Up to ${limits().max_files} files of ${limits().max_upload_mb} MB and ${limits().max_boards} boards per job. Files are kept for ${Math.round(limits().job_ttl_hours / 24)} days.`;
+  renderLimits();
+  onLanguageChange(() => {
+    renderLimits();
+    renderRows();
+    renderPlate();
+  });
   form.hidden = false;
   document.getElementById("editor").hidden = false;
   render();

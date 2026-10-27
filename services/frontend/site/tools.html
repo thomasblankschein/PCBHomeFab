@@ -4,27 +4,36 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>Tools - PCBHomeFab</title>
+<title data-i18n="tools.page_title">Tools - PCBHomeFab</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <header class="top">
   <a class="brand" href="/">PCBHomeFab</a>
-  <nav aria-label="Main">
-    <a href="/">New job</a>
-    <a href="/tools" aria-current="page">Tools</a>
+  <nav aria-label="Main" data-i18n-attr="aria-label:nav.main">
+    <a href="/" data-i18n="nav.new_job">New job</a>
+    <a href="/tools" aria-current="page" data-i18n="nav.tools">Tools</a>
   </nav>
 </header>
 <main>
-<h1>Tool library</h1>
-<p class="lead">Drill bits and end mills the G-code is made for. A hole gets the drill of the same diameter; larger holes are
+<h1 data-i18n="tools.heading">Tool library</h1>
+<p class="lead" data-i18n="tools.lead">Drill bits and end mills the G-code is made for. A hole gets the drill of the same diameter; larger holes are
 milled with the end mill. Cutting values are starting values, tune them on your mill.</p>
 <p id="source" class="muted"></p>
 <p id="load-error" class="error" role="alert"></p>
 <div class="table-wrap">
 <table id="tools" class="tools" hidden>
   <thead>
-    <tr><th>Tool</th><th>Kind</th><th class="num">Diameter</th><th class="num">Spindle (rpm)</th><th class="num">Feed (mm/min)</th><th class="num">Plunge (mm/min)</th><th class="num">Peck / step (mm)</th><th>State</th></tr>
+    <tr>
+      <th data-i18n="tools.col_tool">Tool</th>
+      <th data-i18n="tools.col_kind">Kind</th>
+      <th class="num" data-i18n="tools.col_diameter">Diameter</th>
+      <th class="num" data-i18n="tools.col_spindle">Spindle (rpm)</th>
+      <th class="num" data-i18n="tools.col_feed">Feed (mm/min)</th>
+      <th class="num" data-i18n="tools.col_plunge">Plunge (mm/min)</th>
+      <th class="num" data-i18n="tools.col_peck">Peck / step (mm)</th>
+      <th data-i18n="tools.col_state">State</th>
+    </tr>
   </thead>
   <tbody></tbody>
 </table>

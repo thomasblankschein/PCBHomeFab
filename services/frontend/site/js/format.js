@@ -1,3 +1,5 @@
+import { t } from "./i18n.js";
+
 export function formatSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)} KB`;
@@ -13,9 +15,7 @@ export function programTitle(name) {
   const match = /(\d+)_(drill|mill)_([\d.]+)mm\.nc$/.exec(name);
   if (!match) return name;
   const [, step, kind, diameter] = match;
-  return kind === "drill"
-    ? `${step}. Drill ${diameter} mm`
-    : `${step}. End mill ${diameter} mm (large holes, cutouts and board outlines)`;
+  return t(kind === "drill" ? "job.program_drill" : "job.program_mill", { step, diameter });
 }
 
 export function daysLeft(expires) {

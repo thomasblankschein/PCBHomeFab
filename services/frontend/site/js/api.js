@@ -1,5 +1,7 @@
 // Calls to the REST API of the jobs service (the gateway publishes it under /api).
 
+import { t } from "./i18n.js";
+
 const API = "/api/v1";
 
 export class ApiError extends Error {
@@ -16,7 +18,7 @@ async function request(path, options = {}) {
     response = await fetch(`${API}${path}`, options);
   } catch (error) {
     if (error.name === "AbortError") throw error;
-    throw new ApiError("Cannot reach the server. Check the connection and try again.", { code: "client.network" });
+    throw new ApiError(t("error.network"), { code: "client.network" });
   }
   if (response.ok) return response;
   let problem = {};
@@ -25,7 +27,7 @@ async function request(path, options = {}) {
   } catch {
     // not a JSON problem, for example an error page of a proxy
   }
-  const message = problem.detail || (response.status === 413 ? "The upload is too large." : `The server answered with status ${response.status}.`);
+  const message = problem.detail || (response.status === 413 ? t("error.too_large") : t("error.status", { status: response.status }));
   throw new ApiError(message, { code: problem.code ?? "http.error", status: response.status });
 }
 

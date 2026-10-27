@@ -26,8 +26,8 @@ jobs:
           node-version: "22"
       - name: Syntax of the scripts
         run: for f in site/js/*.js; do node --check "$f"; done
-      - name: Unit tests of the geometry
-        run: node --test tests/geometry.test.mjs
+      - name: Unit tests (geometry, language files)
+        run: node --test tests/*.test.mjs
 
   image:
     runs-on: ubuntu-latest

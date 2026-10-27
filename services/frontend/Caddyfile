@@ -24,5 +24,9 @@
 	@tools path /tools
 	rewrite @tools /tools.html
 
+	# Language files change with releases and are small: always ask whether they are still current.
+	@locales path /locales/*
+	header @locales Cache-Control no-cache
+
 	file_server
 }

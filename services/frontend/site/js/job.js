@@ -1,13 +1,19 @@
 import { ApiError, fileUrl, getJob } from "./api.js";
 import { fill, h } from "./dom.js";
 import { daysLeft, formatSize, mm, programTitle } from "./format.js";
+import { initI18n, onLanguageChange, t } from "./i18n.js";
 
 const jobId = decodeURIComponent(window.location.pathname.split("/").filter(Boolean).pop() ?? "");
 const state = document.getElementById("state");
 const result = document.getElementById("result");
 
-function setState(text, kind = "") {
-  state.textContent = text;
+// What the page shows now, kept so that it can be drawn again when the language changes.
+let shownState = { key: "job.loading", params: {}, kind: "" };
+let shownJob = null;
+
+function setState(key, params = {}, kind = "") {
+  shownState = { key, params, kind };
+  state.textContent = t(key, params);
   state.className = `state ${kind}`.trim();
 }
 
@@ -24,19 +30,19 @@ function download(job, file, label, note) {
 function summaryOf(job) {
   const p = job.params;
   const boards = p.boards.map((b) => `${b.count} × ${b.name} (${mm(b.width_mm)} × ${mm(b.height_mm)})`).join(", ");
-  const outputs = [p.exposure ? `exposure ${p.exposure_s} s` : null, p.mill_gcode ? "drill and mill G-code" : null].filter(Boolean);
+  const outputs = [p.exposure ? t("job.output_exposure", { seconds: p.exposure_s }) : null, p.mill_gcode ? t("job.output_mill") : null].filter(Boolean);
   return h("dl", { class: "facts" }, [
-    h("dt", {}, "Boards"),
+    h("dt", {}, t("job.boards")),
     h("dd", {}, boards),
-    h("dt", {}, "Outputs"),
+    h("dt", {}, t("job.outputs")),
     h("dd", {}, outputs.join(", ")),
-    h("dt", {}, "Plate"),
-    h("dd", {}, `gap ${mm(p.gap_mm)}, margin ${mm(p.margin_mm)}, ${mm(p.thickness_mm)} thick`),
+    h("dt", {}, t("job.plate")),
+    h("dd", {}, t("job.plate_summary", { gap: mm(p.gap_mm), margin: mm(p.margin_mm), thickness: mm(p.thickness_mm) })),
   ]);
 }
 
 function showDone(job) {
-  setState(`Done. The files are kept for about ${daysLeft(job.expires)} more day(s). Keep this link, it is the only way to get them back.`, "ok");
+  setState("job.done", { count: daysLeft(job.expires) }, "ok");
   const files = new Map(job.files.map((f) => [f.name, f]));
   const programs = job.files.filter((f) => /^mill\/.+\.nc$/.test(f.name)).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
   const sections = [summaryOf(job)];
@@ -46,19 +52,19 @@ function showDone(job) {
       h(
         "section",
         { class: "panel" },
-        h("h2", {}, "Exposure"),
+        h("h2", {}, t("job.exposure")),
         h(
           "div",
           { class: "previews" },
           files.has("mask_preview.png")
-            ? h("figure", {}, h("img", { src: fileUrl(job.id, "mask_preview.png"), alt: "Exposure mask: white exposes, black stays copper", width: 1024, height: 640 }), h("figcaption", {}, "Mask as sent to the printer (mirrored, white = exposed)."))
+            ? h("figure", {}, h("img", { src: fileUrl(job.id, "mask_preview.png"), alt: t("job.mask_alt"), width: 1024, height: 640 }), h("figcaption", {}, t("job.mask_caption")))
             : null,
         ),
         h(
           "ul",
           { class: "files" },
-          download(job, files.get("exposure.pm3"), "exposure.pm3", "Open in Photon Workshop and print."),
-          files.has("mask.png") ? download(job, files.get("mask.png"), "mask.png", "The mask as image (4096 × 2560 px).") : null,
+          download(job, files.get("exposure.pm3"), "exposure.pm3", t("job.pm3_note")),
+          files.has("mask.png") ? download(job, files.get("mask.png"), "mask.png", t("job.mask_png_note")) : null,
         ),
       ),
     );
@@ -69,16 +75,16 @@ function showDone(job) {
       h(
         "section",
         { class: "panel" },
-        h("h2", {}, "Drill and mill"),
+        h("h2", {}, t("job.drill_mill")),
         files.has("mill_preview.svg")
-          ? h("figure", {}, h("img", { src: fileUrl(job.id, "mill_preview.svg"), alt: "Plate with board outlines and holes", class: "mill-preview" }), h("figcaption", {}, "Plate on the mill bed with board outlines and holes (colour = diameter)."))
+          ? h("figure", {}, h("img", { src: fileUrl(job.id, "mill_preview.svg"), alt: t("job.mill_alt"), class: "mill-preview" }), h("figcaption", {}, t("job.mill_caption")))
           : null,
-        h("p", { class: "muted" }, "One program per tool, run them in this order and change the tool in between. Set Z0 to the plate surface."),
+        h("p", { class: "muted" }, t("job.programs_hint")),
         h(
           "ul",
           { class: "files" },
           programs.map((file) => download(job, file, programTitle(file.name), file.name.split("/").pop())),
-          files.has("mill_gcode.zip") ? download(job, files.get("mill_gcode.zip"), "All programs (ZIP)") : null,
+          files.has("mill_gcode.zip") ? download(job, files.get("mill_gcode.zip"), t("job.all_programs")) : null,
         ),
       ),
     );
@@ -88,9 +94,9 @@ function showDone(job) {
     h(
       "p",
       { class: "actions-row" },
-      h("button", { type: "button", id: "copy" }, "Copy link"),
+      h("button", { type: "button", id: "copy" }, t("job.copy_link")),
       " ",
-      h("a", { class: "button", href: "/" }, "New job"),
+      h("a", { class: "button", href: "/" }, t("job.new_job")),
     ),
   );
   fill(result, sections);
@@ -98,11 +104,22 @@ function showDone(job) {
   document.getElementById("copy").addEventListener("click", async (event) => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      event.target.textContent = "Link copied";
+      event.target.textContent = t("job.link_copied");
     } catch {
-      event.target.textContent = "Copy the address from the address bar";
+      event.target.textContent = t("job.copy_manually");
     }
   });
+}
+
+function showFailed(job) {
+  setState("job.failed", { error: job.error ?? t("job.unknown_error") }, "error");
+  result.hidden = false;
+  fill(result, summaryOf(job), h("p", {}, h("a", { class: "button", href: "/" }, t("job.start_again"))));
+}
+
+function show(job) {
+  if (job.status === "done") showDone(job);
+  else showFailed(job);
 }
 
 async function poll() {
@@ -111,24 +128,26 @@ async function poll() {
     job = await getJob(jobId);
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
-      setState("This job does not exist or has expired.", "error");
+      setState("job.not_found", {}, "error");
       return;
     }
-    setState("Cannot reach the server, trying again ...");
+    setState("job.unreachable");
     setTimeout(poll, 5000);
     return;
   }
-  document.title = `Job - PCBHomeFab`;
-  if (job.status === "done") {
-    showDone(job);
-  } else if (job.status === "failed") {
-    setState(`The job failed: ${job.error ?? "unknown error"}`, "error");
-    result.hidden = false;
-    fill(result, summaryOf(job), h("p", {}, h("a", { class: "button", href: "/" }, "Start again")));
+  if (job.status === "done" || job.status === "failed") {
+    shownJob = job;
+    show(job);
   } else {
-    setState(job.status === "queued" ? "Waiting in the queue. This page updates itself." : "Creating the files. This page updates itself.");
+    setState(job.status === "queued" ? "job.queued" : "job.running");
     setTimeout(poll, 2000);
   }
 }
 
+await initI18n();
+onLanguageChange(() => {
+  setState(shownState.key, shownState.params, shownState.kind);
+  if (shownJob) show(shownJob);
+});
+setState("job.loading");
 poll();

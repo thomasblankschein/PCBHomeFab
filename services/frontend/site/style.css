@@ -99,6 +99,16 @@ code {
   border-bottom-color: var(--accent);
 }
 
+.top .language {
+  margin-left: auto;
+}
+
+/* The text is filled in by script (js/i18n.js); hide the markup until the language is applied. */
+html:not([data-ready]) .top nav,
+html:not([data-ready]) main {
+  visibility: hidden;
+}
+
 .lead {
   max-width: 50rem;
   color: var(--muted);
