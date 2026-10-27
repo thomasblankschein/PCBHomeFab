@@ -7,6 +7,7 @@ black = light is blocked = copper stays. Copper (traces, pads, pours) is therefo
 from __future__ import annotations
 
 from math import ceil
+from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
@@ -28,10 +29,11 @@ MARK_BORDER = 0.06
 #: Free ring around the pad, so that the pad is no part of a copper pour.
 MARK_CLEARANCE_MM = 0.5
 MARK_CORNER_MM = 0.2
-#: Text next to a mark (the G-code coordinates of the mark): height of the font, stroke added to the letters, and the
+#: Text next to a mark (the G-code coordinates of the mark): height of the font and the
 #: gap between the free ring of the mark and the first letter.
-LABEL_SIZE_MM = 1.8
-LABEL_STROKE_MM = 0.04
+#: Font of the label: DejaVu Sans Mono Bold, equal width and thick strokes (licence next to it).
+LABEL_FONT = Path(__file__).parent / "data" / "fonts" / "DejaVuSansMono-Bold.ttf"
+LABEL_SIZE_MM = 2.0
 LABEL_GAP_MM = 0.2
 #: Outer size of a mark with its free ring (the jobs service keeps the boards away from it).
 MARK_FOOTPRINT_MM = MARK_PAD_MM + 2 * MARK_CLEARANCE_MM
@@ -81,11 +83,10 @@ def draw_label(image: Image.Image, cx: float, cy: float, pixel_mm: float, mark: 
     finished copper. The block of text keeps its place, only the letters inside are mirrored."""
     if not mark.label:
         return
-    font = ImageFont.load_default(size=max(6, round(LABEL_SIZE_MM / pixel_mm)))
-    stroke = round(LABEL_STROKE_MM / pixel_mm)
-    left, top, right, bottom = font.getbbox(mark.label, stroke_width=stroke)
+    font = ImageFont.truetype(str(LABEL_FONT), max(6, round(LABEL_SIZE_MM / pixel_mm)))
+    left, top, right, bottom = font.getbbox(mark.label)
     text = Image.new("L", (ceil(right - left), ceil(bottom - top)), 0)
-    ImageDraw.Draw(text).text((-left, -top), mark.label, fill=255, font=font, stroke_width=stroke)
+    ImageDraw.Draw(text).text((-left, -top), mark.label, fill=255, font=font)
     if mark.label_flip == "x":
         text = ImageOps.mirror(text)
     elif mark.label_flip == "y":

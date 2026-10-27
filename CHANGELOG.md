@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.0 - 2026-10-27
+
+- The text next to the positioning marks uses DejaVu Sans Mono Bold (equal width, thick strokes, dotted zero; bundled in
+  `exposure` with its licence) and is 2 mm high, so it survives etching better.
+
 ## 0.12.0 - 2026-10-27
 
 - Positioning marks get their G-code coordinates as text next to them on the copper layer (`X0 Y0` at the mark that is the
