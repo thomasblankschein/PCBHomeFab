@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0 - 2026-10-27
+
+- The frontend shows the version of the release in the footer (`site/version.json`, kept equal to this file by a test).
+
 ## 0.1.0 - 2026-10-27
 
 First release.

@@ -61,6 +61,8 @@ They are the reference for behaviour until the port is finished.
   are identical copies on purpose; change all five or none.
 - Commits: author Thomas Blankschein using the GitHub noreply address (public repo), messages in English,
   imperative mood, short first line.
+- Release: add the version to `CHANGELOG.md` and `services/frontend/site/version.json` (shown in the footer; a test keeps
+  both equal), tag `vX.Y.Z`, create the GitHub release from the changelog entry.
 - No secrets, no uploaded user data, no generated `.pm3`/`.nc` files in the repository.
 
 ## State (2026-10-26)

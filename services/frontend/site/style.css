@@ -437,3 +437,13 @@ figcaption {
     position: static;
   }
 }
+
+.foot {
+  padding: 1rem 16px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.foot a {
+  color: inherit;
+}
