@@ -58,6 +58,9 @@ class MarkModel(BaseModel):
     x_mm: float
     y_mm: float
     voids: Literal["tl-br", "tr-bl"] = "tl-br"
+    label: str | None = Field(default=None, min_length=1, max_length=20)
+    label_flip: Literal["none", "x", "y"] = "none"
+    label_side: Literal["right", "left"] = "right"
 
 
 class PlateModel(BaseModel):
@@ -128,6 +131,9 @@ class Mark:
     x_mm: float
     y_mm: float
     voids: str = "tl-br"
+    label: str | None = None
+    label_flip: str = "none"
+    label_side: str = "right"
 
 
 def board_id_of(filename: str) -> str:

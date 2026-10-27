@@ -247,6 +247,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         mirror_x: Annotated[bool | None, Form()] = None,
         plate: Annotated[str | None, Form()] = None,
         marks: Annotated[bool, Form()] = True,
+        mark_labels: Annotated[bool, Form()] = True,
     ) -> JSONResponse:
         client = _client_hash(request, settings)
         if store.recent_count(client) >= settings.rate_limit_per_hour:
@@ -313,7 +314,9 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             "frame_bottom_mm": frame_bottom_mm,
             "mirror_x": mirror_x,
             "plate": {"id": chosen_plate.id, "width_mm": chosen_plate.width_mm, "height_mm": chosen_plate.height_mm},
-            "marks": alignment_marks(chosen_plate.width_mm, chosen_plate.height_mm, flip) if marks else None,
+            "marks": alignment_marks(chosen_plate.width_mm, chosen_plate.height_mm, flip, mark_labels)
+            if marks
+            else None,
             "boards": entries,
         }
         record = store.create(job_id, params, client)

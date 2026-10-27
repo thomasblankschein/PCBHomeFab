@@ -84,7 +84,14 @@ def _masks(packages: dict[str, bytes], layout: dict[str, Any], settings: dict[st
     placements = [Placement(boards[p["board_id"]], p["x_mm"], p["y_mm"]) for p in layout["placements"]]
 
     outputs = settings["outputs"]
-    marks = [Mark(m["x_mm"], m["y_mm"], m["voids"]) for m in settings["marks"]] if settings.get("marks") else None
+    marks = (
+        [
+            Mark(m["x_mm"], m["y_mm"], m["voids"], m["label"], m["label_flip"], m["label_side"])
+            for m in settings["marks"]
+        ]
+        if settings.get("marks")
+        else None
+    )
     wants_mask = {"mask", "preview", "pm3"} & set(outputs)
     mask = build_mask(placements, printer, holes=settings["holes"], marks=marks) if wants_mask else None
     buffer = io.BytesIO()

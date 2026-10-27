@@ -12,6 +12,22 @@
       "enum": ["tl-br", "tr-bl"],
       "default": "tl-br",
       "description": "Which two quadrants of the mark are etched free (top left and bottom right, or top right and bottom left), in the design view."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 20,
+      "description": "Text `exposure` puts next to the mark on the copper layer (the G-code coordinates of the mark). `mill` ignores it."
+    },
+    "label_flip": {
+      "enum": ["none", "x", "y"],
+      "default": "none",
+      "description": "How the plate is turned over for milling. The text is mirrored the same way in the design view, so that it reads correctly on the finished copper."
+    },
+    "label_side": {
+      "enum": ["right", "left"],
+      "default": "right",
+      "description": "The text starts next to the mark and runs to the right or to the left (design view), towards the middle of the plate."
     }
   },
   "additionalProperties": false

@@ -7,7 +7,7 @@ import { initI18n, onLanguageChange, t } from "./i18n.js";
 import { holeColors, holeSummary, isRectangle, placedBoards, plateUsage, polygonPath, previewId, validCount } from "./geometry.js";
 
 const STORAGE_KEY = "pcbhomefab.settings";
-const SAVED_FIELDS = ["plate", "marks", "printer", "mill", "holes", "gap_mm", "margin_mm", "flip", "thickness_mm", "tabs", "exposure", "mill_gcode"];
+const SAVED_FIELDS = ["plate", "marks", "mark_labels", "printer", "mill", "holes", "gap_mm", "margin_mm", "flip", "thickness_mm", "tabs", "exposure", "mill_gcode"];
 
 const form = document.getElementById("settings");
 const rowsBody = document.getElementById("rows");
@@ -332,6 +332,7 @@ function jobFormData() {
   const entries = {
     plate: value("plate"),
     marks: value("marks"),
+    mark_labels: value("mark_labels"),
     printer: value("printer"),
     mill: value("mill"),
     exposure: value("exposure"),

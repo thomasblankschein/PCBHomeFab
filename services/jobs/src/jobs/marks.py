@@ -18,11 +18,12 @@ MIN_MARGIN_MM = 4.5
 MIN_PLATE_MM = 20.0
 
 
-def alignment_marks(width_mm: float, height_mm: float, flip: str) -> dict[str, Any]:
+def alignment_marks(width_mm: float, height_mm: float, flip: str, labels: bool = False) -> dict[str, Any]:
     """The two marks (centres in plate coordinates, design view) for a plate, and where the second one is in G-code.
 
     ``flip`` is how the plate is turned over for milling: ``x`` mirrors X, ``y`` mirrors Y, ``none`` leaves it. The mark
-    pattern is chosen so that it looks the same on the mill whatever the way the plate is turned.
+    pattern is chosen so that it looks the same on the mill whatever the way the plate is turned. With ``labels`` every
+    mark gets its G-code coordinates as text, mirrored like the plate is turned over.
     """
     a = INSET_MM
     if flip == "none":
@@ -32,9 +33,18 @@ def alignment_marks(width_mm: float, height_mm: float, flip: str) -> dict[str, A
         # lower left and upper right of the plate after turning it over
         points = [(a, height_mm - a), (width_mm - a, a)]
         voids = "tr-bl"
+    second = {"x_mm": width_mm - 2 * a, "y_mm": height_mm - 2 * a}
+    points_json: list[dict[str, Any]] = [{"x_mm": x, "y_mm": y, "voids": voids} for x, y in points]
+    if labels:
+        # with flip x the second point lies at the lower left after turning the plate, otherwise the first one
+        origin = 1 if flip == "x" else 0
+        for index, point in enumerate(points_json):
+            point["label"] = "X0 Y0" if index == origin else f"X{second['x_mm']:g} Y{second['y_mm']:g}"
+            point["label_flip"] = flip
+            point["label_side"] = "right" if point["x_mm"] < width_mm / 2 else "left"
     return {
-        "points": [{"x_mm": x, "y_mm": y, "voids": voids} for x, y in points],
+        "points": points_json,
         #: The plate's lower left corner in the G-code coordinates, which have the lower left mark as origin.
         "plate_origin_mm": {"x_mm": -a, "y_mm": -a},
-        "second_mm": {"x_mm": width_mm - 2 * a, "y_mm": height_mm - 2 * a},
+        "second_mm": second,
     }

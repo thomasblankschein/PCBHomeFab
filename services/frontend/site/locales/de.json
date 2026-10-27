@@ -202,5 +202,6 @@
   "job.marks": "Positionsmarken",
   "job.marks_off": "keine",
   "job.marks_on": "Marke unten links = X0 Y0, Marke oben rechts bei X {x}, Y {y} mm",
-  "job.marks_hint": "Positionsmarken: Mittelpunkt der Marke unten links suchen (dort, wo die beiden freigeätzten Quadrate sich berühren), dort X0 Y0 setzen und den Mittelpunkt der Marke oben rechts bei X {x}, Y {y} mm prüfen. Weicht er ab, liegt die Platte verdreht: so lange drehen, bis beide passen."
+  "job.marks_hint": "Positionsmarken: Mittelpunkt der Marke unten links suchen (dort, wo die beiden freigeätzten Quadrate sich berühren), dort X0 Y0 setzen und den Mittelpunkt der Marke oben rechts bei X {x}, Y {y} mm prüfen. Weicht er ab, liegt die Platte verdreht: so lange drehen, bis beide passen.",
+  "settings.mark_labels": "Koordinaten neben den Positionsmarken"
 }

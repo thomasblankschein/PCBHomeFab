@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.0 - 2026-10-27
+
+- Positioning marks get their G-code coordinates as text next to them on the copper layer (`X0 Y0` at the mark that is the
+  origin, e.g. `X156 Y96` at the other one). The text is mirrored like the plate is turned over for milling, so it reads
+  correctly on the finished copper. Switchable with `mark_labels` (default on, only with `marks`); marks in the shared
+  mark format have the new optional fields `label`, `label_flip` and `label_side`.
+
 ## 0.11.0 - 2026-10-27
 
 - **Breaking:** the exposure mask is no longer mirrored by default (`PrinterProfile.mirror_x` is now `false`). The Gerber of

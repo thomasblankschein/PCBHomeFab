@@ -27,6 +27,10 @@ class MarkModel(BaseModel):
     x_mm: float
     y_mm: float
     voids: Literal["tl-br", "tr-bl"] = "tl-br"
+    # the text next to the mark is drawn by `exposure`, the mill only accepts the shared mark format
+    label: str | None = Field(default=None, min_length=1, max_length=20)
+    label_flip: Literal["none", "x", "y"] = "none"
+    label_side: Literal["right", "left"] = "right"
 
 
 class MillSettings(BaseModel):

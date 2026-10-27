@@ -202,5 +202,6 @@
   "job.marks": "Positioning marks",
   "job.marks_off": "none",
   "job.marks_on": "lower left mark = X0 Y0, upper right mark at X {x}, Y {y} mm",
-  "job.marks_hint": "Positioning marks: find the centre of the lower left mark (where the two etched-free squares touch), set X0 Y0 there and check the centre of the upper right mark at X {x}, Y {y} mm. If it is off, the plate is turned: turn it until both fit."
+  "job.marks_hint": "Positioning marks: find the centre of the lower left mark (where the two etched-free squares touch), set X0 Y0 there and check the centre of the upper right mark at X {x}, Y {y} mm. If it is off, the plate is turned: turn it until both fit.",
+  "settings.mark_labels": "Coordinates next to the positioning marks"
 }

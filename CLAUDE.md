@@ -119,6 +119,9 @@ docker-compose.yaml
   it stays put when too much is etched). `jobs` (`marks.py`) places them so that, after turning the plate over (`flip`), one
   is at the lower left and one at the upper right. `mill` makes the lower left mark X0 Y0 of every program and names the
   other one in the header and in `programs.json`; `jobs` stores the same position as `params.marks.second_mm`.
+  With `mark_labels` (default on) `exposure` also writes the G-code coordinates (`X0 Y0`, `X156 Y96`) next to each mark; the
+  margin stays copper, so the letters are exposed (etched free), and they are mirrored like the plate is turned (`label_flip`)
+  so they read correctly on the finished copper.
 
 ## Exposure mask
 - The mask has no frame around the display (an earlier version drew an exposed border of 1 mm so that Photon Workshop could

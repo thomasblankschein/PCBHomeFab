@@ -476,7 +476,7 @@ def test_positioning_marks_reach_exposure_and_mill(
     client: TestClient, services: Services, downstream: Downstream
 ) -> None:
     seen = _spy_settings(services, downstream)
-    job = _post(client, ("a.zip", ZIP), marks="true", margin_mm="5", flip="x").json()
+    job = _post(client, ("a.zip", ZIP), marks="true", mark_labels="false", margin_mm="5", flip="x").json()
     process_next(JobStore(services.settings), services)
     params = client.get(f"/v1/jobs/{job['id']}").json()["params"]
     expected = [{"x_mm": 2.0, "y_mm": 98.0, "voids": "tr-bl"}, {"x_mm": 158.0, "y_mm": 2.0, "voids": "tr-bl"}]
@@ -484,6 +484,18 @@ def test_positioning_marks_reach_exposure_and_mill(
     assert params["marks"]["second_mm"] == {"x_mm": 156.0, "y_mm": 96.0}
     assert params["marks"]["plate_origin_mm"] == {"x_mm": -2.0, "y_mm": -2.0}
     assert seen["exposure"]["marks"] == expected and seen["mill"]["marks"] == expected
+
+
+def test_mark_labels_name_the_gcode_coordinates(client: TestClient) -> None:
+    for flip, origin in (("x", 1), ("y", 0), ("none", 0)):
+        job = _post(client, ("a.zip", ZIP), marks="true", margin_mm="5", flip=flip).json()
+        points = client.get(f"/v1/jobs/{job['id']}").json()["params"]["marks"]["points"]
+        assert [p["label"] for p in points] == ["X0 Y0" if i == origin else "X156 Y96" for i in (0, 1)]
+        assert {p["label_flip"] for p in points} == {flip}
+        assert [p["label_side"] for p in points] == ["right", "left"]
+    job = _post(client, ("a.zip", ZIP), marks="true", mark_labels="false", margin_mm="5").json()
+    points = client.get(f"/v1/jobs/{job['id']}").json()["params"]["marks"]["points"]
+    assert all("label" not in p for p in points)
 
 
 def test_marks_depend_on_how_the_plate_is_turned(client: TestClient) -> None:

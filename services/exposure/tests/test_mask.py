@@ -129,6 +129,26 @@ def test_mark_is_mirrored_with_the_display() -> None:
     assert ImageOps.mirror(plain.convert("L")).tobytes() == mirrored.convert("L").tobytes()
 
 
+def test_label_is_drawn_next_to_the_mark_and_mirrored_for_milling() -> None:
+    from exposure.boards import Mark
+
+    def label_pixels(flip: str) -> list[tuple[int, int]]:
+        mark = Mark(20.0, 30.0, "tl-br", "X0 Y0", flip, "right")
+        plain = build_mask([], PHOTON_M3, marks=[Mark(20.0, 30.0, "tl-br")]).convert("L")
+        image = build_mask([], PHOTON_M3, marks=[mark]).convert("L")
+        width, height = image.size
+        return [(x, y) for y in range(height) for x in range(width) if image.getpixel((x, y)) != plain.getpixel((x, y))]
+
+    none, mirrored = label_pixels("none"), label_pixels("x")
+    assert none and len(none) == len(mirrored)
+    pixel = 0.04
+    mark_right = (PHOTON_M3.frame_left_mm + 20.0 + 1.7) / pixel
+    assert min(x for x, _ in none) > mark_right  # to the right of the mark and its free ring
+    # same block, only the letters are mirrored
+    assert abs(min(x for x, _ in none) - min(x for x, _ in mirrored)) <= 3
+    assert sorted(none) != sorted(mirrored)
+
+
 def test_no_marks_no_change(base: Board) -> None:
     assert build_mask(_one(base), PHOTON_M3).tobytes() == build_mask(_one(base), PHOTON_M3, marks=None).tobytes()
 

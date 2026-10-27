@@ -6,7 +6,9 @@ black = light is blocked = copper stays. Copper (traces, pads, pours) is therefo
 
 from __future__ import annotations
 
-from PIL import Image, ImageDraw, ImageOps
+from math import ceil
+
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from .boards import Board, Mark, Placement
 from .profiles import PrinterProfile
@@ -26,6 +28,11 @@ MARK_BORDER = 0.06
 #: Free ring around the pad, so that the pad is no part of a copper pour.
 MARK_CLEARANCE_MM = 0.5
 MARK_CORNER_MM = 0.2
+#: Text next to a mark (the G-code coordinates of the mark): height of the font, stroke added to the letters, and the
+#: gap between the free ring of the mark and the first letter.
+LABEL_SIZE_MM = 1.8
+LABEL_STROKE_MM = 0.04
+LABEL_GAP_MM = 0.2
 #: Outer size of a mark with its free ring (the jobs service keeps the boards away from it).
 MARK_FOOTPRINT_MM = MARK_PAD_MM + 2 * MARK_CLEARANCE_MM
 
@@ -67,6 +74,27 @@ def punch_holes(no_copper: Image.Image, board: Board, px_mm: float, mode: str) -
         draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=255)
 
 
+def draw_label(image: Image.Image, cx: float, cy: float, pixel_mm: float, mark: Mark, value: int) -> None:
+    """Write the label of ``mark`` next to its centre at pixel (cx, cy), in place, in the grey value ``value``.
+
+    The text is mirrored like the plate is turned over for milling (``label_flip``), so it reads correctly on the
+    finished copper. The block of text keeps its place, only the letters inside are mirrored."""
+    if not mark.label:
+        return
+    font = ImageFont.load_default(size=max(6, round(LABEL_SIZE_MM / pixel_mm)))
+    stroke = round(LABEL_STROKE_MM / pixel_mm)
+    left, top, right, bottom = font.getbbox(mark.label, stroke_width=stroke)
+    text = Image.new("L", (ceil(right - left), ceil(bottom - top)), 0)
+    ImageDraw.Draw(text).text((-left, -top), mark.label, fill=255, font=font, stroke_width=stroke)
+    if mark.label_flip == "x":
+        text = ImageOps.mirror(text)
+    elif mark.label_flip == "y":
+        text = ImageOps.flip(text)
+    gap = (MARK_PAD_MM / 2 + MARK_CLEARANCE_MM + LABEL_GAP_MM) / pixel_mm
+    x = cx + gap if mark.label_side == "right" else cx - gap - text.width
+    image.paste(value, (round(x), round(cy - text.height / 2)), text)
+
+
 def build_copper(
     placements: list[Placement], plate_width_mm: float, plate_height_mm: float, marks: list[Mark] | None = None
 ) -> Image.Image:
@@ -90,7 +118,9 @@ def build_copper(
             ),
         )
     for mark in marks or []:
-        draw_mark(alpha, mark.x_mm / pixel, (plate_height_mm - mark.y_mm) / pixel, pixel, mark.voids, 255, 0)
+        cx, cy = mark.x_mm / pixel, (plate_height_mm - mark.y_mm) / pixel
+        draw_mark(alpha, cx, cy, pixel, mark.voids, 255, 0)
+        draw_label(alpha, cx, cy, pixel, mark, 255)
     picture = Image.new("RGBA", alpha.size, (*COPPER_RGB, 0))
     picture.putalpha(alpha)
     return picture
@@ -122,6 +152,8 @@ def build_mask(
         cx = (printer.frame_left_mm + mark.x_mm) / pixel
         cy = (printer.display_height_mm - printer.frame_bottom_mm - mark.y_mm) / pixel
         draw_mark(mask, cx, cy, pixel, mark.voids, copper=0, clear=255)
+        # the margin stays copper, so the letters are exposed (etched free) there
+        draw_label(mask, cx, cy, pixel, mark, 255)
     if printer.mirror_x:
         mask = ImageOps.mirror(mask)
     return mask.point(lambda v: 255 if v >= 128 else 0).convert("1")
