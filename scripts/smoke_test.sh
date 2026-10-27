@@ -14,7 +14,7 @@ curl -fsS "$base/api/healthz"; echo
 curl -fsS "$base/" | grep -q PCBHomeFab
 
 response="$(curl -fsS -F "boards=@$data/basisplatine.zip" -F "boards=@$data/fuehlerknoten.zip" \
-    -F counts=1 -F counts=3 -F plate=160x100 -F exposure_s=60 "$base/api/v1/jobs")"
+    -F counts=1 -F counts=3 -F plate=160x100 -F margin_mm=5 -F exposure_s=60 "$base/api/v1/jobs")"
 id="$(printf '%s' "$response" | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')"
 echo "job $id"
 
