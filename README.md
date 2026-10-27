@@ -51,13 +51,14 @@ files are deleted after seven days.
 The same through the REST API (the gateway publishes the `jobs` service under `/api`):
 
 ```bash
-curl -F boards=@base.zip -F boards=@node.zip -F counts=1 -F counts=15 -F exposure_s=120 http://localhost/api/v1/jobs
+curl -F boards=@base.zip -F boards=@node.zip -F counts=1 -F counts=15 -F plate=160x100 -F exposure_s=120 http://localhost/api/v1/jobs
 # {"id":"...","status":"queued"}
 curl http://localhost/api/v1/jobs/<id>                       # status and file list
 curl -O http://localhost/api/v1/jobs/<id>/files/exposure.pm3
 ```
 
-Other options of `POST /api/v1/jobs`: `exposure`, `mill_gcode` (choose the outputs), `holes`, `gap_mm`, `margin_mm`,
+`plate` (required) is the id of a plate size from `GET /api/v1/plates` (160x100, 75x100 and 100x75 mm built in, the list
+is configurable, see [docs/deployment.md](docs/deployment.md)). Other options of `POST /api/v1/jobs`: `exposure`, `mill_gcode` (choose the outputs), `holes`, `gap_mm`, `margin_mm`,
 `flip`, `thickness_mm`, `tabs`, `printer`, `mill`, `frame_left_mm`, `frame_bottom_mm`, `mirror_x`.
 `GET /api/v1/profiles` lists printers, mills and limits, `GET /api/v1/tools` the tool library. For previews the editor
 uses `POST /api/v1/boards` (shape, size and holes of one ZIP) and `POST /api/v1/layouts` (placement on the plate); both

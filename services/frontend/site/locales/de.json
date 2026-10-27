@@ -98,7 +98,7 @@
   "job.plate": "Platte",
   "job.output_exposure": "Belichtung {seconds} s",
   "job.output_mill": "Bohr- und Fräs-G-Code",
-  "job.plate_summary": "Abstand {gap}, Rand {margin}, {thickness} dick",
+  "job.plate_summary": "{size}, Abstand {gap}, Rand {margin}, {thickness} dick",
   "job.exposure": "Belichtung",
   "job.mask_alt": "Belichtungsmaske: Weiß belichtet, Schwarz bleibt Kupfer",
   "job.mask_caption": "Maske, wie sie an den Drucker geht (gespiegelt, Weiß = belichtet).",
@@ -184,8 +184,14 @@
   "machines.m_tab_height": "Steghöhe",
   "machines.m_flip": "Wenden der Platte",
   "machines.m_offset": "Plattenposition an der Maschine (X, Y)",
-  "machines.m_plate": "Platte (Breite × Höhe)",
   "machines.m_thickness": "Standard-Materialstärke",
   "machines.yes": "ja",
-  "machines.no": "nein"
+  "machines.no": "nein",
+
+  "settings.plate_size": "Plattengröße",
+  "machines.plates": "Plattengrößen",
+  "machines.col_name": "Name",
+  "machines.col_width": "Breite",
+  "machines.col_height": "Höhe",
+  "machines.col_id": "Kennung"
 }

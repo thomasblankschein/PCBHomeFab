@@ -1,0 +1,27 @@
+# Plate sizes (blanks) a job can be made for, width x height in millimetres as the plate lies in the exposure frame.
+# The first enabled entry is the default in the user interface.
+#
+# To use your own list, copy this file, edit it and point PCBHOMEFAB_PLATES_FILE at it (see docs/deployment.md).
+# It replaces this list completely. The exposure frame of the printer sets the upper limit: the plate and its offset
+# must fit on the display (Photon M3: 160 x 100 mm with the default offsets).
+#
+#   id         short name used by the API, letters, digits, "_", "." and "-"
+#   name       text in the user interface (optional, default "width x height mm")
+#   width_mm   along X
+#   height_mm  along Y
+#   enabled    false hides the entry without deleting it (optional, default true)
+
+[[plate]]
+id = "160x100"
+width_mm = 160
+height_mm = 100
+
+[[plate]]
+id = "75x100"
+width_mm = 75
+height_mm = 100
+
+[[plate]]
+id = "100x75"
+width_mm = 100
+height_mm = 75

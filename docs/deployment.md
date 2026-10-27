@@ -49,6 +49,24 @@ Each copy runs at most `MAX_PARALLEL` requests at the same time (`exposure` 2, `
 with `503` and `Retry-After` when it is busy; `jobs` waits and retries up to three times. There is exactly one
 `jobs` container, because it owns the database.
 
+## Own plate sizes
+
+The plate sizes a user can choose are data of the `jobs` service (`services/jobs/src/jobs/data/plates.toml`: 160 x 100,
+75 x 100 and 100 x 75 mm). Replace the list the same way as the tool library, with the file in the `jobs_data` volume:
+
+```bash
+docker compose run --rm --no-deps jobs python -c "from jobs.plates import default_text; print(default_text())" > plates.toml
+# edit plates.toml, then copy it into the volume:
+docker run --rm -v pcbhomefab_jobs_data:/data -v "$PWD":/src alpine cp /src/plates.toml /data/plates.toml
+# in .env:  PCBHOMEFAB_PLATES_FILE=/data/plates.toml
+docker compose up -d jobs
+```
+
+A wrong file stops the `jobs` service at start with a message that names the problem. The file is read at start, so
+restart `jobs` after a change. A job keeps the size it was made with. The plate and the offsets of the printer must fit
+on its display, otherwise `exposure` refuses the job (`exposure.plate_too_large`). `GET /api/v1/plates` shows the list
+in use.
+
 ## Own tool library
 
 The built-in tool library (drills 0.6-1.2 mm, end mills 1 and 2 mm) can be replaced. Copy it out, edit it, put it

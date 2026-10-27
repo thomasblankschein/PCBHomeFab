@@ -1,9 +1,11 @@
-import { getProfiles } from "./api.js";
+import { getPlates, getProfiles } from "./api.js";
 import { fill, h } from "./dom.js";
 import { initI18n, onLanguageChange, t } from "./i18n.js";
 
 const container = document.getElementById("machines");
 let profiles = null;
+let plates = null;
+const plateTable = document.getElementById("plates");
 
 const number = (value, unit) => `${Number(value.toFixed(3))} ${unit}`;
 const yesNo = (value) => t(value ? "machines.yes" : "machines.no");
@@ -37,8 +39,7 @@ const millRows = (m) => [
   ["machines.m_tab_height", number(m.tab_height_mm, "mm")],
   ["machines.m_flip", t(flipKeys[m.flip] ?? "settings.flip_none")],
   ["machines.m_offset", `${number(m.offset_x_mm, "mm")}, ${number(m.offset_y_mm, "mm")}`],
-  ["machines.m_plate", `${m.plate.width_mm} × ${m.plate.height_mm} mm`],
-  ["machines.m_thickness", number(m.plate.thickness_mm, "mm")],
+  ["machines.m_thickness", number(m.default_thickness_mm, "mm")],
 ];
 
 function card(name, rows) {
@@ -60,11 +61,26 @@ function render() {
   );
 }
 
+function renderPlates() {
+  document.getElementById("plates-source").textContent = t("tools.source", { source: plates.source });
+  fill(
+    plateTable.tBodies[0],
+    plates.plates.map((plate) =>
+      h("tr", {}, h("td", {}, plate.name), h("td", { class: "num" }, number(plate.width_mm, "mm")), h("td", { class: "num" }, number(plate.height_mm, "mm")), h("td", {}, h("code", {}, plate.id))),
+    ),
+  );
+  plateTable.hidden = false;
+}
+
 await initI18n();
-onLanguageChange(() => profiles && render());
+onLanguageChange(() => {
+  if (profiles) render();
+  if (plates) renderPlates();
+});
 try {
-  profiles = await getProfiles();
+  [profiles, plates] = await Promise.all([getProfiles(), getPlates()]);
   render();
+  renderPlates();
 } catch (error) {
   document.getElementById("load-error").textContent = error.message;
 }

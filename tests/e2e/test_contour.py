@@ -70,7 +70,7 @@ def client() -> httpx.Client:
 
 
 def test_contour_with_cutout_is_milled(client: httpx.Client) -> None:
-    created = client.post("/api/v1/jobs", files=[("boards", ("round.zip", _board_zip(), "application/zip"))])
+    created = client.post("/api/v1/jobs", files=[("boards", ("round.zip", _board_zip(), "application/zip"))], data={"plate": "160x100"})
     assert created.status_code == 201, created.text
     job_id = created.json()["id"]
     state: dict = {}
@@ -107,14 +107,14 @@ def test_preview_endpoints_for_the_editor(client: httpx.Client) -> None:
 
     layout = client.post(
         "/api/v1/layouts",
-        json={"gap_mm": 3, "margin_mm": 3, "boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 4}]},
+        json={"plate": "160x100", "gap_mm": 3, "margin_mm": 3, "boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 4}]},
     )
     assert layout.status_code == 200, layout.text
     assert [(p["x_mm"], p["y_mm"]) for p in layout.json()["placements"]] == [(3, 3), (36, 3), (69, 3), (102, 3)]
 
     too_many = client.post(
         "/api/v1/layouts",
-        json={"boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 100}]},
+        json={"plate": "160x100", "boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 100}]},
     )
     assert too_many.status_code == 422 and too_many.json()["code"] == "panel.does_not_fit"
 

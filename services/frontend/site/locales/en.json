@@ -98,7 +98,7 @@
   "job.plate": "Plate",
   "job.output_exposure": "exposure {seconds} s",
   "job.output_mill": "drill and mill G-code",
-  "job.plate_summary": "gap {gap}, margin {margin}, {thickness} thick",
+  "job.plate_summary": "{size}, gap {gap}, margin {margin}, {thickness} thick",
   "job.exposure": "Exposure",
   "job.mask_alt": "Exposure mask: white exposes, black stays copper",
   "job.mask_caption": "Mask as sent to the printer (mirrored, white = exposed).",
@@ -184,8 +184,14 @@
   "machines.m_tab_height": "Tab height",
   "machines.m_flip": "Turning the plate over",
   "machines.m_offset": "Plate position on the machine (X, Y)",
-  "machines.m_plate": "Plate (width × height)",
   "machines.m_thickness": "Default material thickness",
   "machines.yes": "yes",
-  "machines.no": "no"
+  "machines.no": "no",
+
+  "settings.plate_size": "Plate size",
+  "machines.plates": "Plate sizes",
+  "machines.col_name": "Name",
+  "machines.col_width": "Width",
+  "machines.col_height": "Height",
+  "machines.col_id": "Id"
 }

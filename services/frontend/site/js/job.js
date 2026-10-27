@@ -27,8 +27,12 @@ function download(job, file, label, note) {
   );
 }
 
+// Jobs made before the plate size became a choice used this plate.
+const LEGACY_PLATE = { width_mm: 160, height_mm: 100 };
+
 function summaryOf(job) {
   const p = job.params;
+  const plate = p.plate ?? LEGACY_PLATE;
   const boards = p.boards.map((b) => `${b.count} × ${b.name} (${mm(b.width_mm)} × ${mm(b.height_mm)})`).join(", ");
   const outputs = [p.exposure ? t("job.output_exposure", { seconds: p.exposure_s }) : null, p.mill_gcode ? t("job.output_mill") : null].filter(Boolean);
   return h("dl", { class: "facts" }, [
@@ -37,7 +41,7 @@ function summaryOf(job) {
     h("dt", {}, t("job.outputs")),
     h("dd", {}, outputs.join(", ")),
     h("dt", {}, t("job.plate")),
-    h("dd", {}, t("job.plate_summary", { gap: mm(p.gap_mm), margin: mm(p.margin_mm), thickness: mm(p.thickness_mm) })),
+    h("dd", {}, t("job.plate_summary", { size: `${plate.width_mm} × ${plate.height_mm} mm`, gap: mm(p.gap_mm), margin: mm(p.margin_mm), thickness: mm(p.thickness_mm) })),
   ]);
 }
 
@@ -55,7 +59,12 @@ function simulationPanel(job, programs) {
     fill(body, h("p", { class: "muted", "data-i18n": "sim.loading" }, t("sim.loading")));
     try {
       const simulation = await import("./simulation.js");
-      simulation.createSimulation(body, await simulation.loadPrograms(job.id, programs), job.params.thickness_mm);
+      simulation.createSimulation(
+        body,
+        await simulation.loadPrograms(job.id, programs),
+        job.params.thickness_mm,
+        job.params.plate ?? LEGACY_PLATE,
+      );
     } catch {
       started = false;
       fill(body, h("p", { class: "error", role: "alert", "data-i18n": "sim.load_failed" }, t("sim.load_failed")));

@@ -28,6 +28,7 @@ from starlette.concurrency import run_in_threadpool
 from . import common
 from .common import Problem
 from .config import Settings
+from .plates import PlateSize, load_plates
 from .services import Services, Unavailable, UserError
 from .store import DONE, JobRecord, JobStore
 from .worker import worker_loop
@@ -47,9 +48,10 @@ class PreviewBoard(BaseModel):
 
 
 class PreviewLayoutRequest(BaseModel):
-    """Boards, copies and spacing of a job, without the plate (the plate belongs to the installation)."""
+    """Plate (id of a plate size), boards, copies and spacing of a job."""
 
     model_config = ConfigDict(extra="forbid")
+    plate: Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.-]{1,40}$")]
     boards: list[PreviewBoard] = Field(min_length=1, max_length=50)
     gap_mm: float = Field(default=3.0, ge=0.5, le=20)
     margin_mm: float = Field(default=3.0, ge=0, le=20)
@@ -106,7 +108,15 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     settings = settings or Settings.from_env()
     services = services or Services(settings)
     store = JobStore(settings)
+    plates = load_plates()
     stop = threading.Event()
+
+    def find_plate(plate_id: str | None) -> PlateSize:
+        found = plates.find(plate_id or "")
+        if found is None:
+            known = ", ".join(plate.id for plate in plates.active)
+            raise Problem(422, "jobs.invalid_plate", f"Choose a plate size (one of: {known}).")
+        return found
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -150,6 +160,10 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             return services.get_json(f"{settings.mill_url}/v1/tools", secrets.token_hex(6))
         except Unavailable as exc:
             raise _unavailable() from exc
+
+    @app.get("/v1/plates")
+    def plate_sizes() -> dict[str, Any]:
+        return plates.to_dict()
 
     @app.get("/v1/profiles")
     def profiles() -> dict[str, Any]:
@@ -195,12 +209,11 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         check_preview_rate(request)
         if sum(b.count for b in body.boards) > settings.max_boards:
             raise Problem(422, "jobs.invalid_upload", f"At most {settings.max_boards} boards fit in one job.")
-        from .workflow import PLATE
-
+        plate = find_plate(body.plate)
         try:
             return services.panel(
                 {
-                    "plate": PLATE,
+                    "plate": {"width_mm": plate.width_mm, "height_mm": plate.height_mm},
                     "gap_mm": body.gap_mm,
                     "margin_mm": body.margin_mm,
                     "boards": [b.model_dump() for b in body.boards],
@@ -231,6 +244,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         frame_left_mm: Annotated[float | None, Form(ge=0, le=20)] = None,
         frame_bottom_mm: Annotated[float | None, Form(ge=0, le=20)] = None,
         mirror_x: Annotated[bool | None, Form()] = None,
+        plate: Annotated[str | None, Form()] = None,
     ) -> JSONResponse:
         client = _client_hash(request, settings)
         if store.recent_count(client) >= settings.rate_limit_per_hour:
@@ -246,6 +260,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             raise Problem(422, "jobs.invalid_upload", f"At most {settings.max_boards} boards fit in one job.")
         if not exposure and not mill_gcode:
             raise Problem(422, "jobs.invalid_upload", "Select at least one output (exposure or mill_gcode).")
+        chosen_plate = find_plate(plate)
 
         uploads: list[bytes] = []
         for upload in boards:
@@ -289,6 +304,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             "frame_left_mm": frame_left_mm,
             "frame_bottom_mm": frame_bottom_mm,
             "mirror_x": mirror_x,
+            "plate": {"id": chosen_plate.id, "width_mm": chosen_plate.width_mm, "height_mm": chosen_plate.height_mm},
             "boards": entries,
         }
         record = store.create(job_id, params, client)

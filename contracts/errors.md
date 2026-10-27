@@ -26,6 +26,7 @@ its own prefix, plus `common.*`.
 | `exposure.invalid_package` | 422 | a board package is not a canonical package |
 | `exposure.unknown_board` | 422 | the layout refers to a board id without package |
 | `exposure.unreadable_copper` | 422 | `copper.gbr` could not be read or drawn |
+| `exposure.plate_too_large` | 422 | the plate, with the calibration offsets, does not fit on the display of the printer |
 | `mill.unknown_mill` | 422 | no mill profile with this id |
 | `mill.invalid_package` | 422 | a board package is not a canonical package |
 | `mill.unknown_board` | 422 | the layout refers to a board id without package |
@@ -39,6 +40,7 @@ its own prefix, plus `common.*`.
 | `jobs.queue_full` | 503 | the queue is full |
 | `jobs.upstream_unavailable` | 503 | a service that the job needs cannot be reached |
 | `jobs.invalid_upload` | 422 | bad upload (count of files, counts, no output selected) |
+| `jobs.invalid_plate` | 422 | the plate size is missing or not in the list of plate sizes |
 | `jobs.upload_too_large` | 413 | a file is larger than the limit |
 
 `jobs` stores the `detail` of a failing downstream call as the error text of the job when the status was 4xx.

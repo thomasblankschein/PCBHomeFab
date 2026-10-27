@@ -8,8 +8,6 @@ import { programInfo, programTitle } from "./format.js";
 import { buildTimeline, parseGcode, positionAt } from "./gcode.js";
 import { onLanguageChange, t } from "./i18n.js";
 
-// Same plate as the jobs service uses (PLATE in workflow.py).
-const PLATE = { width: 160, height: 100 };
 const RAPID_FEED = 1500;
 const SPEEDS = [1, 10, 50, 200, 1000];
 const COLORS = ["#2b7de9", "#e0742b", "#9b59b6", "#16a085", "#c0392b", "#7f8c8d"];
@@ -35,7 +33,8 @@ export async function loadPrograms(jobId, files) {
 }
 
 /** Builds the simulation inside `container` for programs from `loadPrograms`. */
-export function createSimulation(container, programs, thickness) {
+export function createSimulation(container, programs, thickness, plateSize) {
+  const PLATE = { width: plateSize.width_mm, height: plateSize.height_mm };
   const all = programs.flatMap((program) => program.moves);
   const state = {
     camera: makeCamera({ target: [PLATE.width / 2, PLATE.height / 2, 0], distance: 330 }),

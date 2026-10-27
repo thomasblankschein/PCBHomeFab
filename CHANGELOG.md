@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 - 2026-10-27
+
+- Plate sizes: a job is made for a plate size chosen from a list (160 x 100, 75 x 100 and 100 x 75 mm built in). The list is
+  data of the `jobs` service (`plates.toml`, own file with `PCBHOMEFAB_PLATES_FILE`), `GET /api/v1/plates` shows it.
+- **Breaking:** `POST /api/v1/jobs` and `POST /api/v1/layouts` need `plate` (the id of a plate size).
+- The editor has a plate size field, the job page and the 3D simulation use the size of the job, the Machines page lists the
+  sizes. `exposure` refuses a plate that does not fit on the display (`exposure.plate_too_large`). The mill profile gives
+  `default_thickness_mm` instead of a plate size.
+
 ## 0.5.0 - 2026-10-27
 
 - New page "Machines": the parameters of the printers and mills (display, resolution, calibration, lift, spindle, safe height,

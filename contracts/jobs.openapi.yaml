@@ -28,6 +28,32 @@ paths:
                   printers: {type: object}
                   mills: {type: object}
                   limits: {type: object}
+  /v1/plates:
+    get:
+      operationId: listPlates
+      description: >
+        The plate sizes the user can choose from. They are data of this service: the packaged `plates.toml` or the
+        file named by PCBHOMEFAB_PLATES_FILE. The first enabled plate is the default.
+      responses:
+        "200":
+          description: The plate sizes (disabled entries are left out).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [source, plates]
+                properties:
+                  source: {type: string}
+                  plates:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, name, width_mm, height_mm]
+                      properties:
+                        id: {type: string}
+                        name: {type: string}
+                        width_mm: {type: number}
+                        height_mm: {type: number}
   /v1/tools:
     get:
       operationId: listTools
@@ -102,12 +128,13 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required: [boards]
+              required: [boards, plate]
               properties:
                 boards:
                   type: array
                   items: {type: string, format: binary}
                   description: Gerber ZIP files, one per board design.
+                plate: {type: string, description: Id of a plate size, see GET /v1/plates.}
                 counts:
                   type: array
                   items: {type: integer, minimum: 1}

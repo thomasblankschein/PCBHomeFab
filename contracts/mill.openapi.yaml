@@ -30,7 +30,7 @@ paths:
                     type: object
                     additionalProperties:
                       type: object
-                      required: [name, max_spindle_rpm, outline_endmill_mm, flip, tabs, safe_z_mm, spindle_spinup_s, drill_overshoot_mm, mill_overshoot_mm, tab_width_mm, tab_height_mm, offset_x_mm, offset_y_mm, plate]
+                      required: [name, max_spindle_rpm, outline_endmill_mm, flip, tabs, safe_z_mm, spindle_spinup_s, drill_overshoot_mm, mill_overshoot_mm, tab_width_mm, tab_height_mm, offset_x_mm, offset_y_mm, default_thickness_mm]
                       properties:
                         name: {type: string}
                         max_spindle_rpm: {type: integer}
@@ -45,13 +45,7 @@ paths:
                         tab_height_mm: {type: number}
                         offset_x_mm: {type: number}
                         offset_y_mm: {type: number}
-                        plate:
-                          type: object
-                          required: [width_mm, height_mm, thickness_mm]
-                          properties:
-                            width_mm: {type: number}
-                            height_mm: {type: number}
-                            thickness_mm: {type: number}
+                        default_thickness_mm: {type: number}
   /v1/tools:
     get:
       operationId: listTools

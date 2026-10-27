@@ -141,6 +141,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise Problem(
                 422, "exposure.unknown_printer", f"Unknown printer '{parsed_settings.printer}' (known: {known})."
             )
+        printer = PRINTERS[parsed_settings.printer]
+        left = printer.frame_left_mm if parsed_settings.frame_left_mm is None else parsed_settings.frame_left_mm
+        bottom = printer.frame_bottom_mm if parsed_settings.frame_bottom_mm is None else parsed_settings.frame_bottom_mm
+        plate = parsed_layout.plate
+        if left + plate.width_mm > printer.display_width_mm or bottom + plate.height_mm > printer.display_height_mm:
+            raise Problem(
+                422,
+                "exposure.plate_too_large",
+                f"A {plate.width_mm:g} x {plate.height_mm:g} mm plate does not fit on the display of {printer.name} "
+                f"({printer.display_width_mm:g} x {printer.display_height_mm:g} mm, "
+                f"offsets {left:g} and {bottom:g} mm).",
+            )
         if not 1 <= len(packages) <= settings.max_packages:
             raise Problem(422, "common.invalid_request", f"Send between 1 and {settings.max_packages} packages.")
         data: dict[str, bytes] = {}

@@ -140,11 +140,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "tab_height_mm": m.tab_height_mm,
                     "offset_x_mm": m.offset_x_mm,
                     "offset_y_mm": m.offset_y_mm,
-                    "plate": {
-                        "width_mm": plate.width_mm,
-                        "height_mm": plate.height_mm,
-                        "thickness_mm": plate.thickness_mm,
-                    },
+                    "default_thickness_mm": plate.thickness_mm,
                 }
                 for key, m in MILLS.items()
             }

@@ -106,6 +106,19 @@ def test_unknown_printer(client: TestClient) -> None:
     _problem(_post(client, settings={"printer": "nope"}), 422, "exposure.unknown_printer")
 
 
+def test_plate_larger_than_the_display(client: TestClient) -> None:
+    big = {**LAYOUT, "plate": {"width_mm": 170.0, "height_mm": 100.0}}
+    _problem(_post(client, layout=big), 422, "exposure.plate_too_large")
+    # the calibration offset counts too: 160 mm plate and 5 mm offset do not fit on 163.84 mm
+    _problem(_post(client, settings={**SETTINGS, "frame_left_mm": 5.0}), 422, "exposure.plate_too_large")
+
+
+def test_smaller_plates_are_fine(client: TestClient) -> None:
+    small = {**LAYOUT, "plate": {"width_mm": 75.0, "height_mm": 100.0}}
+    single = {**small, "placements": small["placements"][:1]}
+    assert _post(client, layout=single, files=_files()[:1]).status_code == 200
+
+
 def test_unknown_board_in_layout(client: TestClient) -> None:
     layout = {**LAYOUT, "placements": [{**LAYOUT["placements"][0], "board_id": "ghost"}]}
     _problem(_post(client, layout=layout), 422, "exposure.unknown_board")

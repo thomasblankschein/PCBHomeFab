@@ -1,13 +1,13 @@
 // The editor page: choose Gerber ZIPs, set copies and spacing, see the plate, create the job.
 
-import { ApiError, createJob, getBoardInfo, getProfiles, previewLayout } from "./api.js";
+import { ApiError, createJob, getBoardInfo, getPlates, getProfiles, previewLayout } from "./api.js";
 import { fill, h } from "./dom.js";
 import { mm } from "./format.js";
 import { initI18n, onLanguageChange, t } from "./i18n.js";
 import { holeColors, holeSummary, isRectangle, placedBoards, plateUsage, polygonPath, previewId, validCount } from "./geometry.js";
 
 const STORAGE_KEY = "pcbhomefab.settings";
-const SAVED_FIELDS = ["printer", "mill", "holes", "gap_mm", "margin_mm", "flip", "thickness_mm", "tabs", "exposure", "mill_gcode"];
+const SAVED_FIELDS = ["plate", "printer", "mill", "holes", "gap_mm", "margin_mm", "flip", "thickness_mm", "tabs", "exposure", "mill_gcode"];
 
 const form = document.getElementById("settings");
 const rowsBody = document.getElementById("rows");
@@ -20,7 +20,7 @@ const layoutError = document.getElementById("layout-error");
 const submit = document.getElementById("submit");
 const submitError = document.getElementById("submit-error");
 
-const state = { profiles: null, rows: [], nextKey: 1, layout: null, layoutError: "", creating: false };
+const state = { profiles: null, plates: [], rows: [], nextKey: 1, layout: null, layoutError: "", creating: false };
 // A row error or the layout error is a message of the server (text) or one of ours ({ key, params }).
 const messageText = (message) => (typeof message === "string" ? message : message ? t(message.key, message.params) : "");
 let previewTimer = 0;
@@ -65,6 +65,11 @@ function restoreSettings() {
   } catch {
     // ignore broken stored values
   }
+}
+
+/** The plate size chosen in the settings (the first one while the list is still empty). */
+function currentPlate() {
+  return state.plates.find((plate) => plate.id === value("plate")) ?? state.plates[0] ?? { width_mm: 160, height_mm: 100 };
 }
 
 function applyPrinter() {
@@ -206,6 +211,7 @@ function previewRequest() {
   const margin = number("margin_mm");
   if (!(gap >= 0.5 && gap <= 20) || !(margin >= 0 && margin <= 20)) return null;
   return {
+    plate: value("plate"),
     gap_mm: gap,
     margin_mm: margin,
     boards: rows.map((row, i) => ({ id: previewId(i), width_mm: row.info.width_mm, height_mm: row.info.height_mm, count: row.count })),
@@ -248,8 +254,8 @@ function boardsById() {
 
 function renderPlate() {
   const layout = state.layout;
-  const width = layout?.plate.width_mm ?? 160;
-  const height = layout?.plate.height_mm ?? 100;
+  const width = layout?.plate.width_mm ?? currentPlate().width_mm;
+  const height = layout?.plate.height_mm ?? currentPlate().height_mm;
   plate.setAttribute("viewBox", `-2 -2 ${width + 4} ${height + 4}`);
   const parts = [h("rect", { class: "plate", x: 0, y: 0, width, height })];
   const rows = readyRows().map((row, i) => ({ id: previewId(i), count: row.count }));
@@ -317,6 +323,7 @@ function jobFormData() {
   }
   const printer = state.profiles.printers[value("printer")];
   const entries = {
+    plate: value("plate"),
     printer: value("printer"),
     mill: value("mill"),
     exposure: value("exposure"),
@@ -400,18 +407,19 @@ function wire() {
     saveSettings();
     renderSubmit();
   });
-  for (const name of ["gap_mm", "margin_mm"]) field(name).addEventListener("input", onLayoutInputsChanged);
+  for (const name of ["plate", "gap_mm", "margin_mm"]) field(name).addEventListener("input", onLayoutInputsChanged);
   form.addEventListener("submit", onSubmit);
 }
 
 async function start() {
   await initI18n();
   try {
-    state.profiles = await getProfiles();
+    [state.profiles, { plates: state.plates }] = await Promise.all([getProfiles(), getPlates()]);
   } catch (error) {
     document.getElementById("load-error").textContent = t("editor.load_failed", { message: error.message });
     return;
   }
+  fillSelect(field("plate"), Object.fromEntries(state.plates.map((plate) => [plate.id, plate])));
   fillSelect(field("printer"), state.profiles.printers);
   fillSelect(field("mill"), state.profiles.mills);
   applyPrinter();

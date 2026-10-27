@@ -21,6 +21,21 @@
 <p class="lead" data-i18n="machines.lead">Parameters of the printers and mills the files are made for. Calibration values can be changed for a single job under Settings on the New job page.</p>
 <p id="load-error" class="error" role="alert"></p>
 <div id="machines"></div>
+<h2 data-i18n="machines.plates">Plate sizes</h2>
+<p id="plates-source" class="muted"></p>
+<div class="table-wrap">
+<table id="plates" class="tools" hidden>
+  <thead>
+    <tr>
+      <th data-i18n="machines.col_name">Name</th>
+      <th class="num" data-i18n="machines.col_width">Width</th>
+      <th class="num" data-i18n="machines.col_height">Height</th>
+      <th data-i18n="machines.col_id">Id</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+</div>
 </main>
 <footer class="foot"><a href="https://github.com/thomasblankschein/PCBHomeFab">PCBHomeFab</a> <span id="version"></span></footer>
 <script type="module" src="/js/footer.js"></script>

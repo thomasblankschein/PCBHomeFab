@@ -35,6 +35,7 @@ const json = async (path, options) => (await request(path, options)).json();
 
 export const getProfiles = () => json("/profiles");
 export const getTools = () => json("/tools");
+export const getPlates = () => json("/plates");
 export const getJob = (id) => json(`/jobs/${encodeURIComponent(id)}`);
 
 export function getBoardInfo(file) {
