@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.1 - 2026-10-27
+
+- Fix: the user interface asks for every page and script whether it is still current (`Cache-Control: no-cache`). A browser
+  that had cached an older script could mix it with a new one and show an empty job page after an update.
+- The mask caption on the job page no longer says "mirrored".
+
 ## 0.14.0 - 2026-10-27
 
 - The job page has a download of all result files in one ZIP archive (`GET /api/v1/jobs/{id}/archive`), with the folders

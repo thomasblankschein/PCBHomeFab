@@ -101,7 +101,7 @@
   "job.plate_summary": "{size}, Abstand {gap}, Rand {margin}, {thickness} dick",
   "job.exposure": "Belichtung",
   "job.mask_alt": "Belichtungsmaske: Weiß belichtet, Schwarz bleibt Kupfer",
-  "job.mask_caption": "Maske, wie sie an den Drucker geht (gespiegelt, Weiß = belichtet).",
+  "job.mask_caption": "Maske, wie sie an den Drucker geht (Weiß = belichtet).",
   "job.pm3_note": "Auf den Drucker kopieren (USB-Stick) und drucken.",
   "job.mask_png_note": "Die Maske als Bild (4096 × 2560 px).",
   "job.drill_mill": "Bohren und Fräsen",

@@ -101,7 +101,7 @@
   "job.plate_summary": "{size}, gap {gap}, margin {margin}, {thickness} thick",
   "job.exposure": "Exposure",
   "job.mask_alt": "Exposure mask: white exposes, black stays copper",
-  "job.mask_caption": "Mask as sent to the printer (mirrored, white = exposed).",
+  "job.mask_caption": "Mask as sent to the printer (white = exposed).",
   "job.pm3_note": "Copy it to the printer (USB stick) and print.",
   "job.mask_png_note": "The mask as image (4096 × 2560 px).",
   "job.drill_mill": "Drill and mill",
