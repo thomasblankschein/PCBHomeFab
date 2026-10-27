@@ -31,9 +31,9 @@ def test_mask_polarity_copper_is_black(base: Board) -> None:
     """The base board has a GND pour: most of it is copper, so most of the mask must be black."""
     mask = build_mask(_one(base), PHOTON_M3)
     pixel = PHOTON_M3.pixel_mm
-    # mirrored in X: the board's plate x range [3, 31.2] maps to display x = width - (frame + x)
-    x1 = PHOTON_M3.display_width_mm - (PHOTON_M3.frame_left_mm + 3.0 + base.width_mm)
-    x2 = PHOTON_M3.display_width_mm - (PHOTON_M3.frame_left_mm + 3.0)
+    # not mirrored: the board's plate x range [3, 31.2] is at display x = frame + x
+    x1 = PHOTON_M3.frame_left_mm + 3.0
+    x2 = PHOTON_M3.frame_left_mm + 3.0 + base.width_mm
     y2 = PHOTON_M3.display_height_mm - (PHOTON_M3.frame_bottom_mm + 3.0)
     y1 = y2 - base.height_mm
     area = mask.crop((round(x1 / pixel), round(y1 / pixel), round(x2 / pixel), round(y2 / pixel))).convert("L")
@@ -54,7 +54,8 @@ def test_mask_matches_reference_from_old_scripts(base: Board, node: Board) -> No
     """The mask of the old KiCad-SVG based script is the reference. Small edge differences are expected."""
     boards = {"basisplatine": base, "fuehlerknoten": node}
     placements = [Placement(boards[p["board_id"]], p["x_mm"], p["y_mm"]) for p in LAYOUT["placements"]]
-    mask = build_mask(placements, PHOTON_M3, holes="full")
+    # the old script mirrored the picture, the profile default does not any more
+    mask = build_mask(placements, replace(PHOTON_M3, mirror_x=True), holes="full")
     reference = Image.open(DATA / "reference_mask_fbh.png").convert("L")
     diff = ImageChops.difference(mask.convert("L"), reference)
     different = sum(1 for v in diff.tobytes() if v)
@@ -130,3 +131,18 @@ def test_mark_is_mirrored_with_the_display() -> None:
 
 def test_no_marks_no_change(base: Board) -> None:
     assert build_mask(_one(base), PHOTON_M3).tobytes() == build_mask(_one(base), PHOTON_M3, marks=None).tobytes()
+
+
+def test_mask_is_not_mirrored_by_default(base: Board) -> None:
+    """The Gerber of the bottom copper is a top view with mirrored text. With the copper side facing the LCD the mask is
+    that top view as it is, so the text on the mask is mirrored and reads correctly on the etched plate."""
+    assert PHOTON_M3.mirror_x is False
+    plain = build_mask(_one(base), PHOTON_M3)
+    flipped = build_mask(_one(base), replace(PHOTON_M3, mirror_x=True))
+    assert ImageOps.mirror(plain.convert("L")).tobytes() == flipped.convert("L").tobytes()
+    assert plain.tobytes() != flipped.tobytes()
+    # the board starts at the left: plate x 3 mm + offset 1.8 mm = 4.8 mm = pixel 120
+    left = round((PHOTON_M3.frame_left_mm + 3.0) / PHOTON_M3.pixel_mm)
+    gray = plain.convert("L")
+    assert max(gray.crop((0, 1600, left - 2, 2400)).tobytes()) == 0
+    assert max(gray.crop((left, 1600, left + 400, 2400)).tobytes()) == 255

@@ -40,7 +40,11 @@ They are the reference for behaviour until the port is finished.
   maintainer's notes and must be **calibration values per profile**, not hard-coded.
 - Mask polarity for positive photoresist: **white = exposed = copper is etched away**, black = copper stays.
   A copper pour in the Gerber must stay black. (An early version inverted this by mistake, keep a test for it.)
-- The image is mirrored in X before it goes to the printer (copper side faces the LCD).
+- Orientation (corrected 2026-10-27): the Gerber of B.Cu is a top view, text on it is mirrored. The plate lies on the LCD with the
+  copper side down, so the mask on the LCD is that top view **as it is, not mirrored** (`PrinterProfile.mirror_x = False`;
+  the setting stays as a calibration value). Seen from the copper side the etched copper is then the mirror image of the top
+  view, text on B.Cu reads correctly. The mill works on the same side: `flip x` mirrors X, so G-code coordinates are the
+  copper-side view.
 - `.pm3` (Anycubic format, version 516): Photon Workshop rejects files whose machine table names an unknown printer
   ("Unknown"). The MACHINE table (156 bytes) of a file Photon Workshop wrote for the M3 is stored in the profile
   values (`PHOTON_M3`) and in `services/exposure/tests/data/photon_m3_machine_table.bin`; the name is `Anycubic Photon M3`. The writer is

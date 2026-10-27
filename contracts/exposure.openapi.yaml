@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: >
     Builds the UV exposure mask for a layout and writes the printer slice file. White = exposed = copper is etched
-    away, black = copper stays; the image is mirrored in X if the profile says so. Stateless.
+    away, black = copper stays; the image is mirrored in X only if the profile (or the settings) say so; by default it is not mirrored. Stateless.
 paths:
   /healthz:
     get:

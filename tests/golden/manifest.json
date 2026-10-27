@@ -13,7 +13,7 @@
     "tabs": true,
     "frame_left_mm": 1.8,
     "frame_bottom_mm": 0.8,
-    "mirror_x": true,
+    "mirror_x": false,
     "plate": "160x100",
     "marks": false,
     "boards": [
@@ -31,15 +31,15 @@
   },
   "files": {
     "mask.png": {
-      "sha256": "2aa310555dd4782cb11b67370014c8f42434f6620a002b3e11979b968ad72bd0",
-      "size": 36434
+      "sha256": "beb392b07527d38a140adad383986188ba18f2bfab272e098decbd820a5f0619",
+      "size": 36677
     },
     "mask_preview.png": {
-      "sha256": "c512d94d7679ec49a014f8526b03517fa0bcee978b472d06ed65165ebca804b1",
-      "size": 17727
+      "sha256": "ddcf354b311657ec79f1d477eca4a07d2e33fc0c79d6e59c02e61b682de51617",
+      "size": 17771
     },
     "exposure.pm3": {
-      "sha256": "1152da8e2842f6204bd99301c4da64745b437c5a0091b41454d69328b8885b57",
+      "sha256": "45fca434c597975eda0162ceadf7e014e18dd36b9f631eac40ab71b313fb9946",
       "size": 281518
     },
     "mill/1_drill_0.8mm.nc": {

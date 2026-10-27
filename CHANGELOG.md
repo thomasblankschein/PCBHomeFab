@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.0 - 2026-10-27
+
+- **Breaking:** the exposure mask is no longer mirrored by default (`PrinterProfile.mirror_x` is now `false`). The Gerber of
+  the back copper layer is a top view, and the plate lies copper side down on the display, so the unmirrored mask gives
+  copper that reads correctly when seen from the copper side. Text in the B.Cu layer now appears mirrored on the mask. The
+  plate now sits at `frame_left_mm` from the left edge of the display. `mask.png`, `mask_preview.png` and `exposure.pm3`
+  change, the G-code does not. Set `mirror_x` in the printer settings to get the old orientation.
+
 ## 0.10.0 - 2026-10-27
 
 - Positioning marks: the copper layer gets two marks diagonally opposite in the margin (a copper square with two diagonal
