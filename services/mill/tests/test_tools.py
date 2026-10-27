@@ -34,7 +34,7 @@ def _with_holes(*diameters: float) -> list[gcode.Placement]:
 
 def test_default_library_has_drills_and_endmills() -> None:
     library = load_tools()
-    assert [t.diameter_mm for t in library.drills()] == [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]
+    assert [t.diameter_mm for t in library.drills()] == [0.6, 0.7, 0.8, 0.9, 0.95, 1.0, 1.1, 1.2]
     assert [t.diameter_mm for t in library.endmills()] == [1.0, 2.0]
     assert library.endmill(2.0).feed == 180 and library.endmill(1.0).feed == 150  # per tool and from defaults
 
@@ -109,6 +109,6 @@ def test_spindle_speed_above_machine_limit_is_refused() -> None:
 
 
 def test_hole_between_drill_sizes_is_refused_with_a_hint() -> None:
-    with pytest.raises(Problem, match="No drill for a 0.95 mm hole") as caught:
-        gcode.generate(_with_holes(0.95), Plate(), MILL_3018PRO, load_tools())
+    with pytest.raises(Problem, match="No drill for a 1.05 mm hole") as caught:
+        gcode.generate(_with_holes(1.05), Plate(), MILL_3018PRO, load_tools())
     assert caught.value.code == "mill.no_drill"

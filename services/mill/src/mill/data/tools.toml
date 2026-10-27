@@ -45,6 +45,11 @@ kind = "drill"
 diameter_mm = 0.9
 
 [[tool]]
+id = "drill-0.95"
+kind = "drill"
+diameter_mm = 0.95
+
+[[tool]]
 id = "drill-1.0"
 kind = "drill"
 diameter_mm = 1.0

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.1 - 2026-10-27
+
+- Tool library: drill 0.95 mm added.
+
 ## 0.15.0 - 2026-10-27
 
 - A KiCad PCB file (`.kicad_pcb`) can be uploaded instead of a Gerber ZIP, no Gerber export needed. `ingest` recognises the

@@ -121,7 +121,7 @@ def test_hole_without_drill_is_a_problem(client: TestClient) -> None:
         "outline": {"xmin": 0, "ymin": 0, "xmax": 10, "ymax": 10},
         "width_mm": 10,
         "height_mm": 10,
-        "holes": [{"x_mm": 5, "y_mm": 5, "diameter_mm": 0.95, "plated": True}],
+        "holes": [{"x_mm": 5, "y_mm": 5, "diameter_mm": 1.05, "plated": True}],
     }
     with zipfile.ZipFile(raw, "w") as archive:
         archive.writestr("board.json", json.dumps(board))
