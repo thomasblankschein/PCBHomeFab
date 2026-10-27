@@ -1,5 +1,4 @@
 import json
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -54,7 +53,7 @@ def test_mask_matches_reference_from_old_scripts(base: Board, node: Board) -> No
     """The mask of the old KiCad-SVG based script is the reference. Small edge differences are expected."""
     boards = {"basisplatine": base, "fuehlerknoten": node}
     placements = [Placement(boards[p["board_id"]], p["x_mm"], p["y_mm"]) for p in LAYOUT["placements"]]
-    mask = build_mask(placements, replace(PHOTON_M3, border_mm=0), holes="full")
+    mask = build_mask(placements, PHOTON_M3, holes="full")
     reference = Image.open(DATA / "reference_mask_fbh.png").convert("L")
     diff = ImageChops.difference(mask.convert("L"), reference)
     different = sum(1 for v in diff.tobytes() if v)
@@ -67,24 +66,3 @@ def test_hole_modes_change_mask(base: Board) -> None:
     assert full.tobytes() != none.tobytes()
     with pytest.raises(ValueError):
         build_mask(_one(base), PHOTON_M3, holes="bogus")
-
-
-def test_display_border_is_a_closed_white_frame(base: Board) -> None:
-    mask = build_mask(_one(base), PHOTON_M3).convert("L")
-    width = round(PHOTON_M3.border_mm / PHOTON_M3.pixel_mm)
-    assert width == 25
-    w, h = mask.size
-    for x in range(0, w, 7):
-        assert mask.getpixel((x, 0)) == 255 and mask.getpixel((x, width - 1)) == 255
-        assert mask.getpixel((x, h - 1)) == 255 and mask.getpixel((x, h - width)) == 255
-    for y in range(0, h, 7):
-        assert mask.getpixel((0, y)) == 255 and mask.getpixel((width - 1, y)) == 255
-        assert mask.getpixel((w - 1, y)) == 255 and mask.getpixel((w - width, y)) == 255
-    assert mask.getpixel((width, h // 2)) == 0 and mask.getpixel((w // 2, width)) == 0  # inside stays dark
-
-
-def test_border_can_be_switched_off(base: Board) -> None:
-    with_border = build_mask(_one(base), PHOTON_M3)
-    without = build_mask(_one(base), replace(PHOTON_M3, border_mm=0))
-    assert with_border.tobytes() != without.tobytes()
-    assert max(without.crop((0, 0, 400, 400)).convert("L").tobytes()) == 0

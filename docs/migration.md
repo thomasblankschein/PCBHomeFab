@@ -26,7 +26,7 @@ golden outputs of the old code (tag `pre-services`).
 | 4 | `panel` (pilot) | Packing code and tests; `POST /v1/layouts`. Example request gives the example layout of the contract. | done |
 | 5 | `ingest` | Safe unzip, layer detection and the package builder; `POST /v1/packages`. Hostile ZIPs (not a ZIP, too many files, zip bomb, path names) are refused with the right code. | done |
 | 6 | `mill` | G-code, tool library, mill profiles; `GET /v1/profiles`, `GET /v1/tools`, `POST /v1/programs`. G-code of the old reference scripts still matches. | done |
-| 7 | `exposure` | Rasterizer, mask, `.pm3` writer, printer profiles; `GET /v1/profiles`, `POST /v1/masks`. Polarity, border, reference mask and Photon Workshop machine table tests kept. | done |
+| 7 | `exposure` | Rasterizer, mask, `.pm3` writer, printer profiles; `GET /v1/profiles`, `POST /v1/masks`. Polarity, reference mask and Photon Workshop machine table tests kept. | done |
 | 8 | `jobs` | Store, workflow and API over HTTP calls to the other services, worker threads, rate limit, expiry. Tested with fake downstream services built from the contracts. | done |
 | 9 | Gateway, frontend, cleanup | `gateway` (routing, TLS), `frontend` (static pages), `docker-compose.yaml` with an internal network; deleted `src/pcbhomefab`, the CLI, the root `pyproject.toml`, the old tests and the old compose file. `scripts/check_boundaries.py`. | done |
 | 10 | Roll out | Started the new compose project next to the old test instance on WSL (other project name and ports), ran `scripts/smoke_test.sh` and `tests/e2e`: 9 of 9 golden checks pass through the gateway. The old test instance was not touched. | done, switching the old instance over is the maintainer's call |

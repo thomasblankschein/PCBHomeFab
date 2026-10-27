@@ -30,16 +30,16 @@
   },
   "files": {
     "mask.png": {
-      "sha256": "36483e44aeb0840ce16f1e835316529e55f8c6fe69aabeca2c5c156339a12846",
-      "size": 38238
+      "sha256": "2aa310555dd4782cb11b67370014c8f42434f6620a002b3e11979b968ad72bd0",
+      "size": 36434
     },
     "mask_preview.png": {
-      "sha256": "eaccb3efe3b7f69540c86554c6ead0da80b9b7f4c5fb45bd515252ff9a953a53",
-      "size": 18496
+      "sha256": "c512d94d7679ec49a014f8526b03517fa0bcee978b472d06ed65165ebca804b1",
+      "size": 17727
     },
     "exposure.pm3": {
-      "sha256": "5ffb7fc0ab0c6e08d6843f3be93ce0289acc63eeb1ffdde93ba8cf4d1588cd75",
-      "size": 289738
+      "sha256": "1152da8e2842f6204bd99301c4da64745b437c5a0091b41454d69328b8885b57",
+      "size": 281518
     },
     "mill/1_drill_0.8mm.nc": {
       "sha256": "d3addf76d093f28d46c0ea296b9386b8e0e9cc34457f5d6c17002a350188012b",

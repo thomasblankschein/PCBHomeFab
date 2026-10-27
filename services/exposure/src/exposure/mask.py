@@ -33,19 +33,10 @@ def punch_holes(no_copper: Image.Image, board: Board, px_mm: float, mode: str) -
         draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=255)
 
 
-def draw_border(mask: Image.Image, printer: PrinterProfile) -> None:
-    """Closed white frame of ``printer.border_mm`` along the outer edge of the whole display, in place."""
-    if printer.border_mm <= 0:
-        return
-    width = max(1, round(printer.border_mm / printer.pixel_mm))
-    ImageDraw.Draw(mask).rectangle([0, 0, mask.width - 1, mask.height - 1], outline=255, width=width)
-
-
 def build_mask(placements: list[Placement], printer: PrinterProfile, holes: str = "full") -> Image.Image:
     """Full display image (mode ``1``): boards on a black background, mirrored if the profile says so.
 
-    ``holes`` controls how drill holes appear in the pads, see :func:`punch_holes`. The border around the display is
-    described in :func:`draw_border`.
+    ``holes`` controls how drill holes appear in the pads, see :func:`punch_holes`.
     """
     pixel = printer.pixel_mm
     mask = Image.new("L", (printer.resolution_x, printer.resolution_y), 0)
@@ -62,7 +53,6 @@ def build_mask(placements: list[Placement], printer: PrinterProfile, holes: str 
             (printer.display_height_mm - printer.frame_bottom_mm - placement.y_mm - placement.board.height_mm) / pixel
         )
         mask.paste(cache[key], (left, top))
-    draw_border(mask, printer)
     if printer.mirror_x:
         mask = ImageOps.mirror(mask)
     return mask.point(lambda v: 255 if v >= 128 else 0).convert("1")

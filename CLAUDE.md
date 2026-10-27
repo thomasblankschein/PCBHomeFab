@@ -106,7 +106,7 @@ docker-compose.yaml
   0.1 mm steps and end mills 1 mm and 2 mm; holes larger than 1.2 mm are milled. Cutting values in the file are
   starting values, to be tuned on the real mill.
 
-## Exposure border
-- Photon Workshop only slices an image that has a closed outer contour. The mask therefore gets an exposed (white)
-  frame along the outer edge of the whole display (4096 × 2560 px), also outside the plate; its width is
-  `PrinterProfile.border_mm` in `services/exposure` (1.0 mm, 0 = off). It only exists to make slicing work. Confirm in Photon Workshop.
+## Exposure mask
+- The mask has no frame around the display (an earlier version drew an exposed border of 1 mm so that Photon Workshop could
+  slice the image; removed on 2026-10-27 at the maintainer's request). The `.pm3` file is not opened in Photon Workshop at
+  all: the printer reads it directly (USB stick), so Photon Workshop is only a reference for the file format.

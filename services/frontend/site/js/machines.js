@@ -20,7 +20,6 @@ const printerRows = (p) => [
   ["machines.p_frame_left", number(p.frame_left_mm, "mm")],
   ["machines.p_frame_bottom", number(p.frame_bottom_mm, "mm")],
   ["machines.p_mirror", yesNo(p.mirror_x)],
-  ["machines.p_border", p.border_mm > 0 ? number(p.border_mm, "mm") : yesNo(false)],
   ["machines.p_exposure", number(p.default_exposure_s, "s")],
   ["machines.p_lift", number(p.lift_height_mm, "mm")],
   ["machines.p_lift_speed", number(p.lift_speed_mms, "mm/s")],

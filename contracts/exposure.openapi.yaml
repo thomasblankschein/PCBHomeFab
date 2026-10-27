@@ -28,7 +28,7 @@ paths:
                     type: object
                     additionalProperties:
                       type: object
-                      required: [name, machine_name, resolution, display_mm, pixel_mm, frame_left_mm, frame_bottom_mm, mirror_x, border_mm, default_exposure_s, lift_height_mm, lift_speed_mms, retract_speed_mms]
+                      required: [name, machine_name, resolution, display_mm, pixel_mm, frame_left_mm, frame_bottom_mm, mirror_x, default_exposure_s, lift_height_mm, lift_speed_mms, retract_speed_mms]
                       properties:
                         name: {type: string}
                         machine_name: {type: string, description: Printer name written into the slice file.}
@@ -47,7 +47,6 @@ paths:
                         frame_left_mm: {type: number}
                         frame_bottom_mm: {type: number}
                         mirror_x: {type: boolean}
-                        border_mm: {type: number}
                         default_exposure_s: {type: number}
                         lift_height_mm: {type: number}
                         lift_speed_mms: {type: number}

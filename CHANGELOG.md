@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0 - 2026-10-27
+
+- The exposure mask no longer has an exposed frame around the display; `border_mm` is gone from the printer profile and from
+  `GET /v1/profiles` of `exposure` (the golden outputs of the mask and the `.pm3` file changed with it).
+- The job page tells to copy the `.pm3` file to the printer (USB stick); it is not opened in Photon Workshop.
+
 ## 0.6.0 - 2026-10-27
 
 - Plate sizes: a job is made for a plate size chosen from a list (160 x 100, 75 x 100 and 100 x 75 mm built in). The list is

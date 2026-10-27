@@ -125,8 +125,8 @@ Endpoints (the OpenAPI files are authoritative):
 
 ## Profiles and tool library (data, not code)
 
-- **Printer profile** (`exposure`): display resolution and size, frame offsets (calibration), mirror mode, border
-  width, machine name and machine table template, default exposure. The job can override the calibration values.
+- **Printer profile** (`exposure`): display resolution and size, frame offsets (calibration), mirror mode,
+  machine name and machine table template, default exposure. The job can override the calibration values.
 - **Mill profile** (`mill`): controller dialect (GRBL), highest spindle speed, outline end mill, safe height, tab
   size, flip mode, work area.
 - **Tool library** (`mill`, `tools.toml`): every drill bit and end mill with its cutting data (spindle rpm, feeds,
