@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, File, Form, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from starlette.concurrency import run_in_threadpool
 
@@ -36,6 +36,11 @@ from .worker import worker_loop
 
 JOB_ID = re.compile(r"^[A-Za-z0-9_-]{20,32}$")
 SAFE_NAME = re.compile(r"[^A-Za-z0-9_-]+")
+#: Folders of the archive with all result files and what goes into them (the 3D view's copper picture is internal).
+ARCHIVE_FOLDERS = {
+    "exposure": ("exposure.pm3", "mask.png", "mask_preview.png"),
+    "drill-mill": ("mill_preview.svg",),
+}
 INLINE_TYPES = {"image/png", "image/svg+xml", "text/plain; charset=utf-8"}
 PROFILE_ID = r"^[a-z0-9-]{1,40}$"
 
@@ -346,6 +351,24 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             filename=Path(info["name"]).name,
             content_disposition_type=disposition,
             headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'"},
+        )
+
+    @app.get("/v1/jobs/{job_id}/archive")
+    async def get_archive(job_id: str) -> Response:
+        record = _find(job_id)
+        if record.status != DONE:
+            raise Problem(404, "jobs.not_found", "The job is not finished.")
+        output = store.job_dir(job_id) / "output"
+        names = {f["name"] for f in record.files}
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            for folder, files in ARCHIVE_FOLDERS.items():
+                for name in sorted(n for n in names if n in files or (folder == "drill-mill" and n.endswith(".nc"))):
+                    archive.write(output / name, f"{folder}/{Path(name).name}")
+        return Response(
+            buffer.getvalue(),
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="pcbhomefab-{job_id[:8]}.zip"'},
         )
 
     return app

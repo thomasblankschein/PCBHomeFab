@@ -57,6 +57,10 @@ export function createJob(formData) {
   return json("/jobs", { method: "POST", body: formData });
 }
 
+export function archiveUrl(jobId) {
+  return `${API}/jobs/${encodeURIComponent(jobId)}/archive`;
+}
+
 export function fileUrl(jobId, name) {
   return `${API}/jobs/${encodeURIComponent(jobId)}/files/${name.split("/").map(encodeURIComponent).join("/")}`;
 }

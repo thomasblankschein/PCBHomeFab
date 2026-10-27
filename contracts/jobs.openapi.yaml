@@ -204,6 +204,23 @@ paths:
                 format: binary
         "404":
           $ref: "#/components/responses/Problem"
+  /v1/jobs/{id}/archive:
+    get:
+      operationId: getJobArchive
+      summary: All result files of a finished job in one ZIP archive
+      description: Folders `exposure/` (exposure.pm3, mask.png, mask_preview.png) and `drill-mill/` (the G-code programs and mill_preview.svg).
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: The ZIP archive.
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/Problem"
 components:
   responses:
     Problem:

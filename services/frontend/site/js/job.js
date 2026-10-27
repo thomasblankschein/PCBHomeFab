@@ -1,4 +1,4 @@
-import { ApiError, fileUrl, getJob } from "./api.js";
+import { ApiError, archiveUrl, fileUrl, getJob } from "./api.js";
 import { fill, h } from "./dom.js";
 import { daysLeft, formatSize, mm, programTitle } from "./format.js";
 import { initI18n, onLanguageChange, t } from "./i18n.js";
@@ -130,6 +130,16 @@ function showDone(job) {
   }
 
   if (programs.length) sections.push(simulationPanel(job, programs));
+
+  sections.push(
+    h(
+      "section",
+      { class: "panel" },
+      h("h2", {}, t("job.archive")),
+      h("p", { class: "muted" }, t("job.archive_hint")),
+      h("ul", { class: "files" }, h("li", {}, h("a", { href: archiveUrl(job.id), download: `pcbhomefab-${job.id.slice(0, 8)}.zip` }, t("job.archive_link")))),
+    ),
+  );
 
   sections.push(
     h(

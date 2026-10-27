@@ -110,6 +110,17 @@ def test_job_from_upload_to_download(client: TestClient, services: Services, dow
     assert pm3.content == b"ANYCUBIC90.0"
     bundle = zipfile.ZipFile(io.BytesIO(client.get(f"/v1/jobs/{job['id']}/files/mill_gcode.zip").content))
     assert sorted(bundle.namelist()) == ["1_drill_0.8mm.nc", "2_mill_1.0mm.nc"]
+    archive = client.get(f"/v1/jobs/{job['id']}/archive")
+    assert archive.headers["content-type"] == "application/zip"
+    assert archive.headers["content-disposition"] == f'attachment; filename="pcbhomefab-{job["id"][:8]}.zip"'
+    assert sorted(zipfile.ZipFile(io.BytesIO(archive.content)).namelist()) == [
+        "drill-mill/1_drill_0.8mm.nc",
+        "drill-mill/2_mill_1.0mm.nc",
+        "drill-mill/mill_preview.svg",
+        "exposure/exposure.pm3",
+        "exposure/mask.png",
+        "exposure/mask_preview.png",
+    ]
     preview = client.get(f"/v1/jobs/{job['id']}/files/mask_preview.png")
     assert preview.headers["content-type"] == "image/png" and preview.headers["content-disposition"].startswith(
         "inline"
@@ -266,6 +277,7 @@ def test_unknown_jobs_and_files(client: TestClient) -> None:
     _problem(client.get("/v1/jobs/" + "a" * 22), 404, "jobs.not_found")
     job = _post(client, ("node.zip", ZIP)).json()
     _problem(client.get(f"/v1/jobs/{job['id']}/files/exposure.pm3"), 404, "jobs.not_found")  # not done yet
+    _problem(client.get(f"/v1/jobs/{job['id']}/archive"), 404, "jobs.not_found")
 
 
 def test_path_traversal_in_file_name_is_refused(client: TestClient, services: Services, settings: Settings) -> None:

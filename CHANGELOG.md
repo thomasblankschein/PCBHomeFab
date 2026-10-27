@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.0 - 2026-10-27
+
+- The job page has a download of all result files in one ZIP archive (`GET /api/v1/jobs/{id}/archive`), with the folders
+  `exposure/` (`.pm3`, mask, preview) and `drill-mill/` (G-code programs and the milling preview).
+
 ## 0.13.0 - 2026-10-27
 
 - The text next to the positioning marks uses DejaVu Sans Mono Bold (equal width, thick strokes, dotted zero; bundled in
