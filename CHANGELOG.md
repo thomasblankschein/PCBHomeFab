@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0 - 2026-10-27
+
+- New page "Machines": the parameters of the printers and mills (display, resolution, calibration, lift, spindle, safe height,
+  tabs, plate and so on). `GET /v1/profiles` of `exposure` and `mill` return the full parameter set (contracts extended).
+
 ## 0.4.0 - 2026-10-27
 
 - 3D simulation: drag with the middle mouse button to move the view; the two view buttons bring the plate back to the middle.

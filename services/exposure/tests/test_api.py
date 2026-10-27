@@ -87,6 +87,9 @@ def test_profiles(client: TestClient) -> None:
     printers = client.get("/v1/profiles").json()["printers"]
     assert printers["photon-m3"]["resolution"] == [4096, 2560]
     assert printers["photon-m3"]["frame_left_mm"] == 1.8
+    assert printers["photon-m3"]["display_mm"] == [163.84, 102.4]
+    assert printers["photon-m3"]["pixel_mm"] == 0.04
+    assert printers["photon-m3"]["lift_height_mm"] == 6.0
 
 
 def test_calibration_values_move_the_image(client: TestClient) -> None:

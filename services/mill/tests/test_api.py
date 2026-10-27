@@ -68,6 +68,8 @@ def test_response_is_deterministic(client: TestClient) -> None:
 def test_profiles_and_tools(client: TestClient) -> None:
     profiles = client.get("/v1/profiles").json()
     assert profiles["mills"]["3018pro"]["max_spindle_rpm"] == 20000
+    assert profiles["mills"]["3018pro"]["safe_z_mm"] == 3.0
+    assert profiles["mills"]["3018pro"]["plate"] == {"width_mm": 160.0, "height_mm": 100.0, "thickness_mm": 1.5}
     tools = client.get("/v1/tools").json()
     assert tools["source"] == "built-in"
     assert "drill-0.8" in [t["id"] for t in tools["tools"]]

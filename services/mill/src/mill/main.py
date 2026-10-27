@@ -123,6 +123,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/v1/profiles")
     async def profiles() -> dict[str, Any]:
+        plate = Plate()
         return {
             "mills": {
                 key: {
@@ -131,6 +132,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "outline_endmill_mm": m.outline_endmill_mm,
                     "flip": m.flip,
                     "tabs": m.tabs,
+                    "safe_z_mm": m.safe_z_mm,
+                    "spindle_spinup_s": m.spindle_spinup_s,
+                    "drill_overshoot_mm": m.drill_overshoot_mm,
+                    "mill_overshoot_mm": m.mill_overshoot_mm,
+                    "tab_width_mm": m.tab_width_mm,
+                    "tab_height_mm": m.tab_height_mm,
+                    "offset_x_mm": m.offset_x_mm,
+                    "offset_y_mm": m.offset_y_mm,
+                    "plate": {
+                        "width_mm": plate.width_mm,
+                        "height_mm": plate.height_mm,
+                        "thickness_mm": plate.thickness_mm,
+                    },
                 }
                 for key, m in MILLS.items()
             }

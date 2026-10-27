@@ -24,6 +24,9 @@
 	@tools path /tools
 	rewrite @tools /tools.html
 
+	@machines path /machines
+	rewrite @machines /machines.html
+
 	# Language files and the version change with releases and are small: always ask whether they are still current.
 	@locales path /locales/* /version.json
 	header @locales Cache-Control no-cache

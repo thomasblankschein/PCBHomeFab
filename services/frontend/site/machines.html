@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title data-i18n="machines.page_title">Machines - PCBHomeFab</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">PCBHomeFab</a>
+  <nav aria-label="Main" data-i18n-attr="aria-label:nav.main">
+    <a href="/" data-i18n="nav.new_job">New job</a>
+    <a href="/tools" data-i18n="nav.tools">Tools</a>
+    <a href="/machines" aria-current="page" data-i18n="nav.machines">Machines</a>
+  </nav>
+</header>
+<main>
+<h1 data-i18n="machines.heading">Machines</h1>
+<p class="lead" data-i18n="machines.lead">Parameters of the printers and mills the files are made for. Calibration values can be changed for a single job under Settings on the New job page.</p>
+<p id="load-error" class="error" role="alert"></p>
+<div id="machines"></div>
+</main>
+<footer class="foot"><a href="https://github.com/thomasblankschein/PCBHomeFab">PCBHomeFab</a> <span id="version"></span></footer>
+<script type="module" src="/js/footer.js"></script>
+<script type="module" src="/js/machines.js"></script>
+</body>
+</html>
