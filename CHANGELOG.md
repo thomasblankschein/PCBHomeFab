@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0 - 2026-10-27
+
+- Tool change in the G-code: every drill and mill program starts at the tool change position (Z, then X0 Y0, spindle off) and
+  waits with `M0`, so the tool can be inserted and Z0 set before the program is resumed; at the end it parks at the same
+  position. The height is the new parameter `tool_change_z_mm` of the mill profile (50 mm), shown on the Machines page.
+
 ## 0.7.0 - 2026-10-27
 
 - The exposure mask no longer has an exposed frame around the display; `border_mm` is gone from the printer profile and from

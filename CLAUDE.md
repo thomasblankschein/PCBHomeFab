@@ -47,7 +47,9 @@ They are the reference for behaviour until the port is finished.
   native (`services/exposure/src/exposure/pm3.py`). Layer images are run length encoded: black/white runs as two bytes (`nibble << 12 | length`,
   at most 4095). UVtools 7.1 cannot convert a single image and cannot edit a finished `.pm3`, which is why the
   first version of the writer used a long detour; it is no longer needed.
-- GRBL: no canned drill cycles, write explicit moves. `$30` must match the `S` value (20,000 rpm needs `$30=20000`).
+- GRBL: no canned drill cycles, write explicit moves. Every program starts at the tool change position (`MillProfile.tool_change_z_mm`,
+  X0 Y0, spindle off) and pauses with `M0` so the tool can be inserted and Z0 set, then the user resumes in the sender; it parks at
+  the same position at the end (spindle off). `$30` must match the `S` value (20,000 rpm needs `$30=20000`).
 - Drill file (KiCad Excellon): Y is negative of the KiCad Y, absolute origin, metric.
 
 ## Conventions

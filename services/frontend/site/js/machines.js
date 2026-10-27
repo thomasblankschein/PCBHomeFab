@@ -30,6 +30,7 @@ const millRows = (m) => [
   ["machines.m_spindle", number(m.max_spindle_rpm, "rpm")],
   ["machines.m_endmill", number(m.outline_endmill_mm, "mm")],
   ["machines.m_safe_z", number(m.safe_z_mm, "mm")],
+  ["machines.m_tool_change_z", number(m.tool_change_z_mm, "mm")],
   ["machines.m_spinup", number(m.spindle_spinup_s, "s")],
   ["machines.m_drill_overshoot", number(m.drill_overshoot_mm, "mm")],
   ["machines.m_mill_overshoot", number(m.mill_overshoot_mm, "mm")],

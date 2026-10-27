@@ -120,10 +120,15 @@ class _Writer:
             f"({title})",
             "(GRBL, X0 Y0 = lower left corner of the plate, copper side up, Z0 = plate surface)",
             "G21 G90 G17 G94",
+            # tool change position: spindle off, up, to X0 Y0, then wait (M0) until the user resumes
+            "M5",
+            f"G0 Z{mill.tool_change_z_mm:.3f}",
+            "G0 X0.000 Y0.000",
+            f"(MSG, {tool_message}, then resume)",
+            "M0",
             f"G0 Z{mill.safe_z_mm:g}",
             f"M3 S{tool.spindle_rpm}",
             f"G4 P{mill.spindle_spinup_s:g}",
-            f"(MSG, {tool_message})",
         ]
 
     def add(self, line: str) -> None:
@@ -147,7 +152,9 @@ class _Writer:
         self.add(f"G1 X{x:.3f} Y{y:.3f} F{feed:g}")
 
     def finish(self) -> str:
-        self.up(self.mill.safe_z_mm + 15)
+        # park at the tool change position: up, to X0 Y0 (lower left corner of the plate), spindle off
+        self.up(self.mill.tool_change_z_mm)
+        self.add("G0 X0.000 Y0.000")
         self.add("M5")
         self.add("M30")
         return "\n".join(self.lines) + "\n"

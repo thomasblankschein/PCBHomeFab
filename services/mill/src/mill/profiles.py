@@ -24,6 +24,8 @@ class MillProfile:
     #: End mill (diameter in the tool library) that cuts the board outlines. Tools and cutting data: see ``tools.py``.
     outline_endmill_mm: float = 1.0
     safe_z_mm: float = 3.0
+    #: Height (Z) of the tool change position: every program starts there (tool change, then resume) and parks there.
+    tool_change_z_mm: float = 50.0
     spindle_spinup_s: float = 3.0
     drill_overshoot_mm: float = 0.4
     mill_overshoot_mm: float = 0.15

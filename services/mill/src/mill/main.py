@@ -133,6 +133,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "flip": m.flip,
                     "tabs": m.tabs,
                     "safe_z_mm": m.safe_z_mm,
+                    "tool_change_z_mm": m.tool_change_z_mm,
                     "spindle_spinup_s": m.spindle_spinup_s,
                     "drill_overshoot_mm": m.drill_overshoot_mm,
                     "mill_overshoot_mm": m.mill_overshoot_mm,
