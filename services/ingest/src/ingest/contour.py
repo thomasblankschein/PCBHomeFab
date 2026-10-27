@@ -1,7 +1,9 @@
 """The real board contour from the Edge.Cuts layer: closed loops of lines and arcs as polygons.
 
-The result goes to ``board.json`` as ``contour`` (``contracts/schemas/board.schema.json``). When the layer cannot be
-read as closed loops, ``extract_contour`` returns ``None`` and the board is treated as its bounding box.
+The result goes to ``board.json`` as ``contour`` (``contracts/schemas/board.schema.json``). A file can hold several
+boards, each with its own outline: every loop that does not lie inside another one is the outer contour of a board
+("shape"), loops inside it are its cutouts. When the layer cannot be read as closed loops, ``extract_contour`` returns
+``None`` and the board is treated as its bounding box.
 """
 
 from __future__ import annotations
@@ -16,6 +18,8 @@ MAX_SEGMENTS = 5000
 MAX_POINTS = 20000
 
 Point = tuple[float, float]
+#: The outer polygon of one board and the polygons of its cutouts.
+Shape = tuple[list[Point], list[list[Point]]]
 
 
 def _polyline(obj: Any) -> list[Point] | None:
@@ -84,11 +88,11 @@ def relative(loop: list[Point], xmin: float, ymin: float) -> list[list[float]]:
     return cleaned
 
 
-def extract_contour(outline: Any) -> tuple[list[Point], list[list[Point]]] | None:
-    """Outer contour and cutouts of the board as polygons, points in mm in the coordinates of the Gerber file.
+def extract_contour(outline: Any) -> list[Shape] | None:
+    """The boards of the outline layer as shapes (largest first), points in mm in the coordinates of the Gerber file.
 
-    Returns ``None`` when the outline is not made of closed loops of lines and arcs, when there is more than one outer
-    loop, or when it is too large; the board is then milled as its bounding box.
+    Returns ``None`` when the outline is not made of closed loops of lines and arcs, or when it is too large; the board
+    is then milled as its bounding box.
     """
     segments: list[list[Point]] = []
     for obj in outline.objects:
@@ -99,7 +103,7 @@ def extract_contour(outline: Any) -> tuple[list[Point], list[list[Point]]] | Non
     return contour_of(segments)
 
 
-def contour_of(segments: list[list[Point]]) -> tuple[list[Point], list[list[Point]]] | None:
+def contour_of(segments: list[list[Point]]) -> list[Shape] | None:
     """Like :func:`extract_contour` for an outline that is already a list of polylines (lines and arcs as points)."""
     if not segments or len(segments) > MAX_SEGMENTS:
         return None
@@ -110,7 +114,17 @@ def contour_of(segments: list[list[Point]]) -> tuple[list[Point], list[list[Poin
     if not loops:
         return None
     loops.sort(key=lambda loop: abs(_area(loop)), reverse=True)
-    outer, cutouts = loops[0], loops[1:]
-    if not all(_inside(cutout[0], outer) for cutout in cutouts):
-        return None
-    return outer, cutouts
+    # a loop inside an odd number of larger loops is a cutout of the smallest one around it, the others are boards
+    shapes: list[Shape] = []
+    owners: dict[int, int] = {}  # index of a board loop -> index in shapes
+    for index, loop in enumerate(loops):
+        around = [j for j in range(index) if _inside(loop[0], loops[j])]
+        if len(around) % 2 == 0:
+            owners[index] = len(shapes)
+            shapes.append((loop, []))
+        else:
+            owner = around[-1]
+            if owner not in owners:
+                return None  # a cutout inside a cutout: not a shape this service understands
+            shapes[owners[owner]][1].append(loop)
+    return shapes

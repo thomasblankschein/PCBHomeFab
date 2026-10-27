@@ -183,3 +183,12 @@ def test_broken_kicad_file() -> None:
         with pytest.raises(Problem) as error:
             build_package(data, "t")
         assert error.value.code in {"ingest.invalid_kicad", "ingest.invalid_zip"}
+
+
+def test_kicad_file_with_three_boards_keeps_every_outline() -> None:
+    def box(x: float, w: float) -> str:
+        return f'(gr_rect (start {x} 0) (end {x + w} 10) (layer "Edge.Cuts") (width 0.1) (fill no))'
+
+    board, _ = _unpack(build_package(_pcb(TRACK, box(0, 20) + box(25, 15) + box(45, 10)), "t"))
+    assert (board["width_mm"], board["height_mm"]) == (55.0, 10.0)
+    assert len(board["contour"]["others"]) == 2

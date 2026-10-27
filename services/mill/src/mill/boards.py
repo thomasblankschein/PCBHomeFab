@@ -29,10 +29,19 @@ class Hole(BaseModel):
 Polygon = Annotated[list[tuple[float, float]], Field(min_length=3, max_length=MAX_POINTS)]
 
 
+class Part(BaseModel):
+    """One more board of the same file: its outer polygon and its cutouts."""
+
+    model_config = ConfigDict(extra="forbid")
+    outer: Polygon
+    cutouts: list[Polygon] = Field(max_length=100)
+
+
 class Contour(BaseModel):
     model_config = ConfigDict(extra="forbid")
     outer: Polygon
     cutouts: list[Polygon] = Field(max_length=100)
+    others: list[Part] = Field(default_factory=list, max_length=100)
 
 
 class Board(BaseModel):

@@ -278,7 +278,7 @@ function renderPlate() {
           "g",
           {},
           h("title", {}, t("plate.board_title", { name: board.name, width: mm(board.width), height: mm(board.height), x: mm(board.x), y: mm(board.y) })),
-          h("path", { class: "board", "fill-rule": "evenodd", d: polygonPath([board.outer, ...board.cutouts], toX, toY) }),
+          h("path", { class: "board", "fill-rule": "evenodd", d: polygonPath([board.outer, ...board.cutouts, ...board.extra], toX, toY) }),
           board.holes.map((hole) =>
             h("circle", { class: "hole", cx: hole.x, cy: toY(hole.y), r: Math.max(hole.diameter / 2, 0.35), fill: colors.get(hole.diameter) }),
           ),

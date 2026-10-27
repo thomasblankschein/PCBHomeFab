@@ -117,3 +117,31 @@ def test_open_outline_falls_back_to_the_box(data_dir: Path) -> None:
     board = _board(board_with_outline(data_dir, outline))
     assert "contour" not in board
     assert (board["width_mm"], board["height_mm"]) == (10.0, 10.0)
+
+
+def rectangle(x0: float, y0: float, w: float, h: float) -> str:
+    return (
+        line(x0, y0, x0 + w, y0)
+        + line(x0 + w, y0, x0 + w, y0 + h)
+        + line(x0 + w, y0 + h, x0, y0 + h)
+        + line(x0, y0 + h, x0, y0)
+    )
+
+
+def test_a_file_with_three_boards_keeps_every_outline(data_dir: Path) -> None:
+    outline = rectangle(10, -40, 20, 30) + rectangle(35, -40, 15, 30) + rectangle(55, -40, 10, 30) + circle(20, -25, 2)
+    board = _board(board_with_outline(data_dir, outline))
+    assert (board["width_mm"], board["height_mm"]) == (55.0, 30.0)  # the box of all three
+    contour = board["contour"]
+    assert sorted(map(tuple, contour["outer"]))[0] == (0.0, 0.0) and abs(area(contour["outer"]) - 600) < 1e-6
+    assert (
+        len(contour["cutouts"]) == 1 and abs(area(contour["cutouts"][0]) - math.pi * 4) < 0.05
+    )  # the hole of the first
+    assert [abs(round(area(part["outer"]))) for part in contour["others"]] == [450, 300]
+    assert all(part["cutouts"] == [] for part in contour["others"])
+    assert sorted(map(tuple, contour["others"][0]["outer"]))[0] == (25.0, 0.0)
+
+
+def test_single_board_has_no_others(data_dir: Path) -> None:
+    board = _board((data_dir / "fuehlerknoten.zip").read_bytes())
+    assert "others" not in board["contour"]

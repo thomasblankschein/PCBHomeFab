@@ -169,3 +169,23 @@ def test_api_mills_the_contour_of_board_json() -> None:
         code = archive.read("1_mill_1.0mm.nc").decode()
         assert b"<path" in archive.read("preview.svg")
     assert code.count("G1 X") > 100  # the arcs are many short moves
+
+
+def test_every_board_of_a_file_with_several_outlines_is_milled() -> None:
+    def box(x: float, w: float) -> list[tuple[float, float]]:
+        return [(x, 0.0), (x + w, 0.0), (x + w, 20.0), (x, 20.0)]
+
+    placement = Placement(
+        3.0,
+        3.0,
+        50.0,
+        20.0,
+        [],
+        (box(0, 20), []),
+        others=(([(30.0, 0.0), (50.0, 0.0), (50.0, 20.0), (30.0, 20.0)], []),),
+    )
+    layout = gcode.build_layout([placement], Plate(), MILL_3018PRO)
+    assert len(layout.outlines) == 2
+    programs = gcode.generate([placement], Plate(), MILL_3018PRO, gcode.load_tools())
+    mill = next(p for p in programs if p.tool.startswith("endmill"))
+    assert mill.outlines == 2

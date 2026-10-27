@@ -102,6 +102,9 @@ def _programs(boards: dict[str, Board], layout: dict[str, Any], settings: dict[s
                 board.height_mm,
                 [(h.x_mm, h.y_mm, h.diameter_mm) for h in board.holes],
                 (list(board.contour.outer), [list(c) for c in board.contour.cutouts]) if board.contour else None,
+                tuple((list(part.outer), [list(c) for c in part.cutouts]) for part in board.contour.others)
+                if board.contour
+                else (),
             )
         )
     second_mark = None

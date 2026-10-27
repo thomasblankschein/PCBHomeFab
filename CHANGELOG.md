@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.16.0 - 2026-10-27
+
+- Fix: a file that holds several boards, each with its own outline in Edge.Cuts, is milled along every outline. Before, such
+  an outline was not recognised and only the outer box of the whole file was milled. `board.json` lists the largest board
+  in `contour` and the others in the new `contour.others`; the size and the outline box cover all of them. The plate
+  preview draws all outlines. The file is still placed on the plate as one block.
+
 ## 0.15.1 - 2026-10-27
 
 - Tool library: drill 0.95 mm added.

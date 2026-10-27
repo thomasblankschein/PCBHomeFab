@@ -128,7 +128,11 @@ def _build_from_kicad(data: bytes, name: str) -> bytes:
     if not drawing.outline:
         raise _problem("ingest.no_outline", "No board outline (Edge.Cuts) found in the KiCad file.")
     contour = contour_of(drawing.outline)
-    points = contour[0] if contour is not None else [p for loop in drawing.outline for p in loop]
+    points = (
+        [p for outer, _ in contour for p in outer]
+        if contour is not None
+        else [p for loop in drawing.outline for p in loop]
+    )
     xs, ys = [x for x, _ in points], [y for _, y in points]
     xmin, ymin, xmax, ymax = min(xs), min(ys), max(xs), max(ys)
     holes = [
@@ -172,9 +176,9 @@ def build_package(data: bytes, name: str) -> bytes:
         if stack.outline is None:
             raise _problem("ingest.no_outline", "No board outline layer (Edge.Cuts) found in the ZIP.")
         contour = extract_contour(stack.outline)
-        if contour is not None:  # the box of the real contour, also right for boards with arcs
-            xs = [x for x, _ in contour[0]]
-            ys = [y for _, y in contour[0]]
+        if contour is not None:  # the box of the real contours, also right for boards with arcs
+            xs = [x for outer, _ in contour for x, _ in outer]
+            ys = [y for outer, _ in contour for _, y in outer]
             xmin, ymin, xmax, ymax = min(xs), min(ys), max(xs), max(ys)
         else:
             xmin, ymin, xmax, ymax = _outline_bounds(stack.outline)
@@ -195,7 +199,7 @@ def _pack(
     width, height = round(xmax - xmin, 1), round(ymax - ymin, 1)
     if width <= 0 or height <= 0:
         raise _problem("ingest.empty_outline", "The board outline layer (Edge.Cuts) has no area.")
-    board = {
+    board: dict[str, Any] = {
         "schema_version": 1,
         "name": name,
         "outline": {"xmin": xmin, "ymin": ymin, "xmax": xmax, "ymax": ymax},
@@ -204,10 +208,13 @@ def _pack(
         "holes": holes,
     }
     if contour is not None:
-        board["contour"] = {
-            "outer": relative(contour[0], xmin, ymin),
-            "cutouts": [relative(cutout, xmin, ymin) for cutout in contour[1]],
-        }
+        shapes = [
+            {"outer": relative(outer, xmin, ymin), "cutouts": [relative(cutout, xmin, ymin) for cutout in cutouts]}
+            for outer, cutouts in contour
+        ]
+        board["contour"] = shapes[0]  # the largest board; a file with several boards lists the others as well
+        if len(shapes) > 1:
+            board["contour"]["others"] = shapes[1:]
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as package:
         for filename, content in (("copper.gbr", copper_bytes), ("board.json", json.dumps(board, indent=1).encode())):

@@ -23,12 +23,25 @@
     "width_mm": {"type": "number", "exclusiveMinimum": 0, "description": "xmax - xmin, rounded to 0.1 mm."},
     "height_mm": {"type": "number", "exclusiveMinimum": 0, "description": "ymax - ymin, rounded to 0.1 mm."},
     "contour": {
-      "description": "The real board shape from the outline layer (Edge.Cuts): the outer polygon and polygons of cutouts. Points in mm relative to the lower left corner of the outline box, the closing point is not repeated, arcs are approximated to 0.005 mm. Absent when the outline layer is not made of closed loops of lines and arcs: the board is then taken as its box.",
+      "description": "The real board shape from the outline layer (Edge.Cuts): the outer polygon and polygons of cutouts. Points in mm relative to the lower left corner of the outline box, the closing point is not repeated, arcs are approximated to 0.005 mm. A file with several boards (several outlines that are not inside each other) lists the largest one here and the others in `others`; the outline box and the size then cover all of them. Absent when the outline layer is not made of closed loops of lines and arcs: the board is then taken as its box.",
       "type": "object",
       "required": ["outer", "cutouts"],
       "properties": {
         "outer": {"$ref": "#/$defs/polygon"},
-        "cutouts": {"type": "array", "items": {"$ref": "#/$defs/polygon"}}
+        "cutouts": {"type": "array", "items": {"$ref": "#/$defs/polygon"}},
+        "others": {
+          "description": "Further boards in the same file, each with its own outer polygon and cutouts.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["outer", "cutouts"],
+            "properties": {
+              "outer": {"$ref": "#/$defs/polygon"},
+              "cutouts": {"type": "array", "items": {"$ref": "#/$defs/polygon"}}
+            },
+            "additionalProperties": false
+          }
+        }
       },
       "additionalProperties": false
     },

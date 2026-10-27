@@ -34,12 +34,14 @@ class Placement:
     holes: list[tuple[float, float, float]]
     #: Real shape (outer polygon and cutouts) relative to the lower left corner; ``None`` means the rectangle.
     contour: Shape | None = None
+    #: Further boards of the same file (a file can hold several boards, each with its own outline).
+    others: tuple[Shape, ...] = ()
 
-    def shape(self) -> Shape:
+    def shapes(self) -> list[Shape]:
         if self.contour is not None:
-            return self.contour
+            return [self.contour, *self.others]
         w, h = self.width_mm, self.height_mm
-        return [(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)], []
+        return [([(0.0, 0.0), (w, 0.0), (w, h), (0.0, h)], [])]
 
 
 @dataclass(frozen=True)
@@ -84,12 +86,11 @@ def build_layout(placements: list[Placement], plate: Plate, mill: MillProfile) -
     holes: dict[float, list[Point]] = {}
     outlines: list[Shape] = []
     for placement in placements:
-        outer, cutouts = placement.shape()
 
         def move(points: list[Point], p: Placement = placement) -> list[Point]:
             return [frame.point(p.x_mm + x, p.y_mm + y) for x, y in points]
 
-        outlines.append((move(outer), [move(cutout) for cutout in cutouts]))
+        outlines += [(move(outer), [move(cutout) for cutout in cutouts]) for outer, cutouts in placement.shapes()]
         for x, y, diameter in placement.holes:
             holes.setdefault(diameter, []).append(frame.point(placement.x_mm + x, placement.y_mm + y))
     return Layout(holes, outlines)

@@ -113,3 +113,21 @@ test("rectangles are told from real contours", () => {
   assert.ok(!isRectangle({ ...rect, contour: { ...rect.contour, cutouts: [[[1, 1], [2, 1], [2, 2]]] } }));
   assert.ok(!isRectangle({ ...rect, contour: { outer: [[0, 0], [10, 0], [10, 20], [5, 25]], cutouts: [] } }));
 });
+
+test("a file with several boards draws all of their outlines", () => {
+  const two = {
+    name: "two",
+    width_mm: 50,
+    height_mm: 20,
+    holes: [],
+    contour: {
+      outer: [[0, 0], [20, 0], [20, 20], [0, 20]],
+      cutouts: [],
+      others: [{ outer: [[30, 0], [50, 0], [50, 20], [30, 20]], cutouts: [[[35, 5], [40, 5], [40, 10]]] }],
+    },
+  };
+  assert.ok(!isRectangle(two));
+  const [placed] = placedBoards({ plate: { width_mm: 160, height_mm: 100 }, placements: [{ board_id: "t", x_mm: 3, y_mm: 3, rotation_deg: 0 }] }, { t: two });
+  assert.equal(placed.extra.length, 2);
+  assert.deepEqual(placed.extra[0][0], [33, 3]);
+});

@@ -19,8 +19,8 @@ export function boardShape(board) {
 /** Whether the board is a plain rectangle: no contour, or a four point contour along its box without cutouts. */
 export function isRectangle(board) {
   if (!board.contour) return true;
-  const { outer, cutouts } = board.contour;
-  if (cutouts.length > 0 || outer.length !== 4) return false;
+  const { outer, cutouts, others = [] } = board.contour;
+  if (cutouts.length > 0 || others.length > 0 || outer.length !== 4) return false;
   const eps = 1e-3;
   return outer.every(
     ([x, y]) =>
@@ -47,6 +47,8 @@ export function placedBoards(layout, boardsById) {
       height: board.height_mm,
       outer: move(shape.outer, placement.x_mm, placement.y_mm),
       cutouts: shape.cutouts.map((cutout) => move(cutout, placement.x_mm, placement.y_mm)),
+      // the other boards of a file that holds several: their outlines and cutouts, drawn with the first one
+      extra: (shape.others ?? []).flatMap((part) => [part.outer, ...part.cutouts]).map((polygon) => move(polygon, placement.x_mm, placement.y_mm)),
       holes: board.holes.map((hole) => ({
         x: placement.x_mm + hole.x_mm,
         y: placement.y_mm + hole.y_mm,
