@@ -64,6 +64,7 @@ function simulationPanel(job, programs) {
         await simulation.loadPrograms(job.id, programs),
         job.params.thickness_mm,
         job.params.plate ?? LEGACY_PLATE,
+        { copperUrl: job.files.some((f) => f.name === "copper.png") ? fileUrl(job.id, "copper.png") : null, flip: job.params.flip },
       );
     } catch {
       started = false;

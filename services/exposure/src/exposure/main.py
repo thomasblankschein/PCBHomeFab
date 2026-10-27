@@ -17,7 +17,7 @@ from starlette.concurrency import run_in_threadpool
 from . import common
 from .boards import Board, LayoutModel, Placement, board_id_of, load_board
 from .common import Isolation, Problem
-from .mask import build_mask
+from .mask import build_copper, build_mask
 from .pm3 import build_pm3
 from .profiles import PRINTERS
 
@@ -33,7 +33,7 @@ class ExposureSettings(BaseModel):
     frame_left_mm: float | None = Field(default=None, ge=0, le=20)
     frame_bottom_mm: float | None = Field(default=None, ge=0, le=20)
     mirror_x: bool | None = None
-    outputs: list[Literal["mask", "preview", "pm3"]] = Field(default=["mask", "preview", "pm3"], min_length=1)
+    outputs: list[Literal["mask", "preview", "pm3", "copper"]] = Field(default=["mask", "preview", "pm3"], min_length=1)
 
 
 @dataclass(frozen=True)
@@ -82,18 +82,26 @@ def _masks(packages: dict[str, bytes], layout: dict[str, Any], settings: dict[st
     boards: dict[str, Board] = {board_id: load_board(data, board_id) for board_id, data in packages.items()}
     placements = [Placement(boards[p["board_id"]], p["x_mm"], p["y_mm"]) for p in layout["placements"]]
 
-    mask = build_mask(placements, printer, holes=settings["holes"])
+    outputs = settings["outputs"]
+    mask = (
+        build_mask(placements, printer, holes=settings["holes"]) if {"mask", "preview", "pm3"} & set(outputs) else None
+    )
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
-        if "mask" in settings["outputs"]:
+        if "copper" in outputs:
+            plate = layout["plate"]
+            png = io.BytesIO()
+            build_copper(placements, plate["width_mm"], plate["height_mm"]).save(png, format="PNG", optimize=True)
+            _zip_entry(archive, "copper.png", png.getvalue())
+        if mask is not None and "mask" in outputs:
             png = io.BytesIO()
             mask.save(png, format="PNG", dpi=(25.4 / printer.pixel_mm,) * 2)
             _zip_entry(archive, "mask.png", png.getvalue())
-        if "preview" in settings["outputs"]:
+        if mask is not None and "preview" in outputs:
             png = io.BytesIO()
             mask.convert("L").resize(PREVIEW_SIZE, Image.Resampling.BOX).save(png, format="PNG")
             _zip_entry(archive, "mask_preview.png", png.getvalue())
-        if "pm3" in settings["outputs"]:
+        if mask is not None and "pm3" in outputs:
             _zip_entry(archive, "exposure.pm3", build_pm3(mask, printer, settings["exposure_s"]))
     return buffer.getvalue()
 

@@ -83,6 +83,20 @@ def test_outputs_can_be_chosen(client: TestClient) -> None:
         assert archive.namelist() == ["exposure.pm3"]
 
 
+def test_copper_picture_for_the_3d_view(client: TestClient) -> None:
+    response = _post(client, settings={"printer": "photon-m3", "outputs": ["copper"]})
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        assert archive.namelist() == ["copper.png"]
+        picture = Image.open(io.BytesIO(archive.read("copper.png")))
+    assert picture.mode == "RGBA" and picture.size == (1600, 1000)  # 160 x 100 mm at 10 px/mm
+    alpha = picture.getchannel("A")
+    assert alpha.getextrema() == (0, 255)
+    copper = sum(1 for v in alpha.tobytes() if v)
+    assert 0.01 < copper / (1600 * 1000) < 0.5  # some copper, far from everything
+    # the corner of the plate has no board and no copper
+    assert picture.getpixel((1599, 0))[3] == 0
+
+
 def test_profiles(client: TestClient) -> None:
     printers = client.get("/v1/profiles").json()["printers"]
     assert printers["photon-m3"]["resolution"] == [4096, 2560]

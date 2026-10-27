@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from .services import Services, UserError
+from .services import Services, Unavailable, UserError
 
 CONTENT_TYPES = {
     ".png": "image/png",
@@ -75,12 +75,26 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
             "printer": params["printer"],
             "holes": params["holes"],
             "exposure_s": params["exposure_s"],
-            "outputs": ["mask", "preview", "pm3"],
+            "outputs": ["mask", "preview", "pm3", "copper"],
         }
         for key in ("frame_left_mm", "frame_bottom_mm", "mirror_x"):
             if params.get(key) is not None:
                 settings[key] = params[key]
         for name, data in services.exposure(packages, layout, settings, step("exposure")).items():
+            _write(output / name, data, files)
+
+    elif params["mill_gcode"]:
+        # only for the 3D view of the user interface: a job without exposure does not fail when this does
+        try:
+            copper = services.exposure(
+                packages,
+                layout,
+                {"printer": params["printer"], "holes": "full", "exposure_s": 1, "outputs": ["copper"]},
+                step("copper"),
+            )
+        except (UserError, Unavailable):
+            copper = {}
+        for name, data in copper.items():
             _write(output / name, data, files)
 
     if params["mill_gcode"]:

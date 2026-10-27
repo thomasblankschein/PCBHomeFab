@@ -82,7 +82,13 @@ class Downstream:
     def _exposure(self, request: httpx.Request) -> httpx.Response:
         settings = _form_field(request, "settings")
         pm3 = b"ANYCUBIC" + str(settings.get("exposure_s")).encode()
-        package = make_zip({"mask.png": b"png", "mask_preview.png": b"preview", "exposure.pm3": pm3})
+        available = {
+            "mask": ("mask.png", b"png"),
+            "preview": ("mask_preview.png", b"preview"),
+            "pm3": ("exposure.pm3", pm3),
+        }
+        available["copper"] = ("copper.png", b"copper")
+        package = make_zip(dict(available[o] for o in settings.get("outputs", ["mask", "preview", "pm3"])))
         return httpx.Response(200, content=package, headers={"content-type": "application/zip"})
 
     def _mill(self, request: httpx.Request) -> httpx.Response:

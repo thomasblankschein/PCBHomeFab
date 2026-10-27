@@ -99,6 +99,7 @@ def test_job_from_upload_to_download(client: TestClient, services: Services, dow
         "mask.png",
         "mask_preview.png",
         "exposure.pm3",
+        "copper.png",
         "mill/1_drill_0.8mm.nc",
         "mill/2_mill_1.0mm.nc",
         "mill_gcode.zip",
@@ -144,8 +145,30 @@ def test_only_selected_outputs_are_run(client: TestClient, services: Services, d
     job = _post(client, ("node.zip", ZIP), mill_gcode="false").json()
     process_next(JobStore(services.settings), services)
     names = {f["name"] for f in client.get(f"/v1/jobs/{job['id']}").json()["files"]}
-    assert names == {"mask.png", "mask_preview.png", "exposure.pm3"}
+    assert names == {"mask.png", "mask_preview.png", "exposure.pm3", "copper.png"}
     assert not any(path == "/v1/programs" for _, path, _ in downstream.calls)
+
+
+def test_mill_only_job_gets_the_copper_picture(client: TestClient, services: Services, downstream: Downstream) -> None:
+    job = _post(client, ("node.zip", ZIP), exposure="false").json()
+    process_next(JobStore(services.settings), services)
+    status = client.get(f"/v1/jobs/{job['id']}").json()
+    assert status["status"] == "done"
+    names = {f["name"] for f in status["files"]}
+    assert "copper.png" in names and "exposure.pm3" not in names and "mill_gcode.zip" in names
+
+
+def test_mill_only_job_does_not_fail_without_the_copper_picture(
+    client: TestClient, services: Services, downstream: Downstream
+) -> None:
+    downstream.override["exposure"] = lambda _r: problem(
+        422, "exposure.plate_too_large", "The plate does not fit on the display."
+    )
+    job = _post(client, ("node.zip", ZIP), exposure="false").json()
+    process_next(JobStore(services.settings), services)
+    status = client.get(f"/v1/jobs/{job['id']}").json()
+    assert status["status"] == "done"
+    assert "copper.png" not in {f["name"] for f in status["files"]}
 
 
 def test_duplicate_file_names_get_distinct_board_ids(client: TestClient) -> None:

@@ -9,6 +9,7 @@
   --error: #b00020;
   --ok: #17703a;
   --plate: #c9a06a;
+  --copper: #8f2f0c;
   --board: #2d6a4f;
   --board-edge: #0f3d2c;
   --focus: #1b5fd1;
@@ -26,6 +27,7 @@
     --error: #ff8a9b;
     --ok: #6fd69a;
     --plate: #8a6a3f;
+    --copper: #ffbb77;
     --board: #2f8f6a;
     --board-edge: #a8e6cf;
     --focus: #7aa7ff;

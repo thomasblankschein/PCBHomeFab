@@ -44,7 +44,8 @@ shape of each, set the copies, the order and the spacing, and watch the boards o
 by diameter). Printer, mill, exposure time, hole mode, tabs, flip and the calibration of the printer are in the settings;
 they are remembered in the browser. "Create job" leads to the job page with the exposure mask, the mill preview and
 the files to download (`exposure.pm3`, one G-code program per tool, all programs as ZIP) and a 3D simulation of
-the drill and mill paths (turn, zoom, play with the tool moving along the paths). `/tools` shows the tool
+the drill and mill paths (turn, zoom, play with the tool moving along the paths, copper of the boards shown faintly on the plate; it
+can be switched off). `/tools` shows the tool
 library. Without accounts, every job gets a random id and the job link `/jobs/<id>` is the only credential. Jobs and
 files are deleted after seven days.
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0 - 2026-10-27
+
+- 3D simulation: the copper of the boards is shown faintly on the plate and can be switched off ("Show copper"). `exposure`
+  has a new output `copper` (`copper.png`: the copper of the plate in top view, RGBA, 10 px/mm), `jobs` stores it with every
+  job (also without the exposure output; a failure there does not fail the job).
+
 ## 0.8.0 - 2026-10-27
 
 - Tool change in the G-code: every drill and mill program starts at the tool change position (Z, then X0 Y0, spindle off) and

@@ -90,7 +90,7 @@ class Services:
             files=_package_parts(packages),
             data={"layout": json.dumps(layout), "settings": json.dumps(settings)},
         )
-        allowed = re.compile(r"^(mask\.png|mask_preview\.png|exposure\.pm3)$")
+        allowed = re.compile(r"^(mask\.png|mask_preview\.png|exposure\.pm3|copper\.png)$")
         return read_zip(response.content, lambda name: bool(allowed.match(name)))
 
     def mill(

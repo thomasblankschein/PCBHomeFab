@@ -148,6 +148,7 @@
   "sim.speed": "Speed",
   "sim.zscale": "Depth exaggeration",
   "sim.rapids": "Show rapid moves",
+  "sim.copper": "Show copper",
   "sim.view_iso": "Oblique view",
   "sim.view_top": "From above",
   "sim.zoom_in": "Zoom in",

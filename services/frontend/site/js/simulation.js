@@ -12,6 +12,8 @@ const RAPID_FEED = 1500;
 const SPEEDS = [1, 10, 50, 200, 1000];
 const COLORS = ["#2b7de9", "#e0742b", "#9b59b6", "#16a085", "#c0392b", "#7f8c8d"];
 const TOOL_HEIGHT = 14;
+// The copper is shown faintly, so that it does not hide the tool paths.
+const COPPER_ALPHA = 0.45;
 
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -32,8 +34,12 @@ export async function loadPrograms(jobId, files) {
   );
 }
 
-/** Builds the simulation inside `container` for programs from `loadPrograms`. */
-export function createSimulation(container, programs, thickness, plateSize) {
+/**
+ * Builds the simulation inside `container` for programs from `loadPrograms`.
+ * `options.copperUrl` is the picture of the copper (copper.png of the job), `options.flip` how the plate is turned over for
+ * milling ("x", "y" or "none"): the paths are in machine coordinates, so the picture is turned the same way.
+ */
+export function createSimulation(container, programs, thickness, plateSize, options = {}) {
   const PLATE = { width: plateSize.width_mm, height: plateSize.height_mm };
   const all = programs.flatMap((program) => program.moves);
   const state = {
@@ -48,6 +54,9 @@ export function createSimulation(container, programs, thickness, plateSize) {
     timeline: buildTimeline(all, RAPID_FEED),
     screen: new Float32Array(0),
     projected: false,
+    copper: true,
+    copperReady: false,
+    layerKey: "",
     last: 0,
   };
   state.time = state.timeline.total;
@@ -70,6 +79,16 @@ export function createSimulation(container, programs, thickness, plateSize) {
   const speedSelect = h("select", {}, SPEEDS.map((s) => h("option", { value: s, selected: s === state.speed }, `${s}×`)));
   const zScale = h("input", { type: "range", min: 1, max: 10, step: 1, value: state.zScale });
   const rapids = h("input", { type: "checkbox", checked: true });
+  const copperToggle = h("input", { type: "checkbox", checked: true });
+  const layer = document.createElement("canvas");
+  const copperImage = new Image();
+  if (options.copperUrl) {
+    copperImage.onload = () => {
+      state.copperReady = true;
+      draw();
+    };
+    copperImage.src = options.copperUrl;
+  }
   const legend = h("ul", { class: "legend sim-legend" });
   const note = h("p", { class: "muted" });
   const button = (key, onclick) => h("button", { type: "button", "data-i18n": key, onclick }, t(key));
@@ -88,6 +107,9 @@ export function createSimulation(container, programs, thickness, plateSize) {
       label("sim.speed", speedSelect),
       label("sim.zscale", zScale),
       h("label", { class: "inline" }, rapids, " ", h("span", { "data-i18n": "sim.rapids" }, t("sim.rapids"))),
+      options.copperUrl
+        ? h("label", { class: "inline" }, copperToggle, " ", h("span", { "data-i18n": "sim.copper" }, t("sim.copper")))
+        : null,
     ),
     h(
       "p",
@@ -217,6 +239,71 @@ export function createSimulation(container, programs, thickness, plateSize) {
     }
   }
 
+  /** The picture of the copper on the top face of the plate, drawn in small tiles so that the perspective is right. */
+  function drawCopper(ctx, basis, width, height) {
+    const { width: iw, height: ih } = copperImage;
+    // only the shape of the picture is used, the colour comes from the theme
+    const tinted = document.createElement("canvas");
+    tinted.width = iw;
+    tinted.height = ih;
+    const tint = tinted.getContext("2d");
+    tint.drawImage(copperImage, 0, 0);
+    tint.globalCompositeOperation = "source-in";
+    tint.fillStyle = css("--copper");
+    tint.fillRect(0, 0, iw, ih);
+    const flip = options.flip ?? "x";
+    const screen = (px, py) => {
+      const x = (px / iw) * PLATE.width;
+      const y = (1 - py / ih) * PLATE.height; // the picture is the design view: its top is the high Y
+      return project([flip === "x" ? PLATE.width - x : x, flip === "y" ? PLATE.height - y : y, 0], basis, width, height);
+    };
+    const columns = 24;
+    const rows = 15;
+    const sw = iw / columns;
+    const sh = ih / rows;
+    // the tiles overlap a little: draw them opaque into a picture of their own, then lay that over the plate once
+    const sheet = document.createElement("canvas");
+    sheet.width = width;
+    sheet.height = height;
+    const target = ctx;
+    ctx = sheet.getContext("2d");
+    for (let i = 0; i < columns; i++) {
+      for (let j = 0; j < rows; j++) {
+        const sx = i * sw;
+        const sy = j * sh;
+        const tl = screen(sx, sy);
+        const tr = screen(sx + sw, sy);
+        const bl = screen(sx, sy + sh);
+        if (!tl || !tr || !bl) continue;
+        const a = (tr.x - tl.x) / sw;
+        const b = (tr.y - tl.y) / sw;
+        const c = (bl.x - tl.x) / sh;
+        const d = (bl.y - tl.y) / sh;
+        ctx.setTransform(a, b, c, d, tl.x - a * sx - c * sy, tl.y - b * sx - d * sy);
+        ctx.drawImage(tinted, sx, sy, sw, sh, sx - 0.5, sy - 0.5, sw + 1, sh + 1);
+      }
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    target.globalAlpha = COPPER_ALPHA;
+    target.drawImage(sheet, 0, 0);
+    target.globalAlpha = 1;
+  }
+
+  /** The plate (with the copper) only changes with the view, so it is kept in a picture while the tool moves. */
+  function drawPlateLayer(ctx, basis, width, height) {
+    const showCopper = state.copper && state.copperReady && basis.eye[2] > 0;
+    const key = [JSON.stringify(state.camera), state.zScale, width, height, showCopper, css("--plate"), css("--border"), css("--copper")].join("|");
+    if (key !== state.layerKey || layer.width !== width || layer.height !== height) {
+      layer.width = width;
+      layer.height = height;
+      const layerContext = layer.getContext("2d");
+      drawPlate(layerContext, basis, width, height);
+      if (showCopper) drawCopper(layerContext, basis, width, height);
+      state.layerKey = key;
+    }
+    ctx.drawImage(layer, 0, 0);
+  }
+
   function drawAxes(ctx, basis, width, height) {
     const origin = project([0, 0, 0], basis, width, height);
     if (!origin) return;
@@ -247,7 +334,7 @@ export function createSimulation(container, programs, thickness, plateSize) {
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
-    drawPlate(ctx, basis, width, height);
+    drawPlateLayer(ctx, basis, width, height);
     drawAxes(ctx, basis, width, height);
 
     const { done, point } = positionAt(state.moves, state.timeline, state.time);
@@ -381,6 +468,10 @@ export function createSimulation(container, programs, thickness, plateSize) {
   });
   rapids.addEventListener("change", () => {
     state.rapids = rapids.checked;
+    draw();
+  });
+  copperToggle.addEventListener("change", () => {
+    state.copper = copperToggle.checked;
     draw();
   });
   new ResizeObserver(() => draw()).observe(canvas);
