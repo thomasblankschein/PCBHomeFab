@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { basisOf, makeCamera, orbit, project, topView, zoom } from "../site/js/camera.js";
+import { basisOf, makeCamera, orbit, pan, project, topView, zoom } from "../site/js/camera.js";
 import { buildTimeline, parseGcode, positionAt } from "../site/js/gcode.js";
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} is not ${b}`);
@@ -110,4 +110,16 @@ test("orbit keeps the pitch inside its limits and zoom its distance", () => {
   assert.equal(zoom(camera, 1e6).distance, 2000);
   const top = topView(camera);
   assert.ok(Number.isFinite(project([0, 0, 0], basisOf(top), 800, 600).x));
+});
+
+test("panning moves the scene with the mouse and stays on the plate", () => {
+  const camera = makeCamera({ target: [0, 0, 0], distance: 200, yaw: 0, pitch: 0.7 });
+  const before = project([0, 0, 0], basisOf(camera), 800, 600);
+  const moved = pan(camera, 40, 0, 600);
+  assert.equal(moved.target[2], 0);
+  const after = project([0, 0, 0], basisOf(moved), 800, 600);
+  near(after.x - before.x, 40, 0.5);
+  near(after.y, before.y, 0.5);
+  const down = project([0, 0, 0], basisOf(pan(camera, 0, 30, 600)), 800, 600);
+  assert.ok(down.y > before.y, "dragging down moves the scene down");
 });

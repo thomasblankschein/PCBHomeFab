@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0 - 2026-10-27
+
+- 3D simulation: drag with the middle mouse button to move the view; the two view buttons bring the plate back to the middle.
+
 ## 0.3.0 - 2026-10-27
 
 - 3D simulation of the drill and mill paths on the job page: turn and zoom, play the programs with the tool moving along the

@@ -48,9 +48,26 @@ export function orbit(camera, dYaw, dPitch) {
   return { ...camera, yaw: camera.yaw + dYaw, pitch: clamp(camera.pitch + dPitch, MIN_PITCH, MAX_PITCH) };
 }
 
+/**
+ * Moves the view target along the plate by a mouse movement of (dx, dy) pixels on a canvas `height` pixels high, so that the
+ * scene follows the mouse. Dragging along the screen up/down moves along the plate (not along Z).
+ */
+export function pan(camera, dx, dy, height) {
+  const { right, forward } = basisOf(camera);
+  const perPixel = 1 / (height / 2 / Math.tan(FOV / 2) / camera.distance);
+  const flat = normalize([forward[0], forward[1], 0]);
+  const depthFactor = 1 / Math.max(0.2, Math.abs(forward[2]));
+  const target = [...camera.target];
+  for (const axis of [0, 1]) {
+    target[axis] += -dx * perPixel * right[axis] + dy * perPixel * depthFactor * flat[axis];
+  }
+  return { ...camera, target };
+}
+
 export function zoom(camera, factor) {
   return { ...camera, distance: clamp(camera.distance * factor, 30, 2000) };
 }
 
-export const topView = (camera) => ({ ...camera, yaw: 0, pitch: MAX_PITCH });
-export const isoView = (camera) => ({ ...camera, yaw: makeCamera().yaw, pitch: makeCamera().pitch });
+// The two views also bring the plate back to the middle.
+export const topView = (camera) => ({ ...camera, target: makeCamera().target, yaw: 0, pitch: MAX_PITCH });
+export const isoView = (camera) => ({ ...camera, target: makeCamera().target, yaw: makeCamera().yaw, pitch: makeCamera().pitch });

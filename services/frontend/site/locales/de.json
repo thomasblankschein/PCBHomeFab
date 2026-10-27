@@ -135,7 +135,7 @@
   "tools.off": "aus",
 
   "sim.title": "3D-Simulation der Bohr- und Fräsbahnen",
-  "sim.hint": "Ziehen dreht die Ansicht, Mausrad oder die Knöpfe zoomen. Mit Fokus auf der Ansicht: Pfeiltasten drehen, + und - zoomen, Leertaste startet und stoppt.",
+  "sim.hint": "Ziehen dreht die Ansicht, Ziehen mit der mittleren Maustaste verschiebt sie, Mausrad oder die Knöpfe zoomen. Mit Fokus auf der Ansicht: Pfeiltasten drehen, + und - zoomen, Leertaste startet und stoppt.",
   "sim.loading": "Programme werden geladen ...",
   "sim.load_failed": "Die Programme konnten nicht geladen werden.",
   "sim.aria": "3D-Ansicht der Platte mit den Werkzeugbahnen",

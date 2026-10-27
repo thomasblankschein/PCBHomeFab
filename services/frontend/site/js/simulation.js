@@ -2,7 +2,7 @@
 // Drawn on a 2D canvas with the small camera of camera.js, so there is no library and no build step.
 
 import { fileUrl } from "./api.js";
-import { basisOf, isoView, makeCamera, orbit, project, topView, zoom } from "./camera.js";
+import { basisOf, isoView, makeCamera, orbit, pan, project, topView, zoom } from "./camera.js";
 import { fill, h } from "./dom.js";
 import { programInfo, programTitle } from "./format.js";
 import { buildTimeline, parseGcode, positionAt } from "./gcode.js";
@@ -330,17 +330,25 @@ export function createSimulation(container, programs, thickness) {
 
   let drag = null;
   canvas.addEventListener("pointerdown", (event) => {
-    drag = { x: event.clientX, y: event.clientY };
+    if (event.button !== 0 && event.button !== 1) return;
+    event.preventDefault();
+    canvas.focus();
+    drag = { x: event.clientX, y: event.clientY, pan: event.button === 1 };
     canvas.setPointerCapture(event.pointerId);
   });
   canvas.addEventListener("pointermove", (event) => {
     if (!drag) return;
-    state.camera = orbit(state.camera, -(event.clientX - drag.x) * 0.008, (event.clientY - drag.y) * 0.008);
-    drag = { x: event.clientX, y: event.clientY };
+    const dx = event.clientX - drag.x;
+    const dy = event.clientY - drag.y;
+    state.camera = drag.pan
+      ? pan(state.camera, dx * (canvas.height / canvas.clientHeight), dy * (canvas.height / canvas.clientHeight), canvas.height)
+      : orbit(state.camera, -dx * 0.008, dy * 0.008);
+    drag = { ...drag, x: event.clientX, y: event.clientY };
     state.projected = false;
     draw();
   });
   for (const type of ["pointerup", "pointercancel"]) canvas.addEventListener(type, () => (drag = null));
+  canvas.addEventListener("auxclick", (event) => event.preventDefault());
   canvas.addEventListener(
     "wheel",
     (event) => {

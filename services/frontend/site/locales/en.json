@@ -135,7 +135,7 @@
   "tools.off": "off",
 
   "sim.title": "3D simulation of the drill and mill paths",
-  "sim.hint": "Drag to turn the view, mouse wheel or the buttons to zoom. With the view in focus: arrow keys turn, + and - zoom, space starts and stops.",
+  "sim.hint": "Drag to turn the view, drag with the middle mouse button to move it, mouse wheel or the buttons to zoom. With the view in focus: arrow keys turn, + and - zoom, space starts and stops.",
   "sim.loading": "Loading the programs ...",
   "sim.load_failed": "The programs could not be loaded.",
   "sim.aria": "3D view of the plate with the tool paths",
