@@ -16,7 +16,10 @@ its own prefix, plus `common.*`.
 | `ingest.too_many_files` | 422 | the ZIP has more files than allowed |
 | `ingest.too_large_unpacked` | 422 | the ZIP is too large when unpacked |
 | `ingest.unreadable_gerber` | 422 | the Gerber files could not be read |
-| `ingest.no_copper` | 422 | no bottom copper layer found |
+| `ingest.no_copper` | 422 | no bottom copper layer (or no copper on B.Cu of a KiCad file) found |
+| `ingest.invalid_kicad` | 422 | the KiCad PCB file cannot be read |
+| `ingest.unsupported_kicad` | 422 | the KiCad file uses something that is not supported (trapezoid pads, bezier curves) |
+| `ingest.zone_not_filled` | 422 | a copper zone on B.Cu of a KiCad file is not filled |
 | `ingest.no_outline` | 422 | no board outline layer found |
 | `ingest.empty_outline` | 422 | the board outline layer is empty |
 | `ingest.slots_unsupported` | 422 | routed slots in the drill files are not supported |

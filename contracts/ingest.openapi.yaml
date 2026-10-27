@@ -3,7 +3,8 @@ info:
   title: PCBHomeFab ingest
   version: 1.0.0
   description: >
-    Reads a Gerber ZIP of a single-sided board and returns the canonical board package: a ZIP with exactly
+    Reads a Gerber ZIP or a KiCad PCB file (`.kicad_pcb`, recognised by its content) of a single-sided board and returns
+    the canonical board package: a ZIP with exactly
     `copper.gbr` (bottom copper) and `board.json` (see schemas/board.schema.json). Stateless.
 paths:
   /healthz:
@@ -26,7 +27,10 @@ paths:
                 file:
                   type: string
                   format: binary
-                  description: Gerber ZIP with bottom copper, board outline and Excellon drill files.
+                  description: >
+                    Gerber ZIP with bottom copper, board outline and Excellon drill files, or a KiCad PCB file (zones
+                    must be filled; the bottom copper, Edge.Cuts and the drills are read from it, the copper is written
+                    as a Gerber file).
                 name:
                   type: string
                   description: Board name written to board.json (1 to 40 characters of A-Z a-z 0-9 _ -).

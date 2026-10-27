@@ -111,7 +111,7 @@ function addFiles(files) {
   submitError.textContent = "";
   for (const file of files) {
     const row = { key: state.nextKey++, file, status: "reading", info: null, error: "", count: 1 };
-    if (!/\.zip$/i.test(file.name)) {
+    if (!/\.(zip|kicad_pcb)$/i.test(file.name)) {
       Object.assign(row, { status: "error", error: { key: "boards.only_zip" } });
     } else if (file.size > limits().max_upload_mb * 1024 * 1024) {
       Object.assign(row, { status: "error", error: { key: "boards.too_large", params: { mb: limits().max_upload_mb } } });
@@ -256,7 +256,7 @@ async function refreshLayout() {
 }
 
 function boardsById() {
-  return Object.fromEntries(readyRows().map((row, i) => [previewId(i), { ...row.info, name: row.file.name.replace(/\.zip$/i, "") }]));
+  return Object.fromEntries(readyRows().map((row, i) => [previewId(i), { ...row.info, name: row.file.name.replace(/\.(zip|kicad_pcb)$/i, "") }]));
 }
 
 function renderPlate() {

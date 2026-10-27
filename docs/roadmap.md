@@ -12,4 +12,4 @@
 | 8 | Service split | Independent services that talk only through REST, contracts first ([ADR-001](architecture.md), [plan](migration.md)) | done 2026-10-26, no feature changes; outputs equal the golden outputs |
 
 Out of scope for now: double-sided boards, accounts, other printers and controllers (the profile model leaves
-room for them), KiCad `.kicad_pcb` input.
+room for them).

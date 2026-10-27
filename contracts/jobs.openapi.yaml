@@ -133,7 +133,7 @@ paths:
                 boards:
                   type: array
                   items: {type: string, format: binary}
-                  description: Gerber ZIP files, one per board design.
+                  description: Gerber ZIP files or KiCad PCB files (.kicad_pcb), one per board design.
                 plate: {type: string, description: Id of a plate size, see GET /v1/plates.}
                 counts:
                   type: array

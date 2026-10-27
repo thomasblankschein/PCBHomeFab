@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.15.0 - 2026-10-27
+
+- A KiCad PCB file (`.kicad_pcb`) can be uploaded instead of a Gerber ZIP, no Gerber export needed. `ingest` recognises the
+  file by its content and reads the bottom copper (tracks, arcs, vias, pads, filled zones, graphics and stroke font text on
+  B.Cu), the outline (Edge.Cuts, lines, arcs, circles, rectangles, polygons) and the holes. The rest of the pipeline is
+  unchanged. Zones must be filled in the file (a file with an unfilled B.Cu zone is refused: `ingest.zone_not_filled`).
+  Trapezoid pads and bezier curves are refused (`ingest.unsupported_kicad`), chamfered pad corners are drawn square.
+  Checked against the Gerber exports of the two test boards: same size, outline, holes and G-code, mask differs in a few
+  edge pixels. New error codes: `ingest.invalid_kicad`, `ingest.unsupported_kicad`, `ingest.zone_not_filled`.
 ## 0.14.1 - 2026-10-27
 
 - Fix: the user interface asks for every page and script whether it is still current (`Cache-Control: no-cache`). A browser

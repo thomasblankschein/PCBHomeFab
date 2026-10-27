@@ -18,7 +18,7 @@
 </header>
 <main>
 <h1 data-i18n="editor.heading">New job</h1>
-<p class="lead" data-i18n="editor.lead">Gerber ZIP in, exposure file (.pm3) and drill/mill G-code out. Add one or more boards, set how many
+<p class="lead" data-i18n="editor.lead">Gerber ZIP or KiCad PCB file in, exposure file (.pm3) and drill/mill G-code out. Add one or more boards, set how many
 copies you want, check the plate and create the job.</p>
 <p id="load-error" class="error" role="alert"></p>
 
@@ -27,8 +27,8 @@ copies you want, check the plate and create the job.</p>
     <section class="panel" aria-labelledby="boards-title">
       <h2 id="boards-title" data-i18n="boards.title">Boards</h2>
       <div id="drop" class="drop">
-        <p><span data-i18n="boards.drop">Drop Gerber ZIP files here or</span>
-          <label class="button"><span data-i18n="boards.choose">choose files</span><input id="files" type="file" accept=".zip,application/zip" multiple></label>
+        <p><span data-i18n="boards.drop">Drop Gerber ZIP or KiCad PCB files here or</span>
+          <label class="button"><span data-i18n="boards.choose">choose files</span><input id="files" type="file" accept=".zip,.kicad_pcb,application/zip" multiple></label>
         </p>
         <p id="limits" class="muted"></p>
       </div>

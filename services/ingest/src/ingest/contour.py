@@ -96,6 +96,11 @@ def extract_contour(outline: Any) -> tuple[list[Point], list[list[Point]]] | Non
         if polyline is None:
             return None
         segments.append(polyline)
+    return contour_of(segments)
+
+
+def contour_of(segments: list[list[Point]]) -> tuple[list[Point], list[list[Point]]] | None:
+    """Like :func:`extract_contour` for an outline that is already a list of polylines (lines and arcs as points)."""
     if not segments or len(segments) > MAX_SEGMENTS:
         return None
     loops = _chain(segments)

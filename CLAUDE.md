@@ -20,7 +20,9 @@ They are the reference for behaviour until the port is finished.
 ## Decisions (made with the maintainer)
 
 - Name **PCBHomeFab**, public repository, **MIT** license.
-- Input: **Gerber ZIP** first (B.Cu, Edge.Cuts, Excellon drill files). KiCad `.kicad_pcb` input is a later option.
+- Input: **Gerber ZIP** (B.Cu, Edge.Cuts, Excellon drill files) or a **KiCad `.kicad_pcb` file** read directly (since 0.15.0:
+  `services/ingest/src/ingest/kicad.py` has its own S-expression reader, because gerbonara 1.6 cannot parse KiCad 10 files; it
+  writes the B.Cu copper as a small Gerber file, so the rest of the pipeline is unchanged; zones must be filled in the file).
 - Users: **anonymous sessions**, every job has a link. No accounts for now.
 - Hosting: first on the maintainer's Proxmox homelab (Docker), later possibly a root server on the internet.
   Everything must therefore be stateless per request, limits on uploads/CPU time from day one.

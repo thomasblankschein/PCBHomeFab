@@ -39,7 +39,7 @@ docker compose up -d --build
 scripts/smoke_test.sh http://localhost
 ```
 
-Open `http://localhost/`. In the editor you add one or more Gerber ZIPs (drag and drop), see size, holes and board
+Open `http://localhost/`. In the editor you add one or more Gerber ZIPs or KiCad PCB files (`.kicad_pcb`, zones filled; drag and drop), see size, holes and board
 shape of each, set the copies, the order and the spacing, and watch the boards on the plate (design view, holes coloured
 by diameter). Printer, mill, exposure time, hole mode, tabs, flip and the calibration of the printer are in the settings;
 they are remembered in the browser. "Create job" leads to the job page with the exposure mask, the mill preview and

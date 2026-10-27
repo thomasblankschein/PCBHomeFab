@@ -1,4 +1,4 @@
-"""Reading a single-sided board from a Gerber ZIP and building the canonical board package.
+"""Reading a single-sided board from a Gerber ZIP or a KiCad PCB file and building the canonical board package.
 
 The package is a ZIP with exactly ``copper.gbr`` (the bottom copper file as uploaded) and ``board.json``
 (``contracts/schemas/board.schema.json``).
@@ -18,7 +18,8 @@ from typing import Any
 from gerbonara import ExcellonFile, GerberFile, LayerStack
 
 from .common import Problem
-from .contour import extract_contour, relative
+from .contour import contour_of, extract_contour, relative
+from .kicad import read_drawing, write_gerber
 
 #: Hard limits for uploaded archives (zip bombs, absurd uploads).
 MAX_ZIP_FILES = 64
@@ -111,8 +112,41 @@ def _open_by_attributes(zip_path: Path, folder: Path) -> Any:
     return LayerStack(graphic_layers=graphic, drill_pth=pth, drill_npth=npth, board_name=zip_path.stem)
 
 
+def _is_kicad(data: bytes) -> bool:
+    return data.lstrip(b"\xef\xbb\xbf \t\r\n").startswith(b"(kicad_pcb")
+
+
+def _build_from_kicad(data: bytes, name: str) -> bytes:
+    """Read a KiCad PCB file (``.kicad_pcb``): bottom copper, Edge.Cuts and the holes, no Gerber export needed."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise _problem("ingest.invalid_kicad", "The KiCad file is not valid UTF-8 text.") from exc
+    drawing = read_drawing(text)
+    if not (drawing.strokes or drawing.regions or drawing.flashes):
+        raise _problem("ingest.no_copper", "No copper found on the bottom layer (B.Cu) of the KiCad file.")
+    if not drawing.outline:
+        raise _problem("ingest.no_outline", "No board outline (Edge.Cuts) found in the KiCad file.")
+    contour = contour_of(drawing.outline)
+    points = contour[0] if contour is not None else [p for loop in drawing.outline for p in loop]
+    xs, ys = [x for x, _ in points], [y for _, y in points]
+    xmin, ymin, xmax, ymax = min(xs), min(ys), max(xs), max(ys)
+    holes = [
+        {
+            "x_mm": round(h["x"] - xmin, 4),
+            "y_mm": round(h["y"] - ymin, 4),
+            "diameter_mm": h["diameter_mm"],
+            "plated": h["plated"],
+        }
+        for h in drawing.holes
+    ]
+    return _pack(name, write_gerber(drawing), contour, (xmin, ymin, xmax, ymax), holes)
+
+
 def build_package(data: bytes, name: str) -> bytes:
-    """Read a Gerber ZIP and return the canonical board package (bytes of a ZIP)."""
+    """Read a Gerber ZIP or a KiCad PCB file and return the canonical board package (bytes of a ZIP)."""
+    if _is_kicad(data):
+        return _build_from_kicad(data, name)
     _check_zip(data)
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -147,6 +181,17 @@ def build_package(data: bytes, name: str) -> bytes:
         holes = _holes(stack, xmin, ymin)
         copper_bytes = Path(copper.original_path).read_bytes()  # the file as uploaded, read before the folder goes
 
+    return _pack(name, copper_bytes, contour, (xmin, ymin, xmax, ymax), holes)
+
+
+def _pack(
+    name: str,
+    copper_bytes: bytes,
+    contour: Any,
+    bounds: tuple[float, float, float, float],
+    holes: list[dict[str, Any]],
+) -> bytes:
+    xmin, ymin, xmax, ymax = bounds
     width, height = round(xmax - xmin, 1), round(ymax - ymin, 1)
     if width <= 0 or height <= 0:
         raise _problem("ingest.empty_outline", "The board outline layer (Edge.Cuts) has no area.")
