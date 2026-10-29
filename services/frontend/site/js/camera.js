@@ -72,3 +72,26 @@ export function zoom(camera, factor) {
 // The two views also bring the panel back to the middle.
 export const topView = (camera) => ({ ...camera, target: camera.home, yaw: 0, pitch: MAX_PITCH });
 export const isoView = (camera) => ({ ...camera, target: camera.home, yaw: makeCamera().yaw, pitch: makeCamera().pitch });
+
+/**
+ * The flat (affine) mapping of a triangle in a picture onto a triangle on the screen, as the six numbers of
+ * `ctx.setTransform(a, b, c, d, e, f)`. `from` and `to` are three points each: [[x, y], ...] and [{ x, y }, ...].
+ */
+export function triangleTransform(from, to) {
+  const [[x0, y0], [x1, y1], [x2, y2]] = from;
+  const ux = x1 - x0;
+  const uy = y1 - y0;
+  const vx = x2 - x0;
+  const vy = y2 - y0;
+  const det = ux * vy - uy * vx;
+  const dux = to[1].x - to[0].x;
+  const duy = to[1].y - to[0].y;
+  const dvx = to[2].x - to[0].x;
+  const dvy = to[2].y - to[0].y;
+  // the matrix M with M * u = du and M * v = dv, that is M = D * S^-1 for S = [u v] and D = [du dv]
+  const a = (dux * vy - dvx * uy) / det;
+  const c = (dvx * ux - dux * vx) / det;
+  const b = (duy * vy - dvy * uy) / det;
+  const d = (dvy * ux - duy * vx) / det;
+  return [a, b, c, d, to[0].x - a * x0 - c * y0, to[0].y - b * x0 - d * y0];
+}

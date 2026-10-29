@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.6 - 2026-10-29
+
+- Fix: the copper in the 3D simulation was cut by wedge shaped gaps when the view was steep or zoomed in (the picture was drawn
+  in tiles that did not fit together in perspective). It is now drawn as a mesh of 2880 small triangles that share their edges.
+- The copper picture has 20 px/mm again (as tried in 0.22.3, taken back in 0.22.5) and smooth edges, so tracks and pads do not
+  look pixelated when zoomed in.
+
 ## 0.22.5 - 2026-10-29
 
 - Back to the state of 0.22.2: the finer copper picture of 0.22.3 and the tile changes of 0.22.4 are taken out again, because

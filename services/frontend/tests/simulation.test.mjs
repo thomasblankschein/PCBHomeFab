@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { basisOf, makeCamera, orbit, pan, project, topView, zoom } from "../site/js/camera.js";
+import { basisOf, makeCamera, orbit, pan, project, topView, triangleTransform, zoom } from "../site/js/camera.js";
 import { buildTimeline, formatClock, parseGcode, positionAt } from "../site/js/gcode.js";
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} is not ${b}`);
@@ -132,3 +132,13 @@ test("the clock shows hours from 60 minutes on", () => {
   assert.equal(formatClock(3600 + 5 * 60 + 7), "1:05:07");
   assert.equal(formatClock(10 * 3600 + 59.6), "10:01:00");
 }); 
+
+test("triangleTransform maps the three corners exactly", () => {
+  const from = [[10, 20], [40, 25], [12, 70]];
+  const to = [{ x: 100, y: 50 }, { x: 160, y: 40 }, { x: 90, y: 160 }];
+  const [a, b, c, d, e, f] = triangleTransform(from, to);
+  from.forEach(([x, y], i) => {
+    assert.ok(Math.abs(a * x + c * y + e - to[i].x) < 1e-9);
+    assert.ok(Math.abs(b * x + d * y + f - to[i].y) < 1e-9);
+  });
+});

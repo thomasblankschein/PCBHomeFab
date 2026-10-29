@@ -2,7 +2,7 @@
 // Drawn on a 2D canvas with the small camera of camera.js, so there is no library and no build step.
 
 import { fileUrl } from "./api.js";
-import { basisOf, isoView, makeCamera, orbit, pan, project, topView, zoom } from "./camera.js";
+import { basisOf, isoView, makeCamera, orbit, pan, project, topView, triangleTransform, zoom } from "./camera.js";
 import { fill, h } from "./dom.js";
 import { programInfo, programTitle } from "./format.js";
 import { buildTimeline, formatClock as clock, parseGcode, positionAt } from "./gcode.js";
@@ -14,6 +14,8 @@ const COLORS = ["#2b7de9", "#e0742b", "#9b59b6", "#16a085", "#c0392b", "#7f8c8d"
 const TOOL_HEIGHT = 14;
 // The copper is shown faintly, so that it does not hide the tool paths.
 const COPPER_ALPHA = 0.45;
+// Each triangle of the copper picture is clipped this many pixels wider than it is, so that no seams show between them.
+const TRIANGLE_GROW_PX = 0.7;
 
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -240,7 +242,7 @@ export function createSimulation(container, programs, thickness, panelSize, opti
     }
   }
 
-  /** The picture of the copper on the top face of the panel, drawn in small tiles so that the perspective is right. */
+  /** The picture of the copper on the top face of the panel, drawn as a mesh of small triangles so that the perspective is right. */
   function drawCopper(ctx, basis, width, height) {
     const { width: iw, height: ih } = copperImage;
     // only the shape of the picture is used, the colour comes from the theme
@@ -260,30 +262,58 @@ export function createSimulation(container, programs, thickness, panelSize, opti
       const gy = flip === "y" ? PANEL.height - y : y;
       return project([PANEL.x0 + gx, PANEL.y0 + gy, 0], basis, width, height);
     };
-    const columns = 24;
-    const rows = 15;
+    // The picture is a grid of points whose positions on the screen are exact (perspective); every cell is drawn as two
+    // triangles, each with the flat mapping that fits its three corners. Neighbouring triangles share their edges, so
+    // no gaps open up, however steep the view is. Each triangle is clipped a little wider than it is to hide hairline seams.
+    const columns = 48;
+    const rows = 30;
     const sw = iw / columns;
     const sh = ih / rows;
-    // the tiles overlap a little: draw them opaque into a picture of their own, then lay that over the panel once
+    const grid = [];
+    for (let j = 0; j <= rows; j++) {
+      const line = [];
+      for (let i = 0; i <= columns; i++) line.push(screen(i * sw, j * sh));
+      grid.push(line);
+    }
     const sheet = document.createElement("canvas");
     sheet.width = width;
     sheet.height = height;
     const target = ctx;
     ctx = sheet.getContext("2d");
-    for (let i = 0; i < columns; i++) {
-      for (let j = 0; j < rows; j++) {
-        const sx = i * sw;
-        const sy = j * sh;
-        const tl = screen(sx, sy);
-        const tr = screen(sx + sw, sy);
-        const bl = screen(sx, sy + sh);
-        if (!tl || !tr || !bl) continue;
-        const a = (tr.x - tl.x) / sw;
-        const b = (tr.y - tl.y) / sw;
-        const c = (bl.x - tl.x) / sh;
-        const d = (bl.y - tl.y) / sh;
-        ctx.setTransform(a, b, c, d, tl.x - a * sx - c * sy, tl.y - b * sx - d * sy);
-        ctx.drawImage(tinted, sx, sy, sw, sh, sx - 0.5, sy - 0.5, sw + 1, sh + 1);
+    const drawTriangle = (corners, points) => {
+      if (points.some((point) => !point)) return;
+      const [a, b, c, d, e, f] = triangleTransform(corners, points);
+      const centre = { x: (points[0].x + points[1].x + points[2].x) / 3, y: (points[0].y + points[1].y + points[2].y) / 3 };
+      ctx.save();
+      ctx.beginPath();
+      points.forEach((point, index) => {
+        const reach = Math.hypot(point.x - centre.x, point.y - centre.y) || 1;
+        const grow = 1 + TRIANGLE_GROW_PX / reach;
+        const x = centre.x + (point.x - centre.x) * grow;
+        const y = centre.y + (point.y - centre.y) * grow;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.closePath();
+      ctx.clip();
+      ctx.setTransform(a, b, c, d, e, f);
+      const xs = corners.map(([x]) => x);
+      const ys = corners.map(([, y]) => y);
+      const x0 = Math.max(0, Math.min(...xs) - 1);
+      const y0 = Math.max(0, Math.min(...ys) - 1);
+      const x1 = Math.min(iw, Math.max(...xs) + 1);
+      const y1 = Math.min(ih, Math.max(...ys) + 1);
+      ctx.drawImage(tinted, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
+      ctx.restore();
+    };
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < columns; i++) {
+        const tl = [i * sw, j * sh];
+        const tr = [(i + 1) * sw, j * sh];
+        const bl = [i * sw, (j + 1) * sh];
+        const br = [(i + 1) * sw, (j + 1) * sh];
+        drawTriangle([tl, tr, bl], [grid[j][i], grid[j][i + 1], grid[j + 1][i]]);
+        drawTriangle([tr, br, bl], [grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]]);
       }
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
