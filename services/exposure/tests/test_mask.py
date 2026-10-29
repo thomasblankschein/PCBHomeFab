@@ -31,7 +31,7 @@ def test_mask_polarity_copper_is_black(base: Board) -> None:
     """The base board has a GND pour: most of it is copper, so most of the mask must be black."""
     mask = build_mask(_one(base), PHOTON_M3)
     pixel = PHOTON_M3.pixel_mm
-    # not mirrored: the board's plate x range [3, 31.2] is at display x = frame + x
+    # not mirrored: the board's panel x range [3, 31.2] is at display x = frame + x
     x1 = PHOTON_M3.frame_left_mm + 3.0
     x2 = PHOTON_M3.frame_left_mm + 3.0 + base.width_mm
     y2 = PHOTON_M3.display_height_mm - (PHOTON_M3.frame_bottom_mm + 3.0)
@@ -71,7 +71,7 @@ def test_hole_modes_change_mask(base: Board) -> None:
 
 
 def _mark_mask(voids: str, base: Board) -> tuple[Image.Image, float, float]:
-    """A mask with a single mark on an empty plate (no boards), and the pixel position of its centre."""
+    """A mask with a single mark on an empty panel (no boards), and the pixel position of its centre."""
     from exposure.boards import Mark
 
     mark = Mark(20.0, 30.0, voids)
@@ -89,7 +89,7 @@ def test_mark_has_two_copper_quarter_circles_and_a_free_ring(base: Board) -> Non
     assert mask.getpixel((x + d, y - d)) == 0 and mask.getpixel((x - d, y + d)) == 0  # copper quadrants
     ring = round((2.4 / 2 + 0.25) / PHOTON_M3.pixel_mm)  # in the free ring around the pad
     assert mask.getpixel((x + ring, y)) == 255 and mask.getpixel((x, y - ring)) == 255
-    far = round(2.4 / PHOTON_M3.pixel_mm)  # outside the ring the plate is copper
+    far = round(2.4 / PHOTON_M3.pixel_mm)  # outside the ring the panel is copper
     assert mask.getpixel((x + far, y)) == 0 and mask.getpixel((x, y + far)) == 0
 
 
@@ -155,13 +155,13 @@ def test_no_marks_no_change(base: Board) -> None:
 
 def test_mask_is_not_mirrored_by_default(base: Board) -> None:
     """The Gerber of the bottom copper is a top view with mirrored text. With the copper side facing the LCD the mask is
-    that top view as it is, so the text on the mask is mirrored and reads correctly on the etched plate."""
+    that top view as it is, so the text on the mask is mirrored and reads correctly on the etched panel."""
     assert PHOTON_M3.mirror_x is False
     plain = build_mask(_one(base), PHOTON_M3)
     flipped = build_mask(_one(base), replace(PHOTON_M3, mirror_x=True))
     assert ImageOps.mirror(plain.convert("L")).tobytes() == flipped.convert("L").tobytes()
     assert plain.tobytes() != flipped.tobytes()
-    # the board starts at the left: plate x 3 mm + offset 1.8 mm = 4.8 mm = pixel 120
+    # the board starts at the left: panel x 3 mm + offset 1.8 mm = 4.8 mm = pixel 120
     left = round((PHOTON_M3.frame_left_mm + 3.0) / PHOTON_M3.pixel_mm)
     gray = plain.convert("L")
     assert max(gray.crop((0, 1600, left - 2, 2400)).tobytes()) == 0

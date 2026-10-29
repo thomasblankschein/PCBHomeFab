@@ -97,9 +97,9 @@ def _masks(packages: dict[str, bytes], layout: dict[str, Any], settings: dict[st
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         if "copper" in outputs:
-            plate = layout["plate"]
+            panel = layout["panel"]
             png = io.BytesIO()
-            build_copper(placements, plate["width_mm"], plate["height_mm"], marks).save(
+            build_copper(placements, panel["width_mm"], panel["height_mm"], marks).save(
                 png, format="PNG", optimize=True
             )
             _zip_entry(archive, "copper.png", png.getvalue())
@@ -161,12 +161,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         printer = PRINTERS[parsed_settings.printer]
         left = printer.frame_left_mm if parsed_settings.frame_left_mm is None else parsed_settings.frame_left_mm
         bottom = printer.frame_bottom_mm if parsed_settings.frame_bottom_mm is None else parsed_settings.frame_bottom_mm
-        plate = parsed_layout.plate
-        if left + plate.width_mm > printer.display_width_mm or bottom + plate.height_mm > printer.display_height_mm:
+        panel = parsed_layout.panel
+        if left + panel.width_mm > printer.display_width_mm or bottom + panel.height_mm > printer.display_height_mm:
             raise Problem(
                 422,
-                "exposure.plate_too_large",
-                f"A {plate.width_mm:g} x {plate.height_mm:g} mm panel does not fit on the display of {printer.name} "
+                "exposure.panel_too_large",
+                f"A {panel.width_mm:g} x {panel.height_mm:g} mm panel does not fit on the display of {printer.name} "
                 f"({printer.display_width_mm:g} x {printer.display_height_mm:g} mm, "
                 f"offsets {left:g} and {bottom:g} mm).",
             )

@@ -16,7 +16,7 @@ from starlette.concurrency import run_in_threadpool
 from . import common, gcode
 from .boards import Board, Layout, board_id_of, read_board
 from .common import Isolation, Problem
-from .profiles import MILLS, Plate
+from .profiles import MILLS, Panel
 from .tools import load_tools
 
 _ZIP_TIME = (1980, 1, 1, 0, 0, 0)
@@ -91,7 +91,7 @@ def _programs(boards: dict[str, Board], layout: dict[str, Any], settings: dict[s
         mill = replace(mill, flip=settings["flip"])
     if settings["tabs"] is not None:
         mill = replace(mill, tabs=settings["tabs"])
-    plate = Plate(layout["plate"]["width_mm"], layout["plate"]["height_mm"], settings["thickness_mm"])
+    panel = Panel(layout["panel"]["width_mm"], layout["panel"]["height_mm"], settings["thickness_mm"])
     placements = []
     for item in layout["placements"]:
         board = boards[item["board_id"]]
@@ -110,17 +110,17 @@ def _programs(boards: dict[str, Board], layout: dict[str, Any], settings: dict[s
         )
     second_mark = None
     if settings.get("marks"):
-        mill, second_mark = gcode.origin_of_marks(plate, mill, [(m["x_mm"], m["y_mm"]) for m in settings["marks"]])
+        mill, second_mark = gcode.origin_of_marks(panel, mill, [(m["x_mm"], m["y_mm"]) for m in settings["marks"]])
     try:
         drill_map = {float(hole): drill for hole, drill in (settings.get("drill_map") or {}).items()}
     except ValueError as exc:
         raise Problem(422, "mill.invalid_drill_map", "The keys of drill_map must be hole diameters in mm.") from exc
-    programs = gcode.generate(placements, plate, mill, load_tools(), second_mark, drill_map)
+    programs = gcode.generate(placements, panel, mill, load_tools(), second_mark, drill_map)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         for program in programs:
             _zip_entry(archive, program.filename, program.code.encode("ascii", errors="replace"))
-        _zip_entry(archive, "preview.svg", gcode.preview_svg(placements, plate, mill))
+        _zip_entry(archive, "preview.svg", gcode.preview_svg(placements, panel, mill))
         index: dict[str, Any] = {
             "programs": [
                 {
@@ -148,7 +148,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/v1/profiles")
     async def profiles() -> dict[str, Any]:
-        plate = Plate()
+        panel = Panel()
         return {
             "mills": {
                 key: {
@@ -166,7 +166,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     "tab_height_mm": m.tab_height_mm,
                     "offset_x_mm": m.offset_x_mm,
                     "offset_y_mm": m.offset_y_mm,
-                    "default_thickness_mm": plate.thickness_mm,
+                    "default_thickness_mm": panel.thickness_mm,
                 }
                 for key, m in MILLS.items()
             }

@@ -8,7 +8,7 @@
   --accent-text: #ffffff;
   --error: #b00020;
   --ok: #17703a;
-  --plate: #c9a06a;
+  --blank: #c9a06a;
   --copper: #8f2f0c;
   --board: #2d6a4f;
   --board-edge: #0f3d2c;
@@ -27,7 +27,7 @@
     --accent-text: #0b1a16;
     --error: #ff8a9b;
     --ok: #6fd69a;
-    --plate: #8a6a3f;
+    --blank: #8a6a3f;
     --copper: #ffbb77;
     --board: #2f8f6a;
     --trace: #e8a35a;
@@ -349,42 +349,42 @@ summary {
   cursor: pointer;
 }
 
-.plate-view {
+.panel-view {
   width: 100%;
   height: auto;
   display: block;
   background: var(--surface);
 }
 
-.plate-view .plate {
-  fill: var(--plate);
+.panel-view .blank {
+  fill: var(--blank);
   stroke: var(--text);
   stroke-width: 0.4;
 }
 
-.plate-view .board {
+.panel-view .board {
   fill: var(--board);
   stroke: var(--board-edge);
   stroke-width: 0.25;
 }
 
-.plate-view .copper .fill {
+.panel-view .copper .fill {
   fill: var(--trace);
   stroke: none;
 }
 
-.plate-view .copper .track {
+.panel-view .copper .track {
   fill: none;
   stroke: var(--trace);
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.plate-view.zoomed {
+.panel-view.zoomed {
   cursor: grab;
 }
 
-.plate-view.panning {
+.panel-view.panning {
   cursor: grabbing;
 }
 
@@ -399,7 +399,7 @@ summary {
   color: var(--accent-text);
 }
 
-.plate-view .hole {
+.panel-view .hole {
   stroke: #000;
   stroke-width: 0.1;
 }

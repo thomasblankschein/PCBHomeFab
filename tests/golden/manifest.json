@@ -14,7 +14,7 @@
     "frame_left_mm": 1.8,
     "frame_bottom_mm": 0.8,
     "mirror_x": false,
-    "plate": "160x100",
+    "panel": "160x100",
     "marks": false,
     "boards": [
       {

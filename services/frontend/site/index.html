@@ -48,9 +48,9 @@
       </fieldset>
 
       <fieldset>
-        <legend data-i18n="settings.plate">Panel</legend>
+        <legend data-i18n="settings.panel">Panel</legend>
         <div class="grid">
-          <label><span data-i18n="settings.plate_size">Panel size</span><select name="plate"></select></label>
+          <label><span data-i18n="settings.panel_size">Panel size</span><select name="panel"></select></label>
           <label><span data-i18n="settings.gap">Gap between boards (mm)</span><input type="number" name="gap_mm" value="3" min="0.5" max="20" step="0.5"></label>
           <label><span data-i18n="settings.margin">Margin to the edge (mm)</span><input type="number" name="margin_mm" value="5" min="0" max="20" step="0.5"></label>
           <label><span data-i18n="settings.thickness">Material thickness (mm)</span><input type="number" name="thickness_mm" value="1.6" min="0.4" max="3.2" step="0.1"></label>
@@ -110,15 +110,15 @@
     </form>
   </div>
 
-  <section class="panel sticky" aria-labelledby="plate-title">
-    <h2 id="plate-title" data-i18n="plate.title">Panel</h2>
-    <div class="views" role="group" aria-label="View" data-i18n-attr="aria-label:plate.views">
-      <button type="button" id="view-top" class="view" aria-pressed="true" data-i18n="plate.view_top">Design view</button>
-      <button type="button" id="view-bottom" class="view" aria-pressed="false" data-i18n="plate.view_bottom">Underside</button>
+  <section class="panel sticky" aria-labelledby="panel-title">
+    <h2 id="panel-title" data-i18n="panel.title">Panel</h2>
+    <div class="views" role="group" aria-label="View" data-i18n-attr="aria-label:panel.views">
+      <button type="button" id="view-top" class="view" aria-pressed="true" data-i18n="panel.view_top">Design view</button>
+      <button type="button" id="view-bottom" class="view" aria-pressed="false" data-i18n="panel.view_bottom">Underside</button>
     </div>
-    <p id="plate-hint" class="muted">Design view as in KiCad (seen from above): the copper side (B.Cu) is at the bottom. Holes are coloured by diameter.</p>
-    <p class="muted" data-i18n="plate.zoom_hint">Mouse wheel: zoom. Middle mouse button held: move. Double click: show everything.</p>
-    <svg id="plate" class="plate-view" role="img" aria-label="Boards on the plate" data-i18n-attr="aria-label:plate.aria" viewBox="-2 -2 164 104"></svg>
+    <p id="panel-hint" class="muted">Design view as in KiCad (seen from above): the copper side (B.Cu) is at the bottom. Holes are coloured by diameter.</p>
+    <p class="muted" data-i18n="panel.zoom_hint">Mouse wheel: zoom. Middle mouse button held: move. Double click: show everything.</p>
+    <svg id="panel" class="panel-view" role="img" aria-label="Boards on the panel" data-i18n-attr="aria-label:panel.aria" viewBox="-2 -2 164 104"></svg>
     <div id="summary" aria-live="polite"></div>
     <p id="layout-error" class="error" role="alert" hidden></p>
   </section>

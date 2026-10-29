@@ -1,29 +1,29 @@
-// The editor page: choose Gerber ZIPs, set copies and spacing, see the plate, create the job.
+// The editor page: choose Gerber ZIPs, set copies and spacing, see the panel, create the job.
 
-import { ApiError, createJob, getBoardInfo, getPlates, getProfiles, getTools, previewLayout } from "./api.js";
+import { ApiError, createJob, getBoardInfo, getPanels, getProfiles, getTools, previewLayout } from "./api.js";
 import { fill, h } from "./dom.js";
 import { attachPanZoom } from "./panzoom.js";
 import { mm } from "./format.js";
 import { initI18n, onLanguageChange, t } from "./i18n.js";
-import { copperPaths, holeColors, holeSummary, isRectangle, missingDrills, placedBoards, plateUsage, polygonPath, previewId, suggestDrill, validCount } from "./geometry.js";
+import { copperPaths, holeColors, holeSummary, isRectangle, missingDrills, placedBoards, panelUsage, polygonPath, previewId, suggestDrill, validCount } from "./geometry.js";
 
 const STORAGE_KEY = "pcbhomefab.settings";
-const SAVED_FIELDS = ["plate", "marks", "mark_labels", "printer", "mill", "holes", "gap_mm", "margin_mm", "flip", "thickness_mm", "tabs", "exposure", "mill_gcode"];
+const SAVED_FIELDS = ["panel", "marks", "mark_labels", "printer", "mill", "holes", "gap_mm", "margin_mm", "flip", "thickness_mm", "tabs", "exposure", "mill_gcode"];
 
 const form = document.getElementById("settings");
 const rowsBody = document.getElementById("rows");
 const emptyHint = document.getElementById("empty");
 const fileInput = document.getElementById("files");
 const dropZone = document.getElementById("drop");
-const plate = document.getElementById("plate");
-const plateHint = document.getElementById("plate-hint");
-const plateZoom = attachPanZoom(plate);
+const panel = document.getElementById("panel");
+const panelHint = document.getElementById("panel-hint");
+const panelZoom = attachPanZoom(panel);
 const summary = document.getElementById("summary");
 const layoutError = document.getElementById("layout-error");
 const submit = document.getElementById("submit");
 const submitError = document.getElementById("submit-error");
 
-const state = { profiles: null, plates: [], drills: [], missing: [], drillMap: {}, rows: [], nextKey: 1, layout: null, layoutError: "", creating: false, view: "top" };
+const state = { profiles: null, panels: [], drills: [], missing: [], drillMap: {}, rows: [], nextKey: 1, layout: null, layoutError: "", creating: false, view: "top" };
 // A row error or the layout error is a message of the server (text) or one of ours ({ key, params }).
 const messageText = (message) => (typeof message === "string" ? message : message ? t(message.key, message.params) : "");
 let previewTimer = 0;
@@ -70,12 +70,12 @@ function restoreSettings() {
   }
 }
 
-/** The plate size chosen in the settings (the first one while the list is still empty). */
-function currentPlate() {
-  return state.plates.find((plate) => plate.id === value("plate")) ?? state.plates[0] ?? { width_mm: 160, height_mm: 100 };
+/** The panel size chosen in the settings (the first one while the list is still empty). */
+function currentPanel() {
+  return state.panels.find((panel) => panel.id === value("panel")) ?? state.panels[0] ?? { width_mm: 160, height_mm: 100 };
 }
 
-// Positioning marks sit in the margin of the plate; the jobs service refuses a smaller margin.
+// Positioning marks sit in the margin of the panel; the jobs service refuses a smaller margin.
 const MARKS_MIN_MARGIN_MM = 4.5;
 
 function marksNeedMargin() {
@@ -212,7 +212,7 @@ function renderRows() {
   );
 }
 
-// --- plate preview ----------------------------------------------------------------------------------------
+// --- panel preview ----------------------------------------------------------------------------------------
 
 function previewRequest() {
   const rows = readyRows();
@@ -221,7 +221,7 @@ function previewRequest() {
   const margin = number("margin_mm");
   if (!(gap >= 0.5 && gap <= 20) || !(margin >= 0 && margin <= 20)) return null;
   return {
-    plate: value("plate"),
+    panel: value("panel"),
     gap_mm: gap,
     margin_mm: margin,
     boards: rows.map((row, i) => ({ id: previewId(i), width_mm: row.info.width_mm, height_mm: row.info.height_mm, count: row.count })),
@@ -240,8 +240,8 @@ async function refreshLayout() {
   const sequence = ++previewSequence;
   if (!request) {
     state.layout = null;
-    state.layoutError = readyRows().length ? { key: "plate.check_inputs" } : "";
-    renderPlate();
+    state.layoutError = readyRows().length ? { key: "panel.check_inputs" } : "";
+    renderPanel();
     return;
   }
   previewAbort = new AbortController();
@@ -249,13 +249,13 @@ async function refreshLayout() {
     const layout = await previewLayout(request, previewAbort.signal);
     if (sequence !== previewSequence) return;
     state.layout = layout;
-    state.layoutError = marksNeedMargin() ? { key: "plate.marks_margin", params: { min: MARKS_MIN_MARGIN_MM } } : "";
+    state.layoutError = marksNeedMargin() ? { key: "panel.marks_margin", params: { min: MARKS_MIN_MARGIN_MM } } : "";
   } catch (error) {
     if (error.name === "AbortError" || sequence !== previewSequence) return;
     state.layout = null;
     state.layoutError = error.message;
   }
-  renderPlate();
+  renderPanel();
 }
 
 function boardsById() {
@@ -273,17 +273,17 @@ function copperShapes(board, toX, toY) {
   );
 }
 
-function renderPlate() {
+function renderPanel() {
   const layout = state.layout;
-  const width = layout?.plate.width_mm ?? currentPlate().width_mm;
-  const height = layout?.plate.height_mm ?? currentPlate().height_mm;
+  const width = layout?.panel.width_mm ?? currentPanel().width_mm;
+  const height = layout?.panel.height_mm ?? currentPanel().height_mm;
   const underside = state.view === "bottom";
-  plateZoom.setBase({ x: -2, y: -2, w: width + 4, h: height + 4 });
-  plateHint.textContent = t(underside ? "plate.hint_bottom" : "plate.hint_top");
+  panelZoom.setBase({ x: -2, y: -2, w: width + 4, h: height + 4 });
+  panelHint.textContent = t(underside ? "panel.hint_bottom" : "panel.hint_top");
   for (const [view, id] of [["top", "view-top"], ["bottom", "view-bottom"]]) {
     document.getElementById(id).setAttribute("aria-pressed", String(state.view === view));
   }
-  const parts = [h("rect", { class: "plate", x: 0, y: 0, width, height })];
+  const parts = [h("rect", { class: "blank", x: 0, y: 0, width, height })];
   const rows = readyRows().map((row, i) => ({ id: previewId(i), count: row.count }));
   const byId = boardsById();
   const diameters = holeSummary(rows, byId);
@@ -297,7 +297,7 @@ function renderPlate() {
         h(
           "g",
           {},
-          h("title", {}, t("plate.board_title", { name: board.name, width: mm(board.width), height: mm(board.height), x: mm(board.x), y: mm(board.y) })),
+          h("title", {}, t("panel.board_title", { name: board.name, width: mm(board.width), height: mm(board.height), x: mm(board.x), y: mm(board.y) })),
           h("path", { class: "board", "fill-rule": "evenodd", d: polygonPath([board.outer, ...board.cutouts, ...board.extra], toX, toY) }),
           underside && board.copper ? copperShapes(board, toX, toY) : null,
           board.holes.map((hole) =>
@@ -307,7 +307,7 @@ function renderPlate() {
       );
     }
   }
-  fill(plate, parts);
+  fill(panel, parts);
 
   layoutError.textContent = messageText(state.layoutError);
   layoutError.hidden = !state.layoutError;
@@ -316,12 +316,12 @@ function renderPlate() {
     summary,
     layout
       ? [
-          h("p", {}, t("plate.summary", { count: total, width, height, usage: Math.round(plateUsage(layout, byId) * 100) })),
+          h("p", {}, t("panel.summary", { count: total, width, height, usage: Math.round(panelUsage(layout, byId) * 100) })),
           diameters.length
             ? h(
                 "ul",
                 { class: "holes" },
-                diameters.map(([d, n]) => h("li", {}, h("span", { class: "chip", "data-color": colors.get(d) }), t("plate.hole_line", { count: n, diameter: d }))),
+                diameters.map(([d, n]) => h("li", {}, h("span", { class: "chip", "data-color": colors.get(d) }), t("panel.hole_line", { count: n, diameter: d }))),
               )
             : null,
         ]
@@ -378,7 +378,7 @@ function jobFormData() {
   }
   const printer = state.profiles.printers[value("printer")];
   const entries = {
-    plate: value("plate"),
+    panel: value("panel"),
     marks: value("marks"),
     mark_labels: value("mark_labels"),
     printer: value("printer"),
@@ -423,7 +423,7 @@ async function onSubmit(event) {
 function render() {
   renderRows();
   onLayoutInputsChanged();
-  renderPlate();
+  renderPanel();
 }
 
 function renderLimits() {
@@ -467,12 +467,12 @@ function wire() {
     renderDrillMap();
     renderSubmit();
   });
-  for (const name of ["plate", "marks", "gap_mm", "margin_mm"]) field(name).addEventListener("input", onLayoutInputsChanged);
+  for (const name of ["panel", "marks", "gap_mm", "margin_mm"]) field(name).addEventListener("input", onLayoutInputsChanged);
   for (const view of ["top", "bottom"]) {
     document.getElementById(`view-${view}`).addEventListener("click", () => {
       state.view = view;
-      plateZoom.reset(); // the underside is mirrored, the zoomed part would not match
-      renderPlate();
+      panelZoom.reset(); // the underside is mirrored, the zoomed part would not match
+      renderPanel();
     });
   }
   form.addEventListener("submit", onSubmit);
@@ -482,13 +482,13 @@ async function start() {
   await initI18n();
   try {
     let library;
-    [state.profiles, { plates: state.plates }, library] = await Promise.all([getProfiles(), getPlates(), getTools()]);
+    [state.profiles, { panels: state.panels }, library] = await Promise.all([getProfiles(), getPanels(), getTools()]);
     state.drills = library.tools.filter((tool) => tool.kind === "drill" && tool.enabled).map((tool) => tool.diameter_mm).sort((a, b) => a - b);
   } catch (error) {
     document.getElementById("load-error").textContent = t("editor.load_failed", { message: error.message });
     return;
   }
-  fillSelect(field("plate"), Object.fromEntries(state.plates.map((plate) => [plate.id, plate])));
+  fillSelect(field("panel"), Object.fromEntries(state.panels.map((panel) => [panel.id, panel])));
   fillSelect(field("printer"), state.profiles.printers);
   fillSelect(field("mill"), state.profiles.mills);
   applyPrinter();
@@ -499,7 +499,7 @@ async function start() {
   onLanguageChange(() => {
     renderLimits();
     renderRows();
-    renderPlate();
+    renderPanel();
   });
   form.hidden = false;
   document.getElementById("editor").hidden = false;

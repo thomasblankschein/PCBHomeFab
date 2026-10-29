@@ -28,7 +28,7 @@ def _job(client: httpx.Client, filename: str, content_type: str) -> dict:
     created = client.post(
         "/api/v1/jobs",
         files=[("boards", (filename, board, content_type))],
-        data={"plate": "160x100", "margin_mm": "5", "counts": "2", "marks": "false"},
+        data={"panel": "160x100", "margin_mm": "5", "counts": "2", "marks": "false"},
     )
     assert created.status_code == 201, created.text
     for _ in range(120):

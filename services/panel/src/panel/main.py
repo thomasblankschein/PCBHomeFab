@@ -1,4 +1,4 @@
-"""The panel service: boards and counts in, placements on the plate out. A pure function, no state."""
+"""The panel service: boards and counts in, placements on the panel out. A pure function, no state."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from .layout import BoardSpec, pack
 BoardId = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]{1,40}$")]
 
 
-class Plate(BaseModel):
+class Panel(BaseModel):
     model_config = ConfigDict(extra="forbid")
     width_mm: float = Field(gt=0)
     height_mm: float = Field(gt=0)
@@ -33,7 +33,7 @@ class BoardRequest(BaseModel):
 
 class LayoutRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    plate: Plate
+    panel: Panel
     gap_mm: float = Field(default=3.0, ge=0)
     margin_mm: float = Field(default=3.0, ge=0)
     boards: list[BoardRequest] = Field(min_length=1)
@@ -41,7 +41,7 @@ class LayoutRequest(BaseModel):
 
 @dataclass(frozen=True)
 class Settings:
-    #: Number of boards on one plate, copies included.
+    #: Number of boards on one panel, copies included.
     max_boards: int = 500
     timeout_s: float = 10.0
     max_parallel: int = 8
@@ -58,11 +58,11 @@ class Settings:
 
 
 def _layout(request: dict[str, Any]) -> dict[str, Any]:
-    plate = request["plate"]
+    panel = request["panel"]
     boards = [BoardSpec(b["id"], b["width_mm"], b["height_mm"], b["count"]) for b in request["boards"]]
-    placements = pack(boards, plate["width_mm"], plate["height_mm"], request["gap_mm"], request["margin_mm"])
+    placements = pack(boards, panel["width_mm"], panel["height_mm"], request["gap_mm"], request["margin_mm"])
     return {
-        "plate": plate,
+        "panel": panel,
         "placements": [{"board_id": p.board_id, "x_mm": p.x_mm, "y_mm": p.y_mm, "rotation_deg": 0} for p in placements],
     }
 

@@ -7,7 +7,7 @@ const MIN_PITCH = (-10 * Math.PI) / 180;
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
 
 export function makeCamera({ target = [80, 50, 0], distance = 300, yaw = (-35 * Math.PI) / 180, pitch = (40 * Math.PI) / 180 } = {}) {
-  // `home` is where the two standard views look at: the middle of the plate
+  // `home` is where the two standard views look at: the middle of the panel
   return { target, home: target, distance, yaw, pitch };
 }
 
@@ -50,8 +50,8 @@ export function orbit(camera, dYaw, dPitch) {
 }
 
 /**
- * Moves the view target along the plate by a mouse movement of (dx, dy) pixels on a canvas `height` pixels high, so that the
- * scene follows the mouse. Dragging along the screen up/down moves along the plate (not along Z).
+ * Moves the view target along the panel by a mouse movement of (dx, dy) pixels on a canvas `height` pixels high, so that the
+ * scene follows the mouse. Dragging along the screen up/down moves along the panel (not along Z).
  */
 export function pan(camera, dx, dy, height) {
   const { right, forward } = basisOf(camera);
@@ -69,6 +69,6 @@ export function zoom(camera, factor) {
   return { ...camera, distance: clamp(camera.distance * factor, 30, 2000) };
 }
 
-// The two views also bring the plate back to the middle.
+// The two views also bring the panel back to the middle.
 export const topView = (camera) => ({ ...camera, target: camera.home, yaw: 0, pitch: MAX_PITCH });
 export const isoView = (camera) => ({ ...camera, target: camera.home, yaw: makeCamera().yaw, pitch: makeCamera().pitch });

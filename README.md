@@ -40,11 +40,11 @@ scripts/smoke_test.sh http://localhost
 ```
 
 Open `http://localhost/`. In the editor you add one or more Gerber ZIPs or KiCad PCB files (`.kicad_pcb`, zones filled; drag and drop), see size, holes and board
-shape of each, set the copies, the order and the spacing, and watch the boards on the plate (design view, holes coloured
+shape of each, set the copies, the order and the spacing, and watch the boards on the panel (design view, holes coloured
 by diameter). Printer, mill, exposure time, hole mode, tabs, flip and the calibration of the printer are in the settings;
 they are remembered in the browser. "Create job" leads to the job page with the exposure mask, the mill preview and
 the files to download (`exposure.pm3`, one G-code program per tool, all programs as ZIP) and a 3D simulation of
-the drill and mill paths (turn, zoom, play with the tool moving along the paths, copper of the boards shown faintly on the plate; it
+the drill and mill paths (turn, zoom, play with the tool moving along the paths, copper of the boards shown faintly on the panel; it
 can be switched off). `/tools` shows the tool
 library. Without accounts, every job gets a random id and the job link `/jobs/<id>` is the only credential. Jobs and
 files are deleted after seven days.
@@ -52,17 +52,17 @@ files are deleted after seven days.
 The same through the REST API (the gateway publishes the `jobs` service under `/api`):
 
 ```bash
-curl -F boards=@base.zip -F boards=@node.zip -F counts=1 -F counts=15 -F plate=160x100 -F exposure_s=120 http://localhost/api/v1/jobs
+curl -F boards=@base.zip -F boards=@node.zip -F counts=1 -F counts=15 -F panel=160x100 -F exposure_s=120 http://localhost/api/v1/jobs
 # {"id":"...","status":"queued"}
 curl http://localhost/api/v1/jobs/<id>                       # status and file list
 curl -O http://localhost/api/v1/jobs/<id>/files/exposure.pm3
 ```
 
-`plate` (required) is the id of a plate size from `GET /api/v1/plates` (160x100, 75x100 and 100x75 mm built in, the list
+`panel` (required) is the id of a panel size from `GET /api/v1/panels` (160x100, 75x100 and 100x75 mm built in, the list
 is configurable, see [docs/deployment.md](docs/deployment.md)). Other options of `POST /api/v1/jobs`: `exposure`, `mill_gcode` (choose the outputs), `holes`, `gap_mm`, `margin_mm`,
 `flip`, `thickness_mm`, `tabs`, `marks`, `printer`, `mill`, `frame_left_mm`, `frame_bottom_mm`, `mirror_x`.
 `GET /api/v1/profiles` lists printers, mills and limits, `GET /api/v1/tools` the tool library. For previews the editor
-uses `POST /api/v1/boards` (shape, size and holes of one ZIP) and `POST /api/v1/layouts` (placement on the plate); both
+uses `POST /api/v1/boards` (shape, size and holes of one ZIP) and `POST /api/v1/layouts` (placement on the panel); both
 store nothing.
 
 The pages come in English and German; the language switch is in the header (the choice is remembered in the browser, the first
@@ -89,7 +89,7 @@ Checks for the whole repository:
 ```bash
 python scripts/check_contracts.py     # schemas, OpenAPI files and examples are valid
 python scripts/check_boundaries.py    # no code shared between services, one volume per service, ports
-node --test services/frontend/tests/*.test.mjs   # plate geometry and language files (Node 20 or newer)
+node --test services/frontend/tests/*.test.mjs   # panel geometry and language files (Node 20 or newer)
 PCBHOMEFAB_URL=http://localhost pytest tests/e2e   # a running stack gives the golden outputs
 ```
 

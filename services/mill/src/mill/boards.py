@@ -55,7 +55,7 @@ class Board(BaseModel):
     contour: Contour | None = None
 
 
-class Plate(BaseModel):
+class Panel(BaseModel):
     model_config = ConfigDict(extra="forbid")
     width_mm: float = Field(gt=0)
     height_mm: float = Field(gt=0)
@@ -71,7 +71,7 @@ class PlacementModel(BaseModel):
 
 class Layout(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    plate: Plate
+    panel: Panel
     placements: list[PlacementModel]
 
 

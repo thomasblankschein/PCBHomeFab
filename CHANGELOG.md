@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.22.0 - 2026-10-29
+
+- The blank is called "panel" in the code as well (it was "plate"): API field and form field `panel`, endpoint `/api/v1/panels`,
+  error code `jobs.invalid_panel`, `panels.toml` with `[[panel]]` entries, `PCBHOMEFAB_PANELS_FILE`, `panel` and `panel_origin_mm`
+  in the job and layout JSON, and the comments in the G-code files ("panel surface"). The old names are not accepted any more.
+- Upgrading: an own list of panel sizes needs `[[panel]]` instead of `[[plate]]` and the new environment variable. Jobs created
+  before the update still open, but their panel size and positions of the marks may be missing; create them again. The
+  selected panel size is not remembered once in the editor.
+
 ## 0.21.1 - 2026-10-29
 
 - Texts: the blank that carries the boards is called "Nutzen" (German) and "panel" (English) instead of "Platte" and "plate" in

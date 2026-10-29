@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "mark.schema.json",
   "title": "Positioning mark",
-  "description": "A mark on the copper layer that shows the position and the rotation of the plate on the mill. Two of them stand diagonally opposite, just outside the area of the boards. Position of the centre in the coordinates of the layout (design view, origin at the lower left corner of the plate). `exposure` draws the mark, `mill` uses the one that lies at the lower left after turning the plate as X0 Y0.",
+  "description": "A mark on the copper layer that shows the position and the rotation of the panel on the mill. Two of them stand diagonally opposite, just outside the area of the boards. Position of the centre in the coordinates of the layout (design view, origin at the lower left corner of the panel). `exposure` draws the mark, `mill` uses the one that lies at the lower left after turning the panel as X0 Y0.",
   "type": "object",
   "required": ["x_mm", "y_mm"],
   "properties": {
@@ -22,12 +22,12 @@
     "label_flip": {
       "enum": ["none", "x", "y"],
       "default": "none",
-      "description": "How the plate is turned over for milling. The text is mirrored the same way in the design view, so that it reads correctly on the finished copper."
+      "description": "How the panel is turned over for milling. The text is mirrored the same way in the design view, so that it reads correctly on the finished copper."
     },
     "label_side": {
       "enum": ["right", "left"],
       "default": "right",
-      "description": "The text starts next to the mark and runs to the right or to the left (design view), towards the middle of the plate."
+      "description": "The text starts next to the mark and runs to the right or to the left (design view), towards the middle of the panel."
     }
   },
   "additionalProperties": false

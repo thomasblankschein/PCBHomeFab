@@ -26,7 +26,7 @@ def client() -> httpx.Client:
 
 def _job(client: httpx.Client, **fields: str) -> dict:
     board = (ROOT / "tests" / "data" / "fuehlerknoten.zip").read_bytes()
-    data = {"plate": "160x100", "margin_mm": "5", "counts": "3", **fields}
+    data = {"panel": "160x100", "margin_mm": "5", "counts": "3", **fields}
     created = client.post(
         "/api/v1/jobs",
         files=[("boards", ("node.zip", board, "application/zip"))],
@@ -76,7 +76,7 @@ def test_origin_moves_to_the_mark_and_the_copper_picture_shows_the_marks(
             for x, y in re.findall(r"^G0 X(-?[\d.]+) Y(-?[\d.]+)", code, re.M)
         }
 
-    origin = with_marks["params"]["marks"]["plate_origin_mm"]  # the lower left corner of the plate in G-code coordinates
+    origin = with_marks["params"]["marks"]["panel_origin_mm"]  # the lower left corner of the panel in G-code coordinates
     shifted = {
         (round(x + origin["x_mm"], 3), round(y + origin["y_mm"], 3)) for x, y in moves(without) - {(0.0, 0.0)}
     }
@@ -98,6 +98,6 @@ def test_marks_need_a_wide_margin(client: httpx.Client) -> None:
     refused = client.post(
         "/api/v1/jobs",
         files=[("boards", ("node.zip", board, "application/zip"))],
-        data={"plate": "160x100", "margin_mm": "3"},
+        data={"panel": "160x100", "margin_mm": "3"},
     )
     assert refused.status_code == 422 and refused.json()["code"] == "jobs.invalid_marks"

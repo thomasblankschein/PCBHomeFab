@@ -8,7 +8,7 @@ import pytest
 from mill import gcode
 from mill.boards import read_board
 from mill.common import Problem
-from mill.profiles import MILL_3018PRO, Plate
+from mill.profiles import MILL_3018PRO, Panel
 
 DATA = Path(__file__).parent / "data"
 CONTRACTS = Path(__file__).resolve().parents[3] / "contracts"
@@ -28,7 +28,7 @@ def _example_placements() -> list[gcode.Placement]:
 
 @pytest.fixture(scope="module")
 def programs() -> list[gcode.Program]:
-    return gcode.generate(_example_placements(), Plate(), MILL_3018PRO)
+    return gcode.generate(_example_placements(), Panel(), MILL_3018PRO)
 
 
 def _coordinates(code: str, move: str) -> set[tuple[float, float]]:
@@ -58,8 +58,8 @@ def test_depths_and_bounds(programs: list[gcode.Program]) -> None:
         zs = [float(z) for z in re.findall(r"Z(-?[\d.]+)", program.code)]
         xs = [float(x) for x in re.findall(r" X(-?[\d.]+)", program.code)]
         ys = [float(y) for y in re.findall(r" Y(-?[\d.]+)", program.code)]
-        assert min(xs) >= 0 and max(xs) <= Plate().width_mm
-        assert min(ys) >= 0 and max(ys) <= Plate().height_mm
+        assert min(xs) >= 0 and max(xs) <= Panel().width_mm
+        assert min(ys) >= 0 and max(ys) <= Panel().height_mm
         assert max(zs) <= MILL_3018PRO.tool_change_z_mm
     assert min(float(z) for z in re.findall(r"Z(-?[\d.]+)", programs[0].code)) == pytest.approx(-1.75)
     assert min(float(z) for z in re.findall(r"Z(-?[\d.]+)", programs[2].code)) == pytest.approx(-1.75)
@@ -76,18 +76,18 @@ def test_hole_without_drill_or_room_is_rejected() -> None:
     placement = _placement("basisplatine", 3.0, 3.0)
     thin = gcode.Placement(3.0, 3.0, placement.width_mm, placement.height_mm, [(2.0, 2.0, 1.05)])
     with pytest.raises(Problem) as caught:
-        gcode.generate([thin], Plate(), MILL_3018PRO)
+        gcode.generate([thin], Panel(), MILL_3018PRO)
     assert caught.value.code == "mill.no_drill"
 
 
 def test_preview_is_svg() -> None:
-    svg = gcode.preview_svg([_placement("basisplatine", 3.0, 3.0)], Plate(), MILL_3018PRO)
+    svg = gcode.preview_svg([_placement("basisplatine", 3.0, 3.0)], Panel(), MILL_3018PRO)
     assert svg.startswith("<svg") and svg.endswith("</svg>")
 
 
 def test_tool_change_height_comes_from_the_profile() -> None:
     mill = replace(MILL_3018PRO, tool_change_z_mm=42.0)
-    for program in gcode.generate(_example_placements(), Plate(), mill):
+    for program in gcode.generate(_example_placements(), Panel(), mill):
         lines = program.code.splitlines()
         assert lines[-4:] == ["G0 Z42.000", "G0 X0.000 Y0.000", "M5", "M30"]
         assert "G0 Z42.000" in lines[:8]
@@ -108,10 +108,10 @@ MARKS_X_FLIP = [(2.0, 98.0), (158.0, 2.0)]  # design view; with flip "x" they li
 
 
 def test_lower_left_mark_becomes_the_origin() -> None:
-    plain = gcode.generate(_example_placements(), Plate(), MILL_3018PRO)
-    mill, second = gcode.origin_of_marks(Plate(), MILL_3018PRO, MARKS_X_FLIP)
+    plain = gcode.generate(_example_placements(), Panel(), MILL_3018PRO)
+    mill, second = gcode.origin_of_marks(Panel(), MILL_3018PRO, MARKS_X_FLIP)
     assert second == pytest.approx((156.0, 96.0))
-    marked = gcode.generate(_example_placements(), Plate(), mill, second_mark=second)
+    marked = gcode.generate(_example_placements(), Panel(), mill, second_mark=second)
     for before, after in zip(plain, marked, strict=True):
         moves = (_coordinates(before.code, "G1") | _coordinates(before.code, "G0")) - {
             (0.0, 0.0)
@@ -121,12 +121,12 @@ def test_lower_left_mark_becomes_the_origin() -> None:
 
 
 def test_marks_are_named_in_the_headers() -> None:
-    mill, second = gcode.origin_of_marks(Plate(), MILL_3018PRO, MARKS_X_FLIP)
-    for program in gcode.generate(_example_placements(), Plate(), mill, second_mark=second):
+    mill, second = gcode.origin_of_marks(Panel(), MILL_3018PRO, MARKS_X_FLIP)
+    for program in gcode.generate(_example_placements(), Panel(), mill, second_mark=second):
         lines = program.code.splitlines()
         assert "centre of the lower left positioning mark" in lines[1]
         assert lines[2] == "(Second positioning mark, upper right: X156.000 Y96.000)"
-    plain = gcode.generate(_example_placements(), Plate(), MILL_3018PRO)
+    plain = gcode.generate(_example_placements(), Panel(), MILL_3018PRO)
     assert "Second positioning mark" not in plain[0].code
 
 
@@ -139,12 +139,12 @@ def test_marks_are_named_in_the_headers() -> None:
     ],
 )
 def test_the_second_mark_is_always_the_far_corner(flip: str, marks: list[tuple[float, float]]) -> None:
-    mill, second = gcode.origin_of_marks(Plate(), replace(MILL_3018PRO, flip=flip), marks)
+    mill, second = gcode.origin_of_marks(Panel(), replace(MILL_3018PRO, flip=flip), marks)
     assert second == pytest.approx((156.0, 96.0))
-    assert gcode.build_layout([], Plate(), mill).holes == {}
+    assert gcode.build_layout([], Panel(), mill).holes == {}
 
 
 def test_marks_on_one_line_are_refused() -> None:
     with pytest.raises(Problem) as caught:
-        gcode.origin_of_marks(Plate(), MILL_3018PRO, [(2.0, 2.0), (158.0, 2.0)])
+        gcode.origin_of_marks(Panel(), MILL_3018PRO, [(2.0, 2.0), (158.0, 2.0)])
     assert caught.value.code == "mill.invalid_marks"

@@ -2,7 +2,7 @@
 
 from jobs.marks import alignment_marks
 
-BOARDS = (10.0, 20.0, 60.0, 70.0)  # the area of the boards on a 160 x 100 mm plate
+BOARDS = (10.0, 20.0, 60.0, 70.0)  # the area of the boards on a 160 x 100 mm panel
 
 
 def _origin(marks: dict, flip: str) -> tuple[float, float]:
@@ -17,7 +17,7 @@ def test_without_boards_the_marks_stand_in_the_corners() -> None:
 
 
 def test_origin_mark_stands_diagonally_outside_the_corner_of_the_boards() -> None:
-    # lower left of the boards when the plate is not turned, lower right for flip x (X is mirrored), upper left for
+    # lower left of the boards when the panel is not turned, lower right for flip x (X is mirrored), upper left for
     # flip y
     assert _origin(alignment_marks(160, 100, "none", boards=BOARDS), "none") == (8.0, 18.0)
     assert _origin(alignment_marks(160, 100, "x", boards=BOARDS), "x") == (62.0, 18.0)
@@ -28,15 +28,15 @@ def test_other_mark_stays_in_the_opposite_corner_and_is_named_relative_to_the_or
     marks = alignment_marks(160, 100, "none", labels=True, boards=BOARDS)
     assert [(p["x_mm"], p["y_mm"]) for p in marks["points"]] == [(8.0, 18.0), (158.0, 98.0)]
     assert marks["second_mm"] == {"x_mm": 150.0, "y_mm": 80.0}
-    assert marks["plate_origin_mm"] == {"x_mm": -8.0, "y_mm": -18.0}
+    assert marks["panel_origin_mm"] == {"x_mm": -8.0, "y_mm": -18.0}
     assert [p["label"] for p in marks["points"]] == ["X0 Y0", "X150 Y80"]
     flipped = alignment_marks(160, 100, "x", boards=BOARDS)
-    # the plate is turned in X: the origin mark is at 160 - 62 = 98 from the left edge of the mill, the other at 158
+    # the panel is turned in X: the origin mark is at 160 - 62 = 98 from the left edge of the mill, the other at 158
     assert flipped["second_mm"] == {"x_mm": 60.0, "y_mm": 80.0}
-    assert flipped["plate_origin_mm"] == {"x_mm": -98.0, "y_mm": -18.0}
+    assert flipped["panel_origin_mm"] == {"x_mm": -98.0, "y_mm": -18.0}
 
 
-def test_the_mark_never_leaves_the_plate() -> None:
-    boards = (0.0, 0.0, 160.0, 100.0)  # boards all the way to the edge: no room, the mark stays inside the plate
+def test_the_mark_never_leaves_the_panel() -> None:
+    boards = (0.0, 0.0, 160.0, 100.0)  # boards all the way to the edge: no room, the mark stays inside the panel
     assert _origin(alignment_marks(160, 100, "none", boards=boards), "none") == (2.0, 2.0)
     assert _origin(alignment_marks(160, 100, "x", boards=boards), "x") == (158.0, 2.0)

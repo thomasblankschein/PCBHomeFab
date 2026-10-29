@@ -93,7 +93,7 @@ def test_copper_picture_for_the_3d_view(client: TestClient) -> None:
     assert alpha.getextrema() == (0, 255)
     copper = sum(1 for v in alpha.tobytes() if v)
     assert 0.01 < copper / (1600 * 1000) < 0.5  # some copper, far from everything
-    # the corner of the plate has no board and no copper
+    # the corner of the panel has no board and no copper
     assert picture.getpixel((1599, 0))[3] == 0
 
 
@@ -120,15 +120,15 @@ def test_unknown_printer(client: TestClient) -> None:
     _problem(_post(client, settings={"printer": "nope"}), 422, "exposure.unknown_printer")
 
 
-def test_plate_larger_than_the_display(client: TestClient) -> None:
-    big = {**LAYOUT, "plate": {"width_mm": 170.0, "height_mm": 100.0}}
-    _problem(_post(client, layout=big), 422, "exposure.plate_too_large")
-    # the calibration offset counts too: 160 mm plate and 5 mm offset do not fit on 163.84 mm
-    _problem(_post(client, settings={**SETTINGS, "frame_left_mm": 5.0}), 422, "exposure.plate_too_large")
+def test_panel_larger_than_the_display(client: TestClient) -> None:
+    big = {**LAYOUT, "panel": {"width_mm": 170.0, "height_mm": 100.0}}
+    _problem(_post(client, layout=big), 422, "exposure.panel_too_large")
+    # the calibration offset counts too: 160 mm panel and 5 mm offset do not fit on 163.84 mm
+    _problem(_post(client, settings={**SETTINGS, "frame_left_mm": 5.0}), 422, "exposure.panel_too_large")
 
 
-def test_smaller_plates_are_fine(client: TestClient) -> None:
-    small = {**LAYOUT, "plate": {"width_mm": 75.0, "height_mm": 100.0}}
+def test_smaller_panels_are_fine(client: TestClient) -> None:
+    small = {**LAYOUT, "panel": {"width_mm": 75.0, "height_mm": 100.0}}
     single = {**small, "placements": small["placements"][:1]}
     assert _post(client, layout=single, files=_files()[:1]).status_code == 200
 

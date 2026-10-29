@@ -5,7 +5,7 @@ import pytest
 
 from mill import gcode
 from mill.common import Problem
-from mill.profiles import MILL_3018PRO, Plate
+from mill.profiles import MILL_3018PRO, Panel
 from mill.tools import load_tools, parse_tools
 
 MINIMAL = """
@@ -78,7 +78,7 @@ def test_environment_variable_selects_the_file(tmp_path: Path, monkeypatch: pyte
 
 
 def test_every_hole_size_gets_its_own_tool() -> None:
-    programs = gcode.generate(_with_holes(0.6, 0.9, 1.1, 1.2, 1.6, 7.2), Plate(), MILL_3018PRO, load_tools())
+    programs = gcode.generate(_with_holes(0.6, 0.9, 1.1, 1.2, 1.6, 7.2), Panel(), MILL_3018PRO, load_tools())
     assert [p.tool for p in programs] == ["drill-0.6", "drill-0.9", "drill-1.1", "drill-1.2", "endmill-1.0"]
     assert [p.holes for p in programs] == [1, 1, 1, 1, 2]  # 1.6 and 7.2 mm are milled
     assert "M3 S20000" in programs[0].code
@@ -87,14 +87,14 @@ def test_every_hole_size_gets_its_own_tool() -> None:
 def test_cutting_data_comes_from_the_tool() -> None:
     library = parse_tools(MINIMAL)
     mill = replace(MILL_3018PRO, max_spindle_rpm=15000)
-    drill, cutter = gcode.generate(_with_holes(0.8, 1.5), Plate(), mill, library)
+    drill, cutter = gcode.generate(_with_holes(0.8, 1.5), Panel(), mill, library)
     assert "M3 S12000" in drill.code and "F80" in drill.code
     assert "M3 S15000" in cutter.code and "F120" in cutter.code and "F30" in cutter.code
 
 
 def test_larger_outline_endmill_and_fallback_for_small_holes() -> None:
     mill = replace(MILL_3018PRO, outline_endmill_mm=2.0)
-    programs = gcode.generate(_with_holes(1.6, 5.0), Plate(), mill, load_tools())
+    programs = gcode.generate(_with_holes(1.6, 5.0), Panel(), mill, load_tools())
     assert [p.tool for p in programs] == ["endmill-2.0", "endmill-1.0"]
     outline = programs[0]
     assert outline.outlines == 1 and outline.holes == 1  # 5 mm circled with the 2 mm mill
@@ -104,35 +104,35 @@ def test_larger_outline_endmill_and_fallback_for_small_holes() -> None:
 def test_spindle_speed_above_machine_limit_is_refused() -> None:
     slow = replace(MILL_3018PRO, max_spindle_rpm=10000)
     with pytest.raises(Problem, match="rpm") as caught:
-        gcode.generate(_with_holes(0.8), Plate(), slow, load_tools())
+        gcode.generate(_with_holes(0.8), Panel(), slow, load_tools())
     assert caught.value.code == "mill.spindle_too_fast"
 
 
 def test_hole_between_drill_sizes_is_refused_with_a_hint() -> None:
     with pytest.raises(Problem, match="No drill for a 1.05 mm hole") as caught:
-        gcode.generate(_with_holes(1.05), Plate(), MILL_3018PRO, load_tools())
+        gcode.generate(_with_holes(1.05), Panel(), MILL_3018PRO, load_tools())
     assert caught.value.code == "mill.no_drill"
 
 
 def test_hole_without_a_drill_uses_the_chosen_one() -> None:
-    programs = gcode.generate(_with_holes(1.0, 1.05, 1.05), Plate(), MILL_3018PRO, load_tools(), drill_map={1.05: 1.1})
+    programs = gcode.generate(_with_holes(1.0, 1.05, 1.05), Panel(), MILL_3018PRO, load_tools(), drill_map={1.05: 1.1})
     assert [(p.tool, p.holes) for p in programs] == [("drill-1.0", 1), ("drill-1.1", 2), ("endmill-1.0", 0)]
     assert "(2 of them for holes of 1.05 mm)" in programs[1].code
 
 
 def test_mapping_can_use_a_drill_that_is_in_use_anyway() -> None:
-    programs = gcode.generate(_with_holes(1.0, 1.05), Plate(), MILL_3018PRO, load_tools(), drill_map={1.05: 1.0})
+    programs = gcode.generate(_with_holes(1.0, 1.05), Panel(), MILL_3018PRO, load_tools(), drill_map={1.05: 1.0})
     drill = programs[0]
     assert drill.tool == "drill-1.0" and drill.holes == 2
     assert "1 of them for holes of 1.05 mm" in drill.code
 
 
 def test_mapping_is_ignored_for_holes_that_have_a_drill() -> None:
-    programs = gcode.generate(_with_holes(1.0), Plate(), MILL_3018PRO, load_tools(), drill_map={1.0: 1.2})
+    programs = gcode.generate(_with_holes(1.0), Panel(), MILL_3018PRO, load_tools(), drill_map={1.0: 1.2})
     assert [p.tool for p in programs if p.holes] == ["drill-1.0"]
 
 
 def test_mapping_to_a_missing_drill_is_refused() -> None:
     with pytest.raises(Problem) as caught:
-        gcode.generate(_with_holes(1.05), Plate(), MILL_3018PRO, load_tools(), drill_map={1.05: 1.07})
+        gcode.generate(_with_holes(1.05), Panel(), MILL_3018PRO, load_tools(), drill_map={1.05: 1.07})
     assert caught.value.code == "mill.invalid_drill_map"

@@ -1,4 +1,4 @@
-// 3D simulation of the drill and mill programs of a job: the plate, the tool paths and a tool that moves along them.
+// 3D simulation of the drill and mill programs of a job: the panel, the tool paths and a tool that moves along them.
 // Drawn on a 2D canvas with the small camera of camera.js, so there is no library and no build step.
 
 import { fileUrl } from "./api.js";
@@ -36,20 +36,20 @@ export async function loadPrograms(jobId, files) {
 
 /**
  * Builds the simulation inside `container` for programs from `loadPrograms`.
- * `options.copperUrl` is the picture of the copper (copper.png of the job), `options.flip` how the plate is turned over for
+ * `options.copperUrl` is the picture of the copper (copper.png of the job), `options.flip` how the panel is turned over for
  * milling ("x", "y" or "none"): the paths are in machine coordinates, so the picture is turned the same way.
- * `options.plateOrigin` is where the lower left corner of the plate lies in these coordinates (not 0, 0 with positioning marks).
+ * `options.panelOrigin` is where the lower left corner of the panel lies in these coordinates (not 0, 0 with positioning marks).
  */
-export function createSimulation(container, programs, thickness, plateSize, options = {}) {
-  const PLATE = {
-    width: plateSize.width_mm,
-    height: plateSize.height_mm,
-    x0: options.plateOrigin?.x_mm ?? 0,
-    y0: options.plateOrigin?.y_mm ?? 0,
+export function createSimulation(container, programs, thickness, panelSize, options = {}) {
+  const PANEL = {
+    width: panelSize.width_mm,
+    height: panelSize.height_mm,
+    x0: options.panelOrigin?.x_mm ?? 0,
+    y0: options.panelOrigin?.y_mm ?? 0,
   };
   const all = programs.flatMap((program) => program.moves);
   const state = {
-    camera: makeCamera({ target: [PLATE.x0 + PLATE.width / 2, PLATE.y0 + PLATE.height / 2, 0], distance: 330 }),
+    camera: makeCamera({ target: [PANEL.x0 + PANEL.width / 2, PANEL.y0 + PANEL.height / 2, 0], distance: 330 }),
     zScale: 3,
     rapids: true,
     selected: -1,
@@ -214,9 +214,9 @@ export function createSimulation(container, programs, thickness, plateSize, opti
     ctx.stroke();
   }
 
-  function drawPlate(ctx, basis, width, height) {
+  function drawPanel(ctx, basis, width, height) {
     const depth = thickness * state.zScale;
-    const corner = (x, y, z) => project([PLATE.x0 + x * PLATE.width, PLATE.y0 + y * PLATE.height, z], basis, width, height);
+    const corner = (x, y, z) => project([PANEL.x0 + x * PANEL.width, PANEL.y0 + y * PANEL.height, z], basis, width, height);
     const faces = [
       { points: [[0, 0, -depth], [1, 0, -depth], [1, 1, -depth], [0, 1, -depth]], shade: 0.35 },
       { points: [[0, 0, -depth], [1, 0, -depth], [1, 0, 0], [0, 0, 0]], shade: 0.2 },
@@ -234,7 +234,7 @@ export function createSimulation(container, programs, thickness, plateSize, opti
       ctx.beginPath();
       face.projected.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
       ctx.closePath();
-      ctx.fillStyle = css("--plate");
+      ctx.fillStyle = css("--panel");
       ctx.fill();
       if (face.shade) {
         ctx.fillStyle = `rgba(0, 0, 0, ${face.shade})`;
@@ -245,7 +245,7 @@ export function createSimulation(container, programs, thickness, plateSize, opti
     }
   }
 
-  /** The picture of the copper on the top face of the plate, drawn in small tiles so that the perspective is right. */
+  /** The picture of the copper on the top face of the panel, drawn in small tiles so that the perspective is right. */
   function drawCopper(ctx, basis, width, height) {
     const { width: iw, height: ih } = copperImage;
     // only the shape of the picture is used, the colour comes from the theme
@@ -259,17 +259,17 @@ export function createSimulation(container, programs, thickness, plateSize, opti
     tint.fillRect(0, 0, iw, ih);
     const flip = options.flip ?? "x";
     const screen = (px, py) => {
-      const x = (px / iw) * PLATE.width;
-      const y = (1 - py / ih) * PLATE.height; // the picture is the design view: its top is the high Y
-      const gx = flip === "x" ? PLATE.width - x : x;
-      const gy = flip === "y" ? PLATE.height - y : y;
-      return project([PLATE.x0 + gx, PLATE.y0 + gy, 0], basis, width, height);
+      const x = (px / iw) * PANEL.width;
+      const y = (1 - py / ih) * PANEL.height; // the picture is the design view: its top is the high Y
+      const gx = flip === "x" ? PANEL.width - x : x;
+      const gy = flip === "y" ? PANEL.height - y : y;
+      return project([PANEL.x0 + gx, PANEL.y0 + gy, 0], basis, width, height);
     };
     const columns = 24;
     const rows = 15;
     const sw = iw / columns;
     const sh = ih / rows;
-    // the tiles overlap a little: draw them opaque into a picture of their own, then lay that over the plate once
+    // the tiles overlap a little: draw them opaque into a picture of their own, then lay that over the panel once
     const sheet = document.createElement("canvas");
     sheet.width = width;
     sheet.height = height;
@@ -297,15 +297,15 @@ export function createSimulation(container, programs, thickness, plateSize, opti
     target.globalAlpha = 1;
   }
 
-  /** The plate (with the copper) only changes with the view, so it is kept in a picture while the tool moves. */
-  function drawPlateLayer(ctx, basis, width, height) {
+  /** The panel (with the copper) only changes with the view, so it is kept in a picture while the tool moves. */
+  function drawPanelLayer(ctx, basis, width, height) {
     const showCopper = state.copper && state.copperReady && basis.eye[2] > 0;
-    const key = [JSON.stringify(state.camera), state.zScale, width, height, showCopper, css("--plate"), css("--border"), css("--copper")].join("|");
+    const key = [JSON.stringify(state.camera), state.zScale, width, height, showCopper, css("--panel"), css("--border"), css("--copper")].join("|");
     if (key !== state.layerKey || layer.width !== width || layer.height !== height) {
       layer.width = width;
       layer.height = height;
       const layerContext = layer.getContext("2d");
-      drawPlate(layerContext, basis, width, height);
+      drawPanel(layerContext, basis, width, height);
       if (showCopper) drawCopper(layerContext, basis, width, height);
       state.layerKey = key;
     }
@@ -342,7 +342,7 @@ export function createSimulation(container, programs, thickness, plateSize, opti
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
-    drawPlateLayer(ctx, basis, width, height);
+    drawPanelLayer(ctx, basis, width, height);
     drawAxes(ctx, basis, width, height);
 
     const { done, point } = positionAt(state.moves, state.timeline, state.time);

@@ -10,7 +10,7 @@ import {
   isRectangle,
   holeSummary,
   placedBoards,
-  plateUsage,
+  panelUsage,
   polygonPath,
   previewId,
   validCount,
@@ -46,7 +46,7 @@ const round = {
   },
 };
 const layout = {
-  plate: { width_mm: 160, height_mm: 100 },
+  panel: { width_mm: 160, height_mm: 100 },
   placements: [
     { board_id: "a", x_mm: 3, y_mm: 3, rotation_deg: 0 },
     { board_id: "b", x_mm: 20, y_mm: 3, rotation_deg: 0 },
@@ -68,7 +68,7 @@ test("a board with contour keeps it", () => {
   assert.equal(boardShape(round), round.contour);
 });
 
-test("placed boards move shapes and holes to plate coordinates", () => {
+test("placed boards move shapes and holes to panel coordinates", () => {
   const [first, second] = placedBoards(layout, boards);
   assert.deepEqual(first.outer[2], [13, 29]);
   assert.deepEqual(first.holes[0], { x: 5, y: 6, diameter: 0.8 });
@@ -91,8 +91,8 @@ test("holes are counted per diameter with copies", () => {
   ]);
 });
 
-test("plate usage is the share of the boxes", () => {
-  assert.equal(plateUsage(layout, boards), (10 * 26 + 20 * 20) / (160 * 100));
+test("panel usage is the share of the boxes", () => {
+  assert.equal(panelUsage(layout, boards), (10 * 26 + 20 * 20) / (160 * 100));
 });
 
 test("hole colours are stable per diameter", () => {
@@ -130,7 +130,7 @@ test("a file with several boards draws all of their outlines", () => {
     },
   };
   assert.ok(!isRectangle(two));
-  const [placed] = placedBoards({ plate: { width_mm: 160, height_mm: 100 }, placements: [{ board_id: "t", x_mm: 3, y_mm: 3, rotation_deg: 0 }] }, { t: two });
+  const [placed] = placedBoards({ panel: { width_mm: 160, height_mm: 100 }, placements: [{ board_id: "t", x_mm: 3, y_mm: 3, rotation_deg: 0 }] }, { t: two });
   assert.equal(placed.extra.length, 2);
   assert.deepEqual(placed.extra[0][0], [33, 3]);
 });

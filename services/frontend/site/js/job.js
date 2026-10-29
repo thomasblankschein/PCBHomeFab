@@ -27,12 +27,12 @@ function download(job, file, label, note) {
   );
 }
 
-// Jobs made before the plate size became a choice used this plate.
-const LEGACY_PLATE = { width_mm: 160, height_mm: 100 };
+// Jobs made before the panel size became a choice used this panel.
+const LEGACY_PANEL = { width_mm: 160, height_mm: 100 };
 
 function summaryOf(job) {
   const p = job.params;
-  const plate = p.plate ?? LEGACY_PLATE;
+  const panel = p.panel ?? LEGACY_PANEL;
   const boards = p.boards.map((b) => `${b.count} × ${b.name} (${mm(b.width_mm)} × ${mm(b.height_mm)})`).join(", ");
   const outputs = [p.exposure ? t("job.output_exposure", { seconds: p.exposure_s }) : null, p.mill_gcode ? t("job.output_mill") : null].filter(Boolean);
   return h("dl", { class: "facts" }, [
@@ -45,8 +45,8 @@ function summaryOf(job) {
       : null,
     h("dt", {}, t("job.marks")),
     h("dd", {}, p.marks ? t("job.marks_on", { x: p.marks.second_mm.x_mm, y: p.marks.second_mm.y_mm }) : t("job.marks_off")),
-    h("dt", {}, t("job.plate")),
-    h("dd", {}, t("job.plate_summary", { size: `${plate.width_mm} × ${plate.height_mm} mm`, gap: mm(p.gap_mm), margin: mm(p.margin_mm), thickness: mm(p.thickness_mm) })),
+    h("dt", {}, t("job.panel")),
+    h("dd", {}, t("job.panel_summary", { size: `${panel.width_mm} × ${panel.height_mm} mm`, gap: mm(p.gap_mm), margin: mm(p.margin_mm), thickness: mm(p.thickness_mm) })),
   ]);
 }
 
@@ -68,8 +68,8 @@ function simulationPanel(job, programs) {
         body,
         await simulation.loadPrograms(job.id, programs),
         job.params.thickness_mm,
-        job.params.plate ?? LEGACY_PLATE,
-        { copperUrl: job.files.some((f) => f.name === "copper.png") ? fileUrl(job.id, "copper.png") : null, flip: job.params.flip, plateOrigin: job.params.marks?.plate_origin_mm },
+        job.params.panel ?? LEGACY_PANEL,
+        { copperUrl: job.files.some((f) => f.name === "copper.png") ? fileUrl(job.id, "copper.png") : null, flip: job.params.flip, panelOrigin: job.params.marks?.panel_origin_mm },
       );
     } catch {
       started = false;

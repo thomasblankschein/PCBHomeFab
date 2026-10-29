@@ -2,11 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "layout.schema.json",
   "title": "Layout",
-  "description": "Output of `panel`, input of `exposure` and `mill`. Origin is the lower left corner of the plate, Y points up. A placement gives the lower left corner of a board; its size comes from `board.json` of the package with the same id.",
+  "description": "Output of `panel`, input of `exposure` and `mill`. Origin is the lower left corner of the panel, Y points up. A placement gives the lower left corner of a board; its size comes from `board.json` of the package with the same id.",
   "type": "object",
-  "required": ["plate", "placements"],
+  "required": ["panel", "placements"],
   "properties": {
-    "plate": {"$ref": "#/$defs/plate"},
+    "panel": {"$ref": "#/$defs/panel"},
     "placements": {
       "type": "array",
       "items": {
@@ -24,7 +24,7 @@
   },
   "additionalProperties": false,
   "$defs": {
-    "plate": {
+    "panel": {
       "type": "object",
       "required": ["width_mm", "height_mm"],
       "properties": {

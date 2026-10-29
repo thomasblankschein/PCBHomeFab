@@ -112,7 +112,7 @@ test("orbit keeps the pitch inside its limits and zoom its distance", () => {
   assert.ok(Number.isFinite(project([0, 0, 0], basisOf(top), 800, 600).x));
 });
 
-test("panning moves the scene with the mouse and stays on the plate", () => {
+test("panning moves the scene with the mouse and stays on the panel", () => {
   const camera = makeCamera({ target: [0, 0, 0], distance: 200, yaw: 0, pitch: 0.7 });
   const before = project([0, 0, 0], basisOf(camera), 800, 600);
   const moved = pan(camera, 40, 0, 600);

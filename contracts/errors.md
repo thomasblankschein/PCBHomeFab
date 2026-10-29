@@ -31,7 +31,7 @@ its own prefix, plus `common.*`.
 | `exposure.invalid_package` | 422 | a board package is not a canonical package |
 | `exposure.unknown_board` | 422 | the layout refers to a board id without package |
 | `exposure.unreadable_copper` | 422 | `copper.gbr` could not be read or drawn |
-| `exposure.plate_too_large` | 422 | the plate, with the calibration offsets, does not fit on the display of the printer |
+| `exposure.panel_too_large` | 422 | the panel, with the calibration offsets, does not fit on the display of the printer |
 | `mill.unknown_mill` | 422 | no mill profile with this id |
 | `mill.invalid_package` | 422 | a board package is not a canonical package |
 | `mill.unknown_board` | 422 | the layout refers to a board id without package |
@@ -46,7 +46,7 @@ its own prefix, plus `common.*`.
 | `jobs.queue_full` | 503 | the queue is full |
 | `jobs.upstream_unavailable` | 503 | a service that the job needs cannot be reached |
 | `jobs.invalid_upload` | 422 | bad upload (count of files, counts, no output selected) |
-| `jobs.invalid_plate` | 422 | the panel size is missing or not in the list of panel sizes |
+| `jobs.invalid_panel` | 422 | the panel size is missing or not in the list of panel sizes |
 | `jobs.invalid_marks` | 422 | positioning marks asked for, but the margin is too small for them or the panel is too small |
 | `jobs.upload_too_large` | 413 | a file is larger than the limit |
 

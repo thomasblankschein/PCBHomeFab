@@ -1,11 +1,11 @@
-import { getPlates, getProfiles } from "./api.js";
+import { getPanels, getProfiles } from "./api.js";
 import { fill, h } from "./dom.js";
 import { initI18n, onLanguageChange, t } from "./i18n.js";
 
 const container = document.getElementById("machines");
 let profiles = null;
-let plates = null;
-const plateTable = document.getElementById("plates");
+let panels = null;
+const panelTable = document.getElementById("panels");
 
 const number = (value, unit) => `${Number(value.toFixed(3))} ${unit}`;
 const yesNo = (value) => t(value ? "machines.yes" : "machines.no");
@@ -61,26 +61,26 @@ function render() {
   );
 }
 
-function renderPlates() {
-  document.getElementById("plates-source").textContent = t("tools.source", { source: plates.source });
+function renderPanels() {
+  document.getElementById("panels-source").textContent = t("tools.source", { source: panels.source });
   fill(
-    plateTable.tBodies[0],
-    plates.plates.map((plate) =>
-      h("tr", {}, h("td", {}, plate.name), h("td", { class: "num" }, number(plate.width_mm, "mm")), h("td", { class: "num" }, number(plate.height_mm, "mm")), h("td", {}, h("code", {}, plate.id))),
+    panelTable.tBodies[0],
+    panels.panels.map((panel) =>
+      h("tr", {}, h("td", {}, panel.name), h("td", { class: "num" }, number(panel.width_mm, "mm")), h("td", { class: "num" }, number(panel.height_mm, "mm")), h("td", {}, h("code", {}, panel.id))),
     ),
   );
-  plateTable.hidden = false;
+  panelTable.hidden = false;
 }
 
 await initI18n();
 onLanguageChange(() => {
   if (profiles) render();
-  if (plates) renderPlates();
+  if (panels) renderPanels();
 });
 try {
-  [profiles, plates] = await Promise.all([getProfiles(), getPlates()]);
+  [profiles, panels] = await Promise.all([getProfiles(), getPanels()]);
   render();
-  renderPlates();
+  renderPanels();
 } catch (error) {
   document.getElementById("load-error").textContent = error.message;
 }

@@ -3,7 +3,7 @@ info:
   title: PCBHomeFab panel
   version: 1.0.0
   description: >
-    Places boards on the plate in rows from the lower left corner, left to right, new rows going up.
+    Places boards on the panel in rows from the lower left corner, left to right, new rows going up.
     Pure function, stateless.
 paths:
   /healthz:

@@ -58,7 +58,7 @@ def test_example_request_gives_the_example_layout(client: TestClient) -> None:
 
 def test_defaults_for_gap_and_margin(client: TestClient) -> None:
     body = {
-        "plate": {"width_mm": 160, "height_mm": 100},
+        "panel": {"width_mm": 160, "height_mm": 100},
         "boards": [{"id": "a", "width_mm": 10, "height_mm": 10, "count": 2}],
     }
     placements = client.post("/v1/layouts", json=body).json()["placements"]
@@ -69,17 +69,17 @@ def test_defaults_for_gap_and_margin(client: TestClient) -> None:
     "body",
     [
         {},
-        {"plate": {"width_mm": 160, "height_mm": 100}, "boards": []},
+        {"panel": {"width_mm": 160, "height_mm": 100}, "boards": []},
         {
-            "plate": {"width_mm": 160, "height_mm": 100},
+            "panel": {"width_mm": 160, "height_mm": 100},
             "boards": [{"id": "../x", "width_mm": 1, "height_mm": 1, "count": 1}],
         },
         {
-            "plate": {"width_mm": -1, "height_mm": 100},
+            "panel": {"width_mm": -1, "height_mm": 100},
             "boards": [{"id": "a", "width_mm": 1, "height_mm": 1, "count": 1}],
         },
         {
-            "plate": {"width_mm": 160, "height_mm": 100},
+            "panel": {"width_mm": 160, "height_mm": 100},
             "boards": [{"id": "a", "width_mm": 1, "height_mm": 1, "count": 0}],
         },
     ],
@@ -94,7 +94,7 @@ def test_invalid_requests_are_problems(client: TestClient, body: dict) -> None:
 
 def test_layout_errors_are_problems(client: TestClient) -> None:
     body = {
-        "plate": {"width_mm": 160, "height_mm": 100},
+        "panel": {"width_mm": 160, "height_mm": 100},
         "boards": [{"id": "n", "width_mm": 10, "height_mm": 26, "count": 100}],
     }
     response = client.post("/v1/layouts", json=body)
@@ -106,7 +106,7 @@ def test_layout_errors_are_problems(client: TestClient) -> None:
 def test_too_many_boards_limit() -> None:
     small = TestClient(create_app(Settings(max_boards=3, isolate=False)))
     body = {
-        "plate": {"width_mm": 160, "height_mm": 100},
+        "panel": {"width_mm": 160, "height_mm": 100},
         "boards": [{"id": "a", "width_mm": 1, "height_mm": 1, "count": 4}],
     }
     assert small.post("/v1/layouts", json=body).status_code == 422
@@ -117,7 +117,7 @@ def test_isolated_request() -> None:
     request = json.loads((CONTRACTS / "examples" / "layout-request.json").read_text())
     assert isolated.post("/v1/layouts", json=request).status_code == 200
     bad = {
-        "plate": {"width_mm": 160, "height_mm": 100},
+        "panel": {"width_mm": 160, "height_mm": 100},
         "boards": [{"id": "wide", "width_mm": 160, "height_mm": 10, "count": 1}],
     }
     assert isolated.post("/v1/layouts", json=bad).json()["code"] == "panel.board_too_wide"

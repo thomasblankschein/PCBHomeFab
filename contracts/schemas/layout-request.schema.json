@@ -4,9 +4,9 @@
   "title": "Layout request",
   "description": "Input of `panel`. Boards are placed in the order of the list, `count` copies of each.",
   "type": "object",
-  "required": ["plate", "boards"],
+  "required": ["panel", "boards"],
   "properties": {
-    "plate": {"$ref": "layout.schema.json#/$defs/plate"},
+    "panel": {"$ref": "layout.schema.json#/$defs/panel"},
     "gap_mm": {"type": "number", "minimum": 0, "default": 3.0},
     "margin_mm": {"type": "number", "minimum": 0, "default": 3.0},
     "boards": {

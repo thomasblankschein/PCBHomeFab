@@ -45,8 +45,8 @@ Browser ─▶ gateway (Caddy: TLS, size limits, routing)
 | Service | Task | Owns | State |
 |---|---|---|---|
 | `gateway` | TLS, request size limits, routing | Caddy config | none |
-| `frontend` | user interface: editor with plate preview, job page, tool library (plain ES modules, no build step); 3D simulation of the G-code on the job page (canvas, no library; the programs are read in the browser); English and German from JSON language files in `site/locales/` (`js/i18n.js`) | static files | none |
-| `jobs` | accept uploads, run the workflow (ingest → panel → exposure / mill), store results, expire jobs, give anonymous job links, rate limits, the list of plate sizes (`plates.toml`, configurable like the tool library) | job database, job files | **yes** |
+| `frontend` | user interface: editor with panel preview, job page, tool library (plain ES modules, no build step); 3D simulation of the G-code on the job page (canvas, no library; the programs are read in the browser); English and German from JSON language files in `site/locales/` (`js/i18n.js`) | static files | none |
+| `jobs` | accept uploads, run the workflow (ingest → panel → exposure / mill), store results, expire jobs, give anonymous job links, rate limits, the list of panel sizes (`panels.toml`, configurable like the tool library) | job database, job files | **yes** |
 | `ingest` | unpack a ZIP safely, detect the layers, build the canonical board package | ZIP and layer rules | none |
 | `panel` | place boards (with counts) on the blank | packing rules | none |
 | `exposure` | rasterize copper, build the mask, write `.pm3` | printer profiles, `.pm3` writer | none |
@@ -72,7 +72,7 @@ JSON schemas, errors are `problem+json` with a documented code).
   *Changed from the first draft:* the draft also carried `outline.gbr` and `drills.drl`. Everything downstream
   needs from them is the outline box and the holes, which `ingest` extracts once; copying the files would only make
   `exposure` and `mill` parse them again.
-- **Layout** (JSON, output of `panel`, input of `exposure` and `mill`): the plate size and a list of placements
+- **Layout** (JSON, output of `panel`, input of `exposure` and `mill`): the panel size and a list of placements
   `{board_id, x_mm, y_mm, rotation_deg}`. `exposure` and `mill` apply the transform themselves.
 - **Errors:** `application/problem+json` (RFC 9457) with a stable `code` per error kind (`contracts/errors.md`).
 - **Operational rules for every service:** `GET /healthz`, versioned paths (`/v1/...`), an `X-Request-Id` header
@@ -84,7 +84,7 @@ Endpoints (the OpenAPI files are authoritative):
 | Service | Endpoint | Purpose |
 |---|---|---|
 | `ingest` | `POST /v1/packages` | ZIP (and a name) in, canonical package out |
-| `panel` | `POST /v1/layouts` | plate, boards, counts, spacing in; placements out |
+| `panel` | `POST /v1/layouts` | panel, boards, counts, spacing in; placements out |
 | `exposure` | `GET /v1/profiles` | available printer profiles |
 | `exposure` | `POST /v1/masks` | packages, layout, settings in; ZIP with `mask.png`, `mask_preview.png`, `exposure.pm3` out |
 | `mill` | `GET /v1/profiles`, `GET /v1/tools` | mill profiles, tool library |

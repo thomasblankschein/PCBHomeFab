@@ -6,7 +6,7 @@
   "required": ["mill"],
   "properties": {
     "mill": {"type": "string", "description": "Mill profile id, see GET /v1/profiles."},
-    "flip": {"enum": ["x", "y", "none"], "description": "How the plate is turned over, default from the profile."},
+    "flip": {"enum": ["x", "y", "none"], "description": "How the panel is turned over, default from the profile."},
     "tabs": {"type": "boolean", "description": "Default from the profile."},
     "thickness_mm": {"type": "number", "minimum": 0.4, "maximum": 3.2, "default": 1.6},
     "drill_map": {
@@ -21,7 +21,7 @@
       "items": {"$ref": "mark.schema.json"},
       "minItems": 2,
       "maxItems": 2,
-      "description": "Positioning marks. The one at the lower left after turning the plate becomes X0 Y0 of all programs, the other one is named in the program headers and in programs.json."
+      "description": "Positioning marks. The one at the lower left after turning the panel becomes X0 Y0 of all programs, the other one is named in the program headers and in programs.json."
     }
   },
   "additionalProperties": false

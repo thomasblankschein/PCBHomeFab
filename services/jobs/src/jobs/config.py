@@ -23,7 +23,7 @@ class Settings:
     max_upload_bytes: int = 10 * 1024 * 1024
     #: Number of different boards (ZIP files) per job.
     max_files: int = 8
-    #: Number of boards on the plate, copies included.
+    #: Number of boards on the panel, copies included.
     max_boards: int = 200
     #: Jobs and their files are deleted after this time.
     job_ttl_s: float = 7 * 24 * 3600

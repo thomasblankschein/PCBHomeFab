@@ -95,7 +95,7 @@ def punch_holes(no_copper: Image.Image, board: Board, px_mm: float, mode: str) -
 def draw_label(image: Image.Image, cx: float, cy: float, pixel_mm: float, mark: Mark, value: int) -> None:
     """Write the label of ``mark`` next to its centre at pixel (cx, cy), in place, in the grey value ``value``.
 
-    The text is mirrored like the plate is turned over for milling (``label_flip``), so it reads correctly on the
+    The text is mirrored like the panel is turned over for milling (``label_flip``), so it reads correctly on the
     finished copper. The block of text keeps its place, only the letters inside are mirrored."""
     if not mark.label:
         return
@@ -113,13 +113,13 @@ def draw_label(image: Image.Image, cx: float, cy: float, pixel_mm: float, mark: 
 
 
 def build_copper(
-    placements: list[Placement], plate_width_mm: float, plate_height_mm: float, marks: list[Mark] | None = None
+    placements: list[Placement], panel_width_mm: float, panel_height_mm: float, marks: list[Mark] | None = None
 ) -> Image.Image:
-    """The copper of all boards on the plate, in top view (design view, X to the right, Y up), as an RGBA picture:
+    """The copper of all boards on the panel, in top view (design view, X to the right, Y up), as an RGBA picture:
     copper colour where there is copper, transparent elsewhere. The drill holes are open. Not mirrored.
     """
     pixel = COPPER_PX_MM
-    alpha = Image.new("L", (round(plate_width_mm / pixel), round(plate_height_mm / pixel)), 0)
+    alpha = Image.new("L", (round(panel_width_mm / pixel), round(panel_height_mm / pixel)), 0)
     cache: dict[int, Image.Image] = {}
     for placement in placements:
         key = id(placement.board)
@@ -131,11 +131,11 @@ def build_copper(
             cache[key],
             (
                 round(placement.x_mm / pixel),
-                round((plate_height_mm - placement.y_mm - placement.board.height_mm) / pixel),
+                round((panel_height_mm - placement.y_mm - placement.board.height_mm) / pixel),
             ),
         )
     for mark in marks or []:
-        cx, cy = mark.x_mm / pixel, (plate_height_mm - mark.y_mm) / pixel
+        cx, cy = mark.x_mm / pixel, (panel_height_mm - mark.y_mm) / pixel
         draw_mark(alpha, cx, cy, pixel, mark.voids, 255, 0)
         draw_label(alpha, cx, cy, pixel, mark, 255)
     picture = Image.new("RGBA", alpha.size, (*COPPER_RGB, 0))

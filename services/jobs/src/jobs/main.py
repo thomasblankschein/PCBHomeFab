@@ -28,8 +28,8 @@ from starlette.concurrency import run_in_threadpool
 from . import common
 from .common import Problem
 from .config import Settings
-from .marks import MIN_MARGIN_MM, MIN_PLATE_MM, alignment_marks
-from .plates import PlateSize, load_plates
+from .marks import MIN_MARGIN_MM, MIN_PANEL_MM, alignment_marks
+from .panels import PanelSize, load_panels
 from .services import Services, Unavailable, UserError
 from .store import DONE, JobRecord, JobStore
 from .worker import worker_loop
@@ -54,10 +54,10 @@ class PreviewBoard(BaseModel):
 
 
 class PreviewLayoutRequest(BaseModel):
-    """Plate (id of a plate size), boards, copies and spacing of a job."""
+    """Panel (id of a panel size), boards, copies and spacing of a job."""
 
     model_config = ConfigDict(extra="forbid")
-    plate: Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.-]{1,40}$")]
+    panel: Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.-]{1,40}$")]
     boards: list[PreviewBoard] = Field(min_length=1, max_length=50)
     gap_mm: float = Field(default=3.0, ge=0.5, le=20)
     margin_mm: float = Field(default=3.0, ge=0, le=20)
@@ -128,14 +128,14 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     settings = settings or Settings.from_env()
     services = services or Services(settings)
     store = JobStore(settings)
-    plates = load_plates()
+    panels = load_panels()
     stop = threading.Event()
 
-    def find_plate(plate_id: str | None) -> PlateSize:
-        found = plates.find(plate_id or "")
+    def find_panel(panel_id: str | None) -> PanelSize:
+        found = panels.find(panel_id or "")
         if found is None:
-            known = ", ".join(plate.id for plate in plates.active)
-            raise Problem(422, "jobs.invalid_plate", f"Choose a plate size (one of: {known}).")
+            known = ", ".join(panel.id for panel in panels.active)
+            raise Problem(422, "jobs.invalid_panel", f"Choose a panel size (one of: {known}).")
         return found
 
     @asynccontextmanager
@@ -181,9 +181,9 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         except Unavailable as exc:
             raise _unavailable() from exc
 
-    @app.get("/v1/plates")
-    def plate_sizes() -> dict[str, Any]:
-        return plates.to_dict()
+    @app.get("/v1/panels")
+    def panel_sizes() -> dict[str, Any]:
+        return panels.to_dict()
 
     @app.get("/v1/profiles")
     def profiles() -> dict[str, Any]:
@@ -225,15 +225,15 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
 
     @app.post("/v1/layouts")
     def layout_preview(request: Request, body: PreviewLayoutRequest) -> dict[str, Any]:
-        """Where the boards would sit on the plate. Asks the panel service, stores nothing."""
+        """Where the boards would sit on the panel. Asks the panel service, stores nothing."""
         check_preview_rate(request)
         if sum(b.count for b in body.boards) > settings.max_boards:
             raise Problem(422, "jobs.invalid_upload", f"At most {settings.max_boards} boards fit in one job.")
-        plate = find_plate(body.plate)
+        panel = find_panel(body.panel)
         try:
             return services.panel(
                 {
-                    "plate": {"width_mm": plate.width_mm, "height_mm": plate.height_mm},
+                    "panel": {"width_mm": panel.width_mm, "height_mm": panel.height_mm},
                     "gap_mm": body.gap_mm,
                     "margin_mm": body.margin_mm,
                     "boards": [b.model_dump() for b in body.boards],
@@ -264,7 +264,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         frame_left_mm: Annotated[float | None, Form(ge=0, le=20)] = None,
         frame_bottom_mm: Annotated[float | None, Form(ge=0, le=20)] = None,
         mirror_x: Annotated[bool | None, Form()] = None,
-        plate: Annotated[str | None, Form()] = None,
+        panel: Annotated[str | None, Form()] = None,
         marks: Annotated[bool, Form()] = True,
         mark_labels: Annotated[bool, Form()] = True,
         drill_map: Annotated[str | None, Form()] = None,
@@ -283,14 +283,14 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             raise Problem(422, "jobs.invalid_upload", f"At most {settings.max_boards} boards fit in one job.")
         if not exposure and not mill_gcode:
             raise Problem(422, "jobs.invalid_upload", "Select at least one output (exposure or mill_gcode).")
-        chosen_plate = find_plate(plate)
+        chosen_panel = find_panel(panel)
         mapping = _parse_drill_map(drill_map)
         if marks and margin_mm < MIN_MARGIN_MM:
             raise Problem(
                 422, "jobs.invalid_marks", f"Positioning marks need a margin of at least {MIN_MARGIN_MM:g} mm."
             )
-        if marks and min(chosen_plate.width_mm, chosen_plate.height_mm) < MIN_PLATE_MM:
-            raise Problem(422, "jobs.invalid_marks", f"Positioning marks need a panel of at least {MIN_PLATE_MM:g} mm.")
+        if marks and min(chosen_panel.width_mm, chosen_panel.height_mm) < MIN_PANEL_MM:
+            raise Problem(422, "jobs.invalid_marks", f"Positioning marks need a panel of at least {MIN_PANEL_MM:g} mm.")
 
         uploads: list[bytes] = []
         for upload in boards:
@@ -334,8 +334,8 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             "frame_left_mm": frame_left_mm,
             "frame_bottom_mm": frame_bottom_mm,
             "mirror_x": mirror_x,
-            "plate": {"id": chosen_plate.id, "width_mm": chosen_plate.width_mm, "height_mm": chosen_plate.height_mm},
-            "marks": alignment_marks(chosen_plate.width_mm, chosen_plate.height_mm, flip, mark_labels)
+            "panel": {"id": chosen_panel.id, "width_mm": chosen_panel.width_mm, "height_mm": chosen_panel.height_mm},
+            "marks": alignment_marks(chosen_panel.width_mm, chosen_panel.height_mm, flip, mark_labels)
             if marks
             else None,
             "drill_map": mapping,

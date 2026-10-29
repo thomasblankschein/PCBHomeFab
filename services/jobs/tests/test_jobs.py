@@ -52,7 +52,7 @@ def client(settings: Settings, services: Services) -> Iterator[TestClient]:
 
 def _post(client: TestClient, *uploads: tuple[str, bytes], counts: list[str] | None = None, **fields: str) -> Any:
     files = [("boards", (name, data, "application/zip")) for name, data in uploads]
-    data: dict[str, Any] = {"plate": "160x100", "marks": "false", **fields}
+    data: dict[str, Any] = {"panel": "160x100", "marks": "false", **fields}
     if counts is not None:
         data["counts"] = counts
     return client.post("/v1/jobs", files=files, data=data)
@@ -173,7 +173,7 @@ def test_mill_only_job_does_not_fail_without_the_copper_picture(
     client: TestClient, services: Services, downstream: Downstream
 ) -> None:
     downstream.override["exposure"] = lambda _r: problem(
-        422, "exposure.plate_too_large", "The plate does not fit on the display."
+        422, "exposure.panel_too_large", "The panel does not fit on the display."
     )
     job = _post(client, ("node.zip", ZIP), exposure="false").json()
     process_next(JobStore(services.settings), services)
@@ -397,48 +397,48 @@ def test_layout_preview_asks_the_panel_service(client: TestClient) -> None:
     assert response.status_code == 200
     layout = response.json()
     validate("layout", layout)
-    assert layout["plate"] == {"width_mm": 160.0, "height_mm": 100.0}
+    assert layout["panel"] == {"width_mm": 160.0, "height_mm": 100.0}
     assert len(layout["placements"]) == 16
 
 
 def test_layout_preview_errors(client: TestClient, downstream: Downstream) -> None:
     board = {"id": "a", "width_mm": 10, "height_mm": 10, "count": 1}
-    _problem(client.post("/v1/layouts", json={"plate": "160x100", "boards": []}), 422, "common.invalid_request")
+    _problem(client.post("/v1/layouts", json={"panel": "160x100", "boards": []}), 422, "common.invalid_request")
     _problem(
-        client.post("/v1/layouts", json={"plate": "160x100", "boards": [board], "gap_mm": 0}),
+        client.post("/v1/layouts", json={"panel": "160x100", "boards": [board], "gap_mm": 0}),
         422,
         "common.invalid_request",
     )
     _problem(
-        client.post("/v1/layouts", json={"plate": "160x100", "boards": [{**board, "count": 60}] * 2}),
+        client.post("/v1/layouts", json={"panel": "160x100", "boards": [{**board, "count": 60}] * 2}),
         422,
         "jobs.invalid_upload",
     )
     downstream.override["panel"] = lambda _r: problem(422, "panel.does_not_fit", "The boards do not fit on the panel.")
-    response = client.post("/v1/layouts", json={"plate": "160x100", "boards": [board]})
+    response = client.post("/v1/layouts", json={"panel": "160x100", "boards": [board]})
     _problem(response, 422, "panel.does_not_fit")
 
 
 def test_previews_have_their_own_rate_limit(settings: Settings, services: Services) -> None:
     limited = replace(settings, preview_limit_per_hour=3)
     with TestClient(create_app(limited, services)) as client:
-        body = {"plate": "160x100", "boards": [{"id": "a", "width_mm": 10, "height_mm": 10, "count": 1}]}
+        body = {"panel": "160x100", "boards": [{"id": "a", "width_mm": 10, "height_mm": 10, "count": 1}]}
         codes = [client.post("/v1/layouts", json=body).status_code for _ in range(4)]
         assert codes == [200, 200, 200, 429]
         assert _post(client, ("n.zip", ZIP)).status_code == 201  # jobs are not affected
 
 
-def test_plate_sizes_are_listed(client: TestClient) -> None:
-    data = client.get("/v1/plates").json()
+def test_panel_sizes_are_listed(client: TestClient) -> None:
+    data = client.get("/v1/panels").json()
     assert data["source"] == "built-in"
-    assert [(p["id"], p["width_mm"], p["height_mm"]) for p in data["plates"]] == [
+    assert [(p["id"], p["width_mm"], p["height_mm"]) for p in data["panels"]] == [
         ("160x100", 160.0, 100.0),
         ("75x100", 75.0, 100.0),
         ("100x75", 100.0, 75.0),
     ]
 
 
-def test_the_chosen_plate_is_used_and_kept_with_the_job(
+def test_the_chosen_panel_is_used_and_kept_with_the_job(
     client: TestClient, services: Services, downstream: Downstream
 ) -> None:
     seen: list[dict[str, Any]] = []
@@ -450,25 +450,25 @@ def test_the_chosen_plate_is_used_and_kept_with_the_job(
         return original(request)
 
     services.client = httpx.Client(transport=httpx.MockTransport(spy))
-    job = _post(client, ("a.zip", ZIP), plate="75x100").json()
+    job = _post(client, ("a.zip", ZIP), panel="75x100").json()
     process_next(JobStore(services.settings), services)
-    assert seen[-1]["plate"] == {"width_mm": 75.0, "height_mm": 100.0}
+    assert seen[-1]["panel"] == {"width_mm": 75.0, "height_mm": 100.0}
     params = client.get(f"/v1/jobs/{job['id']}").json()["params"]
-    assert params["plate"] == {"id": "75x100", "width_mm": 75.0, "height_mm": 100.0}
+    assert params["panel"] == {"id": "75x100", "width_mm": 75.0, "height_mm": 100.0}
 
 
-def test_a_plate_must_be_chosen_from_the_list(client: TestClient) -> None:
-    _problem(_post(client, ("a.zip", ZIP), plate=""), 422, "jobs.invalid_plate")
-    _problem(_post(client, ("a.zip", ZIP), plate="200x200"), 422, "jobs.invalid_plate")
+def test_a_panel_must_be_chosen_from_the_list(client: TestClient) -> None:
+    _problem(_post(client, ("a.zip", ZIP), panel=""), 422, "jobs.invalid_panel")
+    _problem(_post(client, ("a.zip", ZIP), panel="200x200"), 422, "jobs.invalid_panel")
     board = {"id": "a", "width_mm": 10, "height_mm": 10, "count": 1}
-    _problem(client.post("/v1/layouts", json={"plate": "nope", "boards": [board]}), 422, "jobs.invalid_plate")
+    _problem(client.post("/v1/layouts", json={"panel": "nope", "boards": [board]}), 422, "jobs.invalid_panel")
     _problem(client.post("/v1/layouts", json={"boards": [board]}), 422, "common.invalid_request")
 
 
-def test_the_layout_preview_uses_the_plate(client: TestClient) -> None:
+def test_the_layout_preview_uses_the_panel(client: TestClient) -> None:
     board = {"id": "a", "width_mm": 10, "height_mm": 10, "count": 1}
-    layout = client.post("/v1/layouts", json={"plate": "100x75", "boards": [board]}).json()
-    assert layout["plate"] == {"width_mm": 100.0, "height_mm": 75.0}
+    layout = client.post("/v1/layouts", json={"panel": "100x75", "boards": [board]}).json()
+    assert layout["panel"] == {"width_mm": 100.0, "height_mm": 75.0}
 
 
 def _spy_settings(services: Services, downstream: Downstream) -> dict[str, dict[str, Any]]:
@@ -491,11 +491,11 @@ def test_positioning_marks_reach_exposure_and_mill(
     job = _post(client, ("a.zip", ZIP), marks="true", mark_labels="false", margin_mm="5", flip="x").json()
     process_next(JobStore(services.settings), services)
     params = client.get(f"/v1/jobs/{job['id']}").json()["params"]
-    # the board (10 x 10 mm at 3, 3) ends at x = 13: the origin mark stands 2 mm right of it (the plate is turned in X)
+    # the board (10 x 10 mm at 3, 3) ends at x = 13: the origin mark stands 2 mm right of it (the panel is turned in X)
     expected = [{"x_mm": 2.0, "y_mm": 98.0, "voids": "tr-bl"}, {"x_mm": 15.0, "y_mm": 2.0, "voids": "tr-bl"}]
     assert params["marks"]["points"] == expected
     assert params["marks"]["second_mm"] == {"x_mm": 13.0, "y_mm": 96.0}
-    assert params["marks"]["plate_origin_mm"] == {"x_mm": -145.0, "y_mm": -2.0}
+    assert params["marks"]["panel_origin_mm"] == {"x_mm": -145.0, "y_mm": -2.0}
     assert seen["exposure"]["marks"] == expected and seen["mill"]["marks"] == expected
 
 
@@ -511,7 +511,7 @@ def test_mark_labels_name_the_gcode_coordinates(client: TestClient) -> None:
     assert all("label" not in p for p in points)
 
 
-def test_marks_depend_on_how_the_plate_is_turned(client: TestClient) -> None:
+def test_marks_depend_on_how_the_panel_is_turned(client: TestClient) -> None:
     job = _post(client, ("a.zip", ZIP), marks="true", margin_mm="5", flip="none").json()
     points = client.get(f"/v1/jobs/{job['id']}").json()["params"]["marks"]["points"]
     assert [(p["x_mm"], p["y_mm"], p["voids"]) for p in points] == [(2.0, 2.0, "tl-br"), (158.0, 98.0, "tl-br")]

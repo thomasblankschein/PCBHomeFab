@@ -20,11 +20,11 @@ class PrinterProfile:
     resolution_y: int
     display_width_mm: float
     display_height_mm: float
-    #: Distance of the plate's lower left corner from the lower left corner of the display (calibration).
+    #: Distance of the panel's lower left corner from the lower left corner of the display (calibration).
     frame_left_mm: float = 0.0
     frame_bottom_mm: float = 0.0
     #: Mirror the image in X. Off: the Gerber of the bottom copper is a top view (text on it is mirrored), and the
-    #: plate lies on the LCD with the copper side down, so the picture on the LCD already is the mirror of the copper
+    #: panel lies on the LCD with the copper side down, so the picture on the LCD already is the mirror of the copper
     #: as seen from the copper side. Switch it on only for a layer that is drawn as seen from the copper side.
     mirror_x: bool = False
     default_exposure_s: float = 120.0

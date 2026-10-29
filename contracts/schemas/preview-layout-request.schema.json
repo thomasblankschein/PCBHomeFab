@@ -2,11 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "preview-layout-request.schema.json",
   "title": "Layout preview request (jobs)",
-  "description": "Plate, boards, copies and spacing of a job. `plate` is the id of a plate size, see GET /v1/plates; the jobs service looks up its size.",
+  "description": "Panel, boards, copies and spacing of a job. `panel` is the id of a panel size, see GET /v1/panels; the jobs service looks up its size.",
   "type": "object",
-  "required": ["plate", "boards"],
+  "required": ["panel", "boards"],
   "properties": {
-    "plate": {"type": "string", "pattern": "^[A-Za-z0-9_.-]{1,40}$"},
+    "panel": {"type": "string", "pattern": "^[A-Za-z0-9_.-]{1,40}$"},
     "gap_mm": {"type": "number", "minimum": 0.5, "maximum": 20, "default": 3.0},
     "margin_mm": {"type": "number", "minimum": 0, "maximum": 20, "default": 3.0},
     "boards": {

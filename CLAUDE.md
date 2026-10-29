@@ -37,14 +37,15 @@ They are the reference for behaviour until the port is finished.
 
 ## Domain knowledge to keep
 
-- Terminology: the blank that carries the boards is called **Nutzen** in German and **panel** in English in all texts the user sees (UI, error
-  messages). Code, API fields, file names and G-code comments still say `plate`; do not rename them.
-- Photon M3: display 4096 x 2560 px, 163.84 x 102.4 mm, **40 µm per pixel**. The plate (160 x 100 mm) sits in a
+- Terminology: the blank that carries the boards is called **Nutzen** in German and **panel** in English, in the texts and in the code
+  (API field `panel`, `panels.toml`, G-code comments). The service that packs boards onto it is also called `panel`. Before 0.22.0 the
+  code said `plate`; `scripts/make_golden.py` (old code, tag `pre-services`) and old changelog entries still do.
+- Photon M3: display 4096 x 2560 px, 163.84 x 102.4 mm, **40 µm per pixel**. The panel (160 x 100 mm) sits in a
   frame 1.8 mm from the left and 0.8 mm from the bottom of the display. These offsets are assumptions taken from the
   maintainer's notes and must be **calibration values per profile**, not hard-coded.
 - Mask polarity for positive photoresist: **white = exposed = copper is etched away**, black = copper stays.
   A copper pour in the Gerber must stay black. (An early version inverted this by mistake, keep a test for it.)
-- Orientation (corrected 2026-10-27): the Gerber of B.Cu is a top view, text on it is mirrored. The plate lies on the LCD with the
+- Orientation (corrected 2026-10-27): the Gerber of B.Cu is a top view, text on it is mirrored. The panel lies on the LCD with the
   copper side down, so the mask on the LCD is that top view **as it is, not mirrored** (`PrinterProfile.mirror_x = False`;
   the setting stays as a calibration value). Seen from the copper side the etched copper is then the mirror image of the top
   view, text on B.Cu reads correctly. The mill works on the same side: `flip x` mirrors X, so G-code coordinates are the
@@ -84,7 +85,7 @@ Milestones 1 to 4 and 8 are done. The system runs as seven containers (`docker-c
 The outline is milled along the real Edge.Cuts contour (ingest extracts it, mill offsets it); panelizing still uses
 each board's box. Photon Workshop opens
 the native `.pm3` file and shows the correct mask (confirmed by the maintainer).
-The frontend (milestone 5) is done as plain ES modules without a build step: editor with live plate preview, job page,
+The frontend (milestone 5) is done as plain ES modules without a build step: editor with live panel preview, job page,
 tool library. Open: manual positioning and rotation of boards, calibration of mirroring and frame offsets on the real
 printer, monitoring.
 A test instance of the new stack ran on the maintainer's WSL (Ubuntu-26.04, `~/pcbhomefab-new`, project
@@ -101,7 +102,7 @@ services/
   frontend/       static pages and ES modules (Caddy), tests with `node --test`; no inline styles (CSP default-src 'self')
   jobs/           uploads, job store (SQLite), workflow, worker threads, downloads
   ingest/         Gerber ZIP -> canonical board package (copper.gbr + board.json)
-  panel/          packing of boards on the plate
+  panel/          packing of boards on the panel
   exposure/       raster, mask, .pm3 writer, printer profiles
   mill/           G-code, tool library (data/tools.toml), mill profiles
 tests/            e2e (golden test against a running stack), golden (hashes), data (two real boards)
@@ -120,16 +121,16 @@ docker-compose.yaml
   with a select box per size (default: the next larger drill), `jobs` stores the choice in `params.drill_map`.
 
 ## Positioning marks
-- The plate is not always at the same place on the mill and not exactly square. With `marks` (default on, margin of at least
+- The panel is not always at the same place on the mill and not exactly square. With `marks` (default on, margin of at least
   4.5 mm) the copper layer gets two marks diagonally opposite in the margin (`services/exposure/src/exposure/mask.py`:
   two quarter circles of copper facing each other diagonally inside a free disc; the centre is where their tips touch, so
-  it stays put when too much is etched). `jobs` (`marks.py`) places them so that, after turning the plate over (`flip`), one
+  it stays put when too much is etched). `jobs` (`marks.py`) places them so that, after turning the panel over (`flip`), one
   is at the lower left and one at the upper right. The origin mark (lower left on the mill) is set as close to the boards as possible (outside the corner of the area of
   all placed boards, `NEAR_BOARDS_MM`; the workflow computes it after panelizing and stores the result in `params.marks`), the
-  other one stays in the opposite corner of the plate. `mill` makes the lower left mark X0 Y0 of every program and names the
+  other one stays in the opposite corner of the panel. `mill` makes the lower left mark X0 Y0 of every program and names the
   other one in the header and in `programs.json`; `jobs` stores the same position as `params.marks.second_mm`.
   With `mark_labels` (default on) `exposure` also writes the G-code coordinates (`X0 Y0`, `X156 Y96`) next to each mark; the
-  margin stays copper, so the letters are exposed (etched free), and they are mirrored like the plate is turned (`label_flip`)
+  margin stays copper, so the letters are exposed (etched free), and they are mirrored like the panel is turned (`label_flip`)
   so they read correctly on the finished copper. The font is DejaVu Sans Mono Bold
   (`services/exposure/src/exposure/data/fonts/`, licence included).
 

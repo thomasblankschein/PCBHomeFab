@@ -19,8 +19,8 @@ CONTENT_TYPES = {
     ".svg": "image/svg+xml",
     ".zip": "application/zip",
 }
-#: The blank of jobs made before the plate size became a choice.
-LEGACY_PLATE = {"width_mm": 160.0, "height_mm": 100.0}
+#: The blank of jobs made before the panel size became a choice.
+LEGACY_PANEL = {"width_mm": 160.0, "height_mm": 100.0}
 _ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 
 
@@ -51,13 +51,13 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
         return f"{request_id}-{name}"
 
     entries = params["boards"]
-    plate = params.get("plate") or LEGACY_PLATE
+    panel = params.get("panel") or LEGACY_PANEL
     marks = params["marks"]["points"] if params.get("marks") else None
     packages = {e["name"]: (job_dir / "input" / e["file"]).read_bytes() for e in entries}
 
     layout = services.panel(
         {
-            "plate": {"width_mm": plate["width_mm"], "height_mm": plate["height_mm"]},
+            "panel": {"width_mm": panel["width_mm"], "height_mm": panel["height_mm"]},
             "gap_mm": params["gap_mm"],
             "margin_mm": params["margin_mm"],
             "boards": [
@@ -79,7 +79,7 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
             max(y + h for _, y, _, h in placed),
         )
         labels = "label" in marks[0]
-        params["marks"] = alignment_marks(plate["width_mm"], plate["height_mm"], params["flip"], labels, box)
+        params["marks"] = alignment_marks(panel["width_mm"], panel["height_mm"], params["flip"], labels, box)
         marks = params["marks"]["points"]
 
     output = job_dir / "output"

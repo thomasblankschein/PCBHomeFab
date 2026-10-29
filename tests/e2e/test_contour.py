@@ -73,7 +73,7 @@ def test_contour_with_cutout_is_milled(client: httpx.Client) -> None:
     created = client.post(
         "/api/v1/jobs",
         files=[("boards", ("round.zip", _board_zip(), "application/zip"))],
-        data={"plate": "160x100", "marks": "false"},
+        data={"panel": "160x100", "marks": "false"},
     )
     assert created.status_code == 201, created.text
     job_id = created.json()["id"]
@@ -128,7 +128,7 @@ def test_preview_endpoints_for_the_editor(client: httpx.Client) -> None:
     layout = client.post(
         "/api/v1/layouts",
         json={
-            "plate": "160x100",
+            "panel": "160x100",
             "gap_mm": 3,
             "margin_mm": 3,
             "boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 4}],
@@ -145,7 +145,7 @@ def test_preview_endpoints_for_the_editor(client: httpx.Client) -> None:
     too_many = client.post(
         "/api/v1/layouts",
         json={
-            "plate": "160x100",
+            "panel": "160x100",
             "boards": [{"id": "b0", "width_mm": 30, "height_mm": 20, "count": 100}],
         },
     )

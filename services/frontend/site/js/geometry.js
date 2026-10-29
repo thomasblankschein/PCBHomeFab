@@ -1,4 +1,4 @@
-// Pure functions for the plate preview: no DOM, no network, so they can be tested with `node --test`.
+// Pure functions for the panel preview: no DOM, no network, so they can be tested with `node --test`.
 
 /** Shape of a board (outer polygon and cutouts) relative to its lower left corner. */
 export function boardShape(board) {
@@ -31,7 +31,7 @@ export function isRectangle(board) {
 const move = (points, dx, dy) => points.map(([x, y]) => [x + dx, y + dy]);
 
 /**
- * Boards as placed by a layout: shapes and holes in plate coordinates (mm, Y up).
+ * Boards as placed by a layout: shapes and holes in panel coordinates (mm, Y up).
  * `boardsById` maps the ids used in the layout to board info (board.json).
  */
 export function placedBoards(layout, boardsById) {
@@ -62,7 +62,7 @@ export function placedBoards(layout, boardsById) {
 /**
  * The copper of a placed board as SVG path data: `tracks` is a list of `{ width, d }` (draw them with that stroke width and
  * round caps; round pads are tracks of zero length) and `fills` one path for all filled shapes (draw with fill, nonzero).
- * `copper` is `board.copper`, (`x`, `y`) the lower left corner of the board on the plate, `toX` and `toY` map plate
+ * `copper` is `board.copper`, (`x`, `y`) the lower left corner of the board on the panel, `toX` and `toY` map panel
  * millimetres to drawing units.
  */
 export function copperPaths(copper, x, y, toX = (value) => value, toY = (value) => value) {
@@ -85,7 +85,7 @@ export function copperPaths(copper, x, y, toX = (value) => value, toY = (value) 
   return { tracks: [...byWidth].map(([width, d]) => ({ width, d })), fills };
 }
 
-/** SVG path data for polygons. `toX` and `toY` map plate millimetres to drawing units. */
+/** SVG path data for polygons. `toX` and `toY` map panel millimetres to drawing units. */
 export function polygonPath(polygons, toX = (x) => x, toY = (y) => y) {
   return polygons
     .map((points) => `M${points.map(([x, y]) => `${toX(x).toFixed(3)} ${toY(y).toFixed(3)}`).join(" L")} Z`)
@@ -123,14 +123,14 @@ export function suggestDrill(diameter, drills) {
   return larger.length ? larger[0] : Math.max(...drills);
 }
 
-/** Share of the plate covered by the boxes of the boards, 0 to 1. */
-export function plateUsage(layout, boardsById) {
-  const plate = layout.plate.width_mm * layout.plate.height_mm;
+/** Share of the panel covered by the boxes of the boards, 0 to 1. */
+export function panelUsage(layout, boardsById) {
+  const panel = layout.panel.width_mm * layout.panel.height_mm;
   const used = layout.placements.reduce((sum, p) => {
     const board = boardsById[p.board_id];
     return sum + board.width_mm * board.height_mm;
   }, 0);
-  return plate > 0 ? used / plate : 0;
+  return panel > 0 ? used / panel : 0;
 }
 
 const PALETTE = ["#d9a400", "#0096c7", "#e5e5e5", "#e0006a", "#7a5cff", "#2a9d4b"];

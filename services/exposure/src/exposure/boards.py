@@ -63,7 +63,7 @@ class MarkModel(BaseModel):
     label_side: Literal["right", "left"] = "right"
 
 
-class PlateModel(BaseModel):
+class PanelModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
     width_mm: float = Field(gt=0)
     height_mm: float = Field(gt=0)
@@ -79,7 +79,7 @@ class PlacementModel(BaseModel):
 
 class LayoutModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    plate: PlateModel
+    panel: PanelModel
     placements: list[PlacementModel]
 
 
@@ -117,7 +117,7 @@ class Board:
 
 @dataclass(frozen=True)
 class Placement:
-    """A board at a position on the plate (lower left corner of the board, plate origin at its lower left)."""
+    """A board at a position on the panel (lower left corner of the board, panel origin at its lower left)."""
 
     board: Board
     x_mm: float
@@ -126,7 +126,7 @@ class Placement:
 
 @dataclass(frozen=True)
 class Mark:
-    """A positioning mark: centre in plate coordinates and which two quadrants have no copper (the other two are
+    """A positioning mark: centre in panel coordinates and which two quadrants have no copper (the other two are
     quarter circles of copper)."""
 
     x_mm: float

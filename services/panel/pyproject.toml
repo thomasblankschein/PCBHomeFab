@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "pcbhomefab-panel"
 version = "1.0.0"
-description = "PCBHomeFab panel service: places boards on the plate"
+description = "PCBHomeFab panel service: places boards on the panel"
 license = { text = "MIT" }
 requires-python = ">=3.12"
 dependencies = [

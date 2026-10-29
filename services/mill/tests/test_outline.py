@@ -17,7 +17,7 @@ from mill import gcode
 from mill.common import Problem
 from mill.gcode import Placement, Shape, _area, _sections, tool_paths
 from mill.main import Settings, create_app
-from mill.profiles import MILL_3018PRO, Plate
+from mill.profiles import MILL_3018PRO, Panel
 
 DATA = Path(__file__).parent / "data"
 R = 0.5  # radius of the 1 mm end mill
@@ -48,10 +48,10 @@ def test_rectangle_contour_gives_the_same_code_as_no_contour() -> None:
     rect = placement(([(0, 0), (28.2, 0), (28.2, 38.0), (0, 38.0)], []), 28.2, 38.0)
     for flip in ("x", "y", "none"):
         mill = replace(MILL_3018PRO, flip=flip)
-        a = gcode.generate([plain], Plate(), mill)
-        b = gcode.generate([rect], Plate(), mill)
+        a = gcode.generate([plain], Panel(), mill)
+        b = gcode.generate([rect], Panel(), mill)
         assert [p.code for p in a] == [p.code for p in b]
-        assert gcode.preview_svg([plain], Plate(), mill) == gcode.preview_svg([rect], Plate(), mill)
+        assert gcode.preview_svg([plain], Panel(), mill) == gcode.preview_svg([rect], Panel(), mill)
 
 
 def test_tool_path_runs_at_the_tool_radius_outside_the_contour() -> None:
@@ -108,7 +108,7 @@ def test_cutout_too_small_for_the_tool() -> None:
 
 def test_generate_mills_cutouts_before_the_outer_contour() -> None:
     shape: Shape = (rounded_rectangle(30, 20, 2), [circle(15, 10, 3)])
-    programs = gcode.generate([placement(shape, 30, 20)], Plate(), MILL_3018PRO)
+    programs = gcode.generate([placement(shape, 30, 20)], Panel(), MILL_3018PRO)
     [program] = programs
     assert program.outlines == 1
     moves = re.findall(r"^G1 X(-?[\d.]+) Y(-?[\d.]+) F", program.code, re.M)
@@ -119,20 +119,20 @@ def test_generate_mills_cutouts_before_the_outer_contour() -> None:
 
 
 @pytest.mark.parametrize("flip", ["x", "y", "none"])
-def test_outer_path_stays_counter_clockwise_when_the_plate_is_turned(flip: str) -> None:
+def test_outer_path_stays_counter_clockwise_when_the_panel_is_turned(flip: str) -> None:
     l_shape = [(0.0, 0.0), (20.0, 0.0), (20.0, 5.0), (5.0, 5.0), (5.0, 15.0), (0.0, 15.0)]
     mill = replace(MILL_3018PRO, flip=flip)
-    layout = gcode.build_layout([placement((l_shape, []), 20, 15)], Plate(), mill)
+    layout = gcode.build_layout([placement((l_shape, []), 20, 15)], Panel(), mill)
     [(path, _)] = tool_paths(layout.outlines[0], R)
     assert _area(path[:-1]) > 0 and path[0][1] == min(y for _, y in path)
 
 
 def test_preview_draws_the_real_shape() -> None:
     svg = gcode.preview_svg(
-        [placement((rounded_rectangle(30, 20, 2), [circle(15, 10, 3)]), 30, 20)], Plate(), MILL_3018PRO
+        [placement((rounded_rectangle(30, 20, 2), [circle(15, 10, 3)]), 30, 20)], Panel(), MILL_3018PRO
     )
     assert "<path" in svg and 'fill-rule="evenodd"' in svg and svg.count(" Z") == 2
-    rect = gcode.preview_svg([placement(None)], Plate(), MILL_3018PRO)
+    rect = gcode.preview_svg([placement(None)], Panel(), MILL_3018PRO)
     assert "<rect" in rect and "<path" not in rect
 
 
@@ -154,7 +154,7 @@ def test_api_mills_the_contour_of_board_json() -> None:
         archive.writestr("board.json", json.dumps(board))
         archive.writestr("copper.gbr", "G04*\nM02*\n")
     layout = {
-        "plate": {"width_mm": 160, "height_mm": 100},
+        "panel": {"width_mm": 160, "height_mm": 100},
         "placements": [{"board_id": "round", "x_mm": 3, "y_mm": 3, "rotation_deg": 0}],
     }
     client = TestClient(create_app(Settings(isolate=False)))
@@ -184,9 +184,9 @@ def test_every_board_of_a_file_with_several_outlines_is_milled() -> None:
         (box(0, 20), []),
         others=(([(30.0, 0.0), (50.0, 0.0), (50.0, 20.0), (30.0, 20.0)], []),),
     )
-    layout = gcode.build_layout([placement], Plate(), MILL_3018PRO)
+    layout = gcode.build_layout([placement], Panel(), MILL_3018PRO)
     assert len(layout.outlines) == 2
-    programs = gcode.generate([placement], Plate(), MILL_3018PRO, gcode.load_tools())
+    programs = gcode.generate([placement], Panel(), MILL_3018PRO, gcode.load_tools())
     mill = next(p for p in programs if p.tool.startswith("endmill"))
     assert mill.outlines == 2
 
@@ -197,9 +197,9 @@ def test_a_hole_that_is_a_cutout_of_the_outline_is_milled_only_once() -> None:
     mounting = (10.0, 15.0, 7.2)  # the same circle as a drilled hole
     other = (30.0, 15.0, 7.2)  # no cutout there: milled as a hole
     both = Placement(3.0, 3.0, 40.0, 30.0, [mounting, other], contour)
-    layout = gcode.build_layout([both], Plate(), MILL_3018PRO)
+    layout = gcode.build_layout([both], Panel(), MILL_3018PRO)
     assert [len(points) for points in layout.holes.values()] == [1]
     only_outline = Placement(3.0, 3.0, 40.0, 30.0, [mounting], contour)
-    assert gcode.build_layout([only_outline], Plate(), MILL_3018PRO).holes == {}
+    assert gcode.build_layout([only_outline], Panel(), MILL_3018PRO).holes == {}
     # a hole of the same size somewhere else is not a cutout
-    assert gcode.build_layout([replace(only_outline, holes=[(20.0, 15.0, 7.2)])], Plate(), MILL_3018PRO).holes
+    assert gcode.build_layout([replace(only_outline, holes=[(20.0, 15.0, 7.2)])], Panel(), MILL_3018PRO).holes

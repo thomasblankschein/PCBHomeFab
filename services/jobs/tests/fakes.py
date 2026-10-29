@@ -75,7 +75,7 @@ class Downstream:
             for _ in range(board["count"]):
                 placements.append({"board_id": board["id"], "x_mm": x, "y_mm": 3.0, "rotation_deg": 0})
                 x += board["width_mm"] + body["gap_mm"]
-        return httpx.Response(200, json={"plate": body["plate"], "placements": placements})
+        return httpx.Response(200, json={"panel": body["panel"], "placements": placements})
 
     # --- exposure and mill ----------------------------------------------------------------------------------
 

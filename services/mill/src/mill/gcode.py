@@ -1,7 +1,7 @@
 """Drill and mill G-code for a GRBL hobby mill.
 
-Coordinates: X0 Y0 is the lower left corner of the plate (``MillProfile.offset_*`` shifts it), copper side up,
-Z0 is the plate surface. With positioning marks X0 Y0 is the centre of the mark that lies at the lower left (the
+Coordinates: X0 Y0 is the lower left corner of the panel (``MillProfile.offset_*`` shifts it), copper side up,
+Z0 is the panel surface. With positioning marks X0 Y0 is the centre of the mark that lies at the lower left (the
 offset is chosen accordingly, see :func:`origin_of_marks`). One program per tool so the tool can be changed by hand
 between the programs.
 """
@@ -14,7 +14,7 @@ from dataclasses import dataclass, replace
 from shapely.geometry import MultiPolygon, Polygon
 
 from .common import Problem
-from .profiles import MillProfile, Plate
+from .profiles import MillProfile, Panel
 from .tools import Tool, ToolLibrary, load_tools
 
 Point = tuple[float, float]
@@ -26,7 +26,7 @@ Shape = tuple[list[Point], list[list[Point]]]
 
 @dataclass(frozen=True)
 class Placement:
-    """A board on the plate: lower left corner, size and holes (relative to the board's lower left corner)."""
+    """A board on the panel: lower left corner, size and holes (relative to the board's lower left corner)."""
 
     x_mm: float
     y_mm: float
@@ -69,17 +69,17 @@ class Layout:
 
 
 class _Frame:
-    """Plate coordinates (copper side up after turning the plate) to machine coordinates."""
+    """Panel coordinates (copper side up after turning the panel) to machine coordinates."""
 
-    def __init__(self, plate: Plate, mill: MillProfile) -> None:
-        self.plate = plate
+    def __init__(self, panel: Panel, mill: MillProfile) -> None:
+        self.panel = panel
         self.mill = mill
 
     def point(self, x: float, y: float) -> Point:
         if self.mill.flip == "x":
-            x = self.plate.width_mm - x
+            x = self.panel.width_mm - x
         elif self.mill.flip == "y":
-            y = self.plate.height_mm - y
+            y = self.panel.height_mm - y
         return x + self.mill.offset_x_mm, y + self.mill.offset_y_mm
 
 
@@ -98,8 +98,8 @@ def _is_cutout(x: float, y: float, diameter: float, cutouts: list[list[Point]]) 
     return False
 
 
-def build_layout(placements: list[Placement], plate: Plate, mill: MillProfile) -> Layout:
-    frame = _Frame(plate, mill)
+def build_layout(placements: list[Placement], panel: Panel, mill: MillProfile) -> Layout:
+    frame = _Frame(panel, mill)
     holes: dict[float, list[Point]] = {}
     outlines: list[Shape] = []
     for placement in placements:
@@ -143,9 +143,9 @@ class _Writer:
         self.tool = tool
         self.z = mill.safe_z_mm
         if second_mark is None:
-            zero = "(GRBL, X0 Y0 = lower left corner of the plate, copper side up, Z0 = plate surface)"
+            zero = "(GRBL, X0 Y0 = lower left corner of the panel, copper side up, Z0 = panel surface)"
         else:
-            zero = "(GRBL, X0 Y0 = centre of the lower left positioning mark, copper side up, Z0 = plate surface)"
+            zero = "(GRBL, X0 Y0 = centre of the lower left positioning mark, copper side up, Z0 = panel surface)"
         self.lines = [
             f"({title})",
             zero,
@@ -187,7 +187,7 @@ class _Writer:
         self.add(f"G1 X{x:.3f} Y{y:.3f} F{feed:g}")
 
     def finish(self) -> str:
-        # park at the tool change position: up, to X0 Y0 (lower left corner of the plate), spindle off
+        # park at the tool change position: up, to X0 Y0 (lower left corner of the panel), spindle off
         self.up(self.mill.tool_change_z_mm)
         self.add("G0 X0.000 Y0.000")
         self.add("M5")
@@ -195,9 +195,9 @@ class _Writer:
         return "\n".join(self.lines) + "\n"
 
 
-def _drill(writer: _Writer, holes: list[Point], plate: Plate, mill: MillProfile) -> None:
+def _drill(writer: _Writer, holes: list[Point], panel: Panel, mill: MillProfile) -> None:
     tool = writer.tool
-    depth = plate.thickness_mm + mill.drill_overshoot_mm
+    depth = panel.thickness_mm + mill.drill_overshoot_mm
     for x, y in _nearest_order(holes):
         writer.rapid(x, y)
         writer.up(1.0)
@@ -211,11 +211,11 @@ def _drill(writer: _Writer, holes: list[Point], plate: Plate, mill: MillProfile)
         writer.up()
 
 
-def _mill_hole(writer: _Writer, x: float, y: float, diameter: float, plate: Plate, mill: MillProfile) -> None:
+def _mill_hole(writer: _Writer, x: float, y: float, diameter: float, panel: Panel, mill: MillProfile) -> None:
     """Circle a hole out with the end mill (path inside the hole edge)."""
     tool = writer.tool
     radius = (diameter - tool.diameter_mm) / 2
-    depth = plate.thickness_mm + mill.mill_overshoot_mm
+    depth = panel.thickness_mm + mill.mill_overshoot_mm
     writer.rapid(x + radius, y)
     writer.up(0.5)
     z = 0.0
@@ -320,11 +320,11 @@ def _sections(path: list[Point], mill: MillProfile, with_tabs: bool) -> list[tup
     return sections
 
 
-def _mill_outline(writer: _Writer, path: list[Point], with_tabs: bool, plate: Plate, mill: MillProfile) -> None:
+def _mill_outline(writer: _Writer, path: list[Point], with_tabs: bool, panel: Panel, mill: MillProfile) -> None:
     """Walk along a tool path (see ``tool_paths``), with tabs if asked for."""
     tool = writer.tool
-    depth = plate.thickness_mm + mill.mill_overshoot_mm
-    tab_z = -(plate.thickness_mm - mill.tab_height_mm)
+    depth = panel.thickness_mm + mill.mill_overshoot_mm
+    tab_z = -(panel.thickness_mm - mill.tab_height_mm)
     sections = _sections(path, mill, with_tabs)
     writer.rapid(*path[0])
     writer.up(0.5)
@@ -340,13 +340,13 @@ def _mill_outline(writer: _Writer, path: list[Point], with_tabs: bool, plate: Pl
     writer.up()
 
 
-def origin_of_marks(plate: Plate, mill: MillProfile, marks: list[Point]) -> tuple[MillProfile, Point]:
-    """Use the lower left of two positioning marks (plate coordinates of their centres) as X0 Y0.
+def origin_of_marks(panel: Panel, mill: MillProfile, marks: list[Point]) -> tuple[MillProfile, Point]:
+    """Use the lower left of two positioning marks (panel coordinates of their centres) as X0 Y0.
 
-    Returns the mill profile with the plate offset moved so that this mark is the origin, and the position of the other
+    Returns the mill profile with the panel offset moved so that this mark is the origin, and the position of the other
     mark relative to it. Raises ``mill.invalid_marks`` if the marks do not stand diagonally opposite.
     """
-    frame = _Frame(plate, mill)
+    frame = _Frame(panel, mill)
     first, second = sorted((frame.point(x, y) for x, y in marks), key=lambda p: p[0] + p[1])
     dx, dy = second[0] - first[0], second[1] - first[1]
     if dx < 1.0 or dy < 1.0:
@@ -375,7 +375,7 @@ def _mapped_drill(tools: ToolLibrary, drill_map: dict[float, float] | None, diam
 
 def generate(
     placements: list[Placement],
-    plate: Plate,
+    panel: Panel,
     mill: MillProfile,
     tools: ToolLibrary | None = None,
     second_mark: Point | None = None,
@@ -386,7 +386,7 @@ def generate(
     ``second_mark`` (from :func:`origin_of_marks`) is named in the program headers. ``drill_map`` says which drill
     (by diameter) is used for holes without a drill of their own size: ``{hole diameter: drill diameter}``."""
     tools = tools or load_tools()
-    layout = build_layout(placements, plate, mill)
+    layout = build_layout(placements, panel, mill)
     outline_tool = tools.endmill(mill.outline_endmill_mm)
     drilled: dict[str, tuple[Tool, list[Point]]] = {}
     borrowed: dict[str, dict[float, int]] = {}  # drill id -> hole diameter -> holes drilled with it in place of its own
@@ -414,9 +414,9 @@ def generate(
         title = f"Drill {drill.diameter_mm:.1f} mm, {len(holes)} holes"
         for diameter, count in sorted(borrowed.get(drill.id, {}).items()):
             title += f" ({count} of them for holes of {diameter:g} mm)"
-        message = f"Insert the {drill.diameter_mm:.1f} mm drill and set Z0 to the plate surface"
+        message = f"Insert the {drill.diameter_mm:.1f} mm drill and set Z0 to the panel surface"
         writer = _Writer(title, mill, drill, message, second_mark)
-        _drill(writer, holes, plate, mill)
+        _drill(writer, holes, panel, mill)
         name = f"{len(programs) + 1}_drill_{drill.diameter_mm:.1f}mm.nc"
         programs.append(Program(name, title, writer.finish(), holes=len(holes), tool=drill.id))
 
@@ -424,15 +424,15 @@ def generate(
         is_outline = cutter.id == outline_tool.id
         scope = "large holes and outlines" if is_outline else "large holes"
         title = f"Mill with {cutter.diameter_mm:.1f} mm end mill: {scope}"
-        message = f"Insert the {cutter.diameter_mm:.1f} mm end mill and set Z0 to the plate surface"
+        message = f"Insert the {cutter.diameter_mm:.1f} mm end mill and set Z0 to the panel surface"
         writer = _Writer(title, mill, cutter, message, second_mark)
         for diameter, holes in by_diameter.items():
             for x, y in _nearest_order(holes):
-                _mill_hole(writer, x, y, diameter, plate, mill)
+                _mill_hole(writer, x, y, diameter, panel, mill)
         if is_outline:
             for shape in layout.outlines:
                 for path, with_tabs in tool_paths(shape, cutter.diameter_mm / 2):
-                    _mill_outline(writer, path, with_tabs, plate, mill)
+                    _mill_outline(writer, path, with_tabs, panel, mill)
         name = f"{len(programs) + 1}_mill_{cutter.diameter_mm:.1f}mm.nc"
         programs.append(
             Program(
@@ -447,12 +447,12 @@ def generate(
     return programs
 
 
-def preview_svg(placements: list[Placement], plate: Plate, mill: MillProfile, scale: float = 5.0) -> str:
-    """Plate, board outlines and holes (coloured by diameter) as SVG, as the plate lies on the mill bed."""
-    layout = build_layout(placements, plate, mill)
+def preview_svg(placements: list[Placement], panel: Panel, mill: MillProfile, scale: float = 5.0) -> str:
+    """Panel, board outlines and holes (coloured by diameter) as SVG, as the panel lies on the mill bed."""
+    layout = build_layout(placements, panel, mill)
     colors = ["#ffd60a", "#00b4d8", "#ffffff", "#ff006e"]
     by_diameter = {d: colors[i % len(colors)] for i, d in enumerate(sorted(layout.holes))}
-    height = plate.height_mm
+    height = panel.height_mm
 
     def sx(x: float) -> float:
         return (x - mill.offset_x_mm) * scale
@@ -461,7 +461,7 @@ def preview_svg(placements: list[Placement], plate: Plate, mill: MillProfile, sc
         return (height - (y - mill.offset_y_mm)) * scale
 
     parts = [
-        f'<rect x="0" y="0" width="{plate.width_mm * scale}" height="{height * scale}" fill="#c9a06a" stroke="black"/>'
+        f'<rect x="0" y="0" width="{panel.width_mm * scale}" height="{height * scale}" fill="#c9a06a" stroke="black"/>'
     ]
     for outer, cutouts in layout.outlines:
         xs, ys = [x for x, _ in outer], [y for _, y in outer]
@@ -480,6 +480,6 @@ def preview_svg(placements: list[Placement], plate: Plate, mill: MillProfile, sc
             radius = max(diameter * scale / 2, 1.2)
             parts.append(f'<circle cx="{sx(x)}" cy="{sy(y)}" r="{radius}" fill="{by_diameter[diameter]}"/>')
     return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{plate.width_mm * scale}" height="{height * scale}" '
-        f'viewBox="0 0 {plate.width_mm * scale} {height * scale}">' + "".join(parts) + "</svg>"
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{panel.width_mm * scale}" height="{height * scale}" '
+        f'viewBox="0 0 {panel.width_mm * scale} {height * scale}">' + "".join(parts) + "</svg>"
     )

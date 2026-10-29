@@ -1,4 +1,4 @@
-"""Mill profile and plate. Profiles are plain data; values that depend on the physical setup are calibration values."""
+"""Mill profile and panel. Profiles are plain data; values that depend on the physical setup are calibration values."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
-class Plate:
+class Panel:
     """Copper clad blank. Origin is its lower left corner."""
 
     width_mm: float = 160.0
@@ -32,9 +32,9 @@ class MillProfile:
     tab_width_mm: float = 2.0
     tab_height_mm: float = 0.6
     tabs: bool = True
-    #: How the plate is turned over after exposure: "x" mirrors X, "y" mirrors Y, "none" keeps it.
+    #: How the panel is turned over after exposure: "x" mirrors X, "y" mirrors Y, "none" keeps it.
     flip: str = "x"
-    #: Position of the plate's lower left corner in machine coordinates.
+    #: Position of the panel's lower left corner in machine coordinates.
     offset_x_mm: float = 0.0
     offset_y_mm: float = 0.0
     notes: list[str] = field(default_factory=list)
