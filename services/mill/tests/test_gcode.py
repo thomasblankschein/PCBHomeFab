@@ -1,4 +1,5 @@
 import json
+import math
 import re
 from dataclasses import replace
 from pathlib import Path
@@ -148,3 +149,13 @@ def test_marks_on_one_line_are_refused() -> None:
     with pytest.raises(Problem) as caught:
         gcode.origin_of_marks(Panel(), MILL_3018PRO, [(2.0, 2.0), (158.0, 2.0)])
     assert caught.value.code == "mill.invalid_marks"
+
+
+def test_estimate_seconds_counts_moves_arcs_and_waiting() -> None:
+    from mill.gcode import estimate_seconds
+
+    # 60 mm at 60 mm/min, a full circle of radius 10 mm at 120 mm/min, 3 s of waiting; the pause at M0 is free
+    code = "G0 X0 Y0\nG4 P3\nG1 X60 Y0 F60\nG3 X60 Y0 I10 J0 F120\nM0\nG0 X60 Y15\n"
+    expected = 3 + 60 + (2 * math.pi * 10) / 120 * 60 + 15 / 1500 * 60
+    assert estimate_seconds(code) == pytest.approx(expected)
+    assert estimate_seconds("(only a comment)\nM5\n") == 0.0

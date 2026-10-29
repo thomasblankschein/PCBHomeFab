@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from starlette.concurrency import run_in_threadpool
@@ -30,6 +30,7 @@ from .common import Problem
 from .config import Settings
 from .marks import MIN_MARGIN_MM, MIN_PANEL_MM, alignment_marks
 from .panels import PanelSize, load_panels
+from .report import build_report
 from .services import Services, Unavailable, UserError
 from .store import DONE, JobRecord, JobStore
 from .worker import worker_loop
@@ -368,6 +369,18 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             filename=Path(info["name"]).name,
             content_disposition_type=disposition,
             headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'"},
+        )
+
+    @app.get("/v1/jobs/{job_id}/report.pdf")
+    async def get_report(job_id: str, lang: Annotated[str, Query(pattern="^(de|en)$")] = "en") -> Response:
+        record = _find(job_id)
+        if record.status != DONE:
+            raise Problem(404, "jobs.not_found", "The job is not finished.")
+        pdf = await run_in_threadpool(build_report, record, store.job_dir(job_id) / "output", lang)
+        return Response(
+            pdf,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="pcbhomefab-{job_id[:8]}.pdf"'},
         )
 
     @app.get("/v1/jobs/{job_id}/archive")

@@ -145,5 +145,7 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
                     bundle.writestr(info, data)
         _write(output / "mill_gcode.zip", archive.getvalue(), files)
         _write(output / "mill_preview.svg", programs["preview.svg"], files)
+        if "programs.json" in programs:
+            _write(output / "programs.json", programs["programs.json"], files)
 
     return [_file_info(path, path.relative_to(output).as_posix()) for path in files]

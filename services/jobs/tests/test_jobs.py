@@ -16,7 +16,7 @@ from fakes import Downstream, _form_field, make_zip, problem
 from jobs.config import Settings
 from jobs.main import create_app
 from jobs.services import Services
-from jobs.store import FAILED, JobStore
+from jobs.store import FAILED, JobRecord, JobStore
 from jobs.worker import process_next
 
 ZIP = make_zip({"board.gbr": "x"})
@@ -104,6 +104,7 @@ def test_job_from_upload_to_download(client: TestClient, services: Services, dow
         "mill/2_mill_1.0mm.nc",
         "mill_gcode.zip",
         "mill_preview.svg",
+        "programs.json",
     }
 
     pm3 = client.get(f"/v1/jobs/{job['id']}/files/exposure.pm3")
@@ -547,3 +548,52 @@ def test_drill_map_is_stored_and_sent_to_the_mill(
 @pytest.mark.parametrize("bad", ["not json", "[1]", '{"a": 1}', '{"1.0": "x"}', '{"1.0": 0}', '{"1.0": 99}'])
 def test_invalid_drill_map_is_refused(client: TestClient, bad: str) -> None:
     _problem(_post(client, ("a.zip", ZIP), drill_map=bad), 422, "jobs.invalid_drill_map")
+
+
+def test_report_pdf_describes_the_job(client: TestClient, services: Services) -> None:
+    job = _post(client, ("node.zip", ZIP)).json()
+    process_next(JobStore(services.settings), services)
+    pdfs = {}
+    for lang in ("de", "en"):
+        response = client.get(f"/v1/jobs/{job['id']}/report.pdf", params={"lang": lang})
+        assert response.status_code == 200 and response.headers["content-type"] == "application/pdf"
+        assert response.content.startswith(b"%PDF-")
+        pdfs[lang] = response.content
+    assert pdfs["de"] != pdfs["en"]
+    assert client.get(f"/v1/jobs/{job['id']}/report.pdf", params={"lang": "fr"}).status_code == 422
+    assert client.get("/v1/jobs/" + "x" * 22 + "/report.pdf").status_code == 404
+
+
+def test_report_text_has_header_tools_and_times() -> None:
+    from jobs.report import _facts, _Texts, _tool_rows, clock
+
+    assert clock(59) == "0:59" and clock(3600) == "1:00:00" and clock(3725) == "1:02:05"
+    record = JobRecord(
+        "a" * 22,
+        "done",
+        0.0,
+        0.0,
+        1.0,
+        {
+            "boards": [{"name": "node", "count": 2, "width_mm": 10.0, "height_mm": 26.0}],
+            "exposure": True,
+            "exposure_s": 60.0,
+            "mill_gcode": True,
+            "marks": None,
+            "panel": {"width_mm": 160, "height_mm": 100},
+            "gap_mm": 3.0,
+            "margin_mm": 5.0,
+            "thickness_mm": 1.6,
+            "drill_map": {"1.05": 1.1},
+        },
+    )
+    facts = dict(_facts(_Texts("de"), record))
+    assert facts["Platinen"] == "2 × node (10 mm × 26 mm)"
+    assert facts["Bohrer-Zuordnung"] == "1,05 → 1,1 mm" and facts["Positionsmarken"] == "keine"
+    assert "1,6 mm dick" in facts["Nutzen"]
+    from reportlab.lib.styles import getSampleStyleSheet
+
+    from fakes import PROGRAMS
+
+    rows, drilling, milling, timed = _tool_rows(_Texts("en"), getSampleStyleSheet()["BodyText"], PROGRAMS["programs"])
+    assert timed and drilling == 75.4 and milling == 3725 and len(rows) == 3

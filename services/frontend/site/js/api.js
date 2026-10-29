@@ -61,6 +61,11 @@ export function archiveUrl(jobId) {
   return `${API}/jobs/${encodeURIComponent(jobId)}/archive`;
 }
 
+/** The job description as a PDF; the report is written in German or English (`lang`). */
+export function reportUrl(jobId, lang) {
+  return `${API}/jobs/${encodeURIComponent(jobId)}/report.pdf?lang=${lang === "de" ? "de" : "en"}`;
+}
+
 export function fileUrl(jobId, name) {
   return `${API}/jobs/${encodeURIComponent(jobId)}/files/${name.split("/").map(encodeURIComponent).join("/")}`;
 }

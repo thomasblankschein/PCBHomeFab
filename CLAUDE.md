@@ -120,6 +120,13 @@ docker-compose.yaml
   (`mill.no_drill`) unless the job carries `drill_map` ({hole diameter: drill diameter}); the editor lists such sizes
   with a select box per size (default: the next larger drill), `jobs` stores the choice in `params.drill_map`.
 
+## Job description (PDF)
+- `GET /v1/jobs/{id}/report.pdf?lang=de|en` (`services/jobs/src/jobs/report.py`, reportlab) builds the PDF when it is asked for, from the
+  files of the job: header data (like the job page), `mask_preview.png`, `mill_preview.svg` (drawn as vector graphics by a small reader
+  of the few SVG elements `mill` writes), the programs of `programs.json` (the workflow stores it since 0.23.0) and their run time.
+  `mill` estimates the time of a program from its G-code (`gcode.estimate_seconds`: feed rates, rapid moves at 1500 mm/min, `G4`
+  waits; not the pause at `M0`, not the exposure). Texts of the PDF are in `report.py` (German and English).
+
 ## Positioning marks
 - The panel is not always at the same place on the mill and not exactly square. With `marks` (default on, margin of at least
   4.5 mm) the copper layer gets two marks diagonally opposite in the margin (`services/exposure/src/exposure/mask.py`:

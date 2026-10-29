@@ -1,7 +1,7 @@
-import { ApiError, archiveUrl, fileUrl, getJob } from "./api.js";
+import { ApiError, archiveUrl, fileUrl, getJob, reportUrl } from "./api.js";
 import { fill, h } from "./dom.js";
 import { daysLeft, formatSize, mm, programTitle } from "./format.js";
-import { initI18n, onLanguageChange, t } from "./i18n.js";
+import { currentLanguage, initI18n, onLanguageChange, t } from "./i18n.js";
 
 const jobId = decodeURIComponent(window.location.pathname.split("/").filter(Boolean).pop() ?? "");
 const state = document.getElementById("state");
@@ -133,6 +133,16 @@ function showDone(job) {
   }
 
   if (programs.length) sections.push(simulationPanel(job, programs));
+
+  sections.push(
+    h(
+      "section",
+      { class: "panel" },
+      h("h2", {}, t("job.report")),
+      h("p", { class: "muted" }, t("job.report_hint")),
+      h("ul", { class: "files" }, h("li", {}, h("a", { href: reportUrl(job.id, currentLanguage()), target: "_blank", rel: "noopener" }, t("job.report_link")))),
+    ),
+  );
 
   sections.push(
     h(

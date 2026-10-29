@@ -88,7 +88,7 @@ Endpoints (the OpenAPI files are authoritative):
 | `exposure` | `GET /v1/profiles` | available printer profiles |
 | `exposure` | `POST /v1/masks` | packages, layout, settings in; ZIP with `mask.png`, `mask_preview.png`, `exposure.pm3` out |
 | `mill` | `GET /v1/profiles`, `GET /v1/tools` | mill profiles, tool library |
-| `mill` | `POST /v1/programs` | packages, layout, settings in; ZIP with one `.nc` per tool, `preview.svg`, `programs.json` out |
+| `mill` | `POST /v1/programs` | packages, layout, settings in; ZIP with one `.nc` per tool, `preview.svg`, `programs.json` (with the estimated run time of every program) out |
 | `jobs` | `POST /v1/jobs`, `GET /v1/jobs/{id}`, `GET /v1/jobs/{id}/files/{name}`, `GET /v1/profiles`, `GET /v1/tools` | what the browser uses (behind `/api` at the gateway) |
 | `jobs` | `POST /v1/boards`, `POST /v1/layouts` | previews for the editor: board info from `ingest`, placement from `panel`; nothing is stored, limited per client |
 

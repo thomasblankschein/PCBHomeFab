@@ -205,6 +205,27 @@ paths:
                 format: binary
         "404":
           $ref: "#/components/responses/Problem"
+  /v1/jobs/{id}/report.pdf:
+    get:
+      operationId: getJobReport
+      summary: The job description of a finished job as a PDF
+      description: >
+        Header data of the job, the pictures of the exposure mask and of drilling and milling, the tools with the G-code
+        files they belong to and the estimated production time (drilling and milling, not the exposure). Made when it is asked
+        for, from the files of the job.
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: lang, in: query, required: false, schema: {type: string, enum: [de, en], default: en}, description: Language of the texts.}
+      responses:
+        "200":
+          description: The PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/Problem"
   /v1/jobs/{id}/archive:
     get:
       operationId: getJobArchive

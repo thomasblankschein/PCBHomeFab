@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.23.0 - 2026-10-29
+
+- New: job description as a PDF (`GET /v1/jobs/{id}/report.pdf?lang=de|en`, link on the job page). It holds the header data of
+  the job, the exposure mask, the drill and mill view with a legend of the hole sizes, the tools with the program (.nc file)
+  of each, and the production time for drilling and milling (without exposure).
+- `mill` estimates the run time of every program from its G-code and reports it as `estimated_s` in `programs.json`; `jobs`
+  now keeps `programs.json` in the job files. Jobs made before this release have no times, their PDF omits the tool table.
+- `jobs` depends on `reportlab`.
+
 ## 0.22.9 - 2026-10-29
 
 - Fix: the holes of the 3D simulation started below the copper level when the drill works in steps (pecking). Every hole now

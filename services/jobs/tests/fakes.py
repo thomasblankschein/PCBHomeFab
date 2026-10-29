@@ -5,7 +5,9 @@ from __future__ import annotations
 import io
 import json
 import re
+import struct
 import zipfile
+import zlib
 from collections.abc import Callable
 from typing import Any
 
@@ -20,6 +22,49 @@ def make_zip(files: dict[str, bytes | str]) -> bytes:
         for name, content in files.items():
             archive.writestr(zipfile.ZipInfo(name, ZIP_TIME), content)
     return buffer.getvalue()
+
+
+def tiny_png(width: int = 8, height: int = 5) -> bytes:
+    """A small valid PNG (grey, black), for the pictures of the fake services."""
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        body = kind + data
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body))
+
+    header = struct.pack(">IIBBBBB", width, height, 8, 0, 0, 0, 0)
+    rows = b"".join(b"\x00" + bytes(width) for _ in range(height))
+    signature = b"\x89PNG\r\n\x1a\n"
+    return signature + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b"")
+
+
+MILL_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">'
+    '<rect x="0" y="0" width="800" height="500" fill="#c9a06a" stroke="black"/>'
+    '<path d="M100 100 L200 100 L200 200 L100 200 Z M120 120 L150 120 L150 150 Z" fill-rule="evenodd" fill="#2d6a4f" '
+    'stroke="#d00000" stroke-width="1"/>'
+    '<circle cx="110" cy="110" r="2" fill="#ffd60a"/><circle cx="190" cy="190" r="2" fill="#ffd60a"/>'
+    '<circle cx="150" cy="170" r="3" fill="#00b4d8"/></svg>'
+)
+PROGRAMS = {
+    "programs": [
+        {
+            "filename": "1_drill_0.8mm.nc",
+            "title": "t",
+            "tool": "drill-0.8",
+            "holes": 2,
+            "outlines": 0,
+            "estimated_s": 75.4,
+        },
+        {
+            "filename": "2_mill_1.0mm.nc",
+            "title": "t",
+            "tool": "endmill-1.0",
+            "holes": 1,
+            "outlines": 1,
+            "estimated_s": 3725,
+        },
+    ]
+}
 
 
 def problem(status: int, code: str, detail: str, headers: dict[str, str] | None = None) -> httpx.Response:
@@ -84,7 +129,7 @@ class Downstream:
         pm3 = b"ANYCUBIC" + str(settings.get("exposure_s")).encode()
         available = {
             "mask": ("mask.png", b"png"),
-            "preview": ("mask_preview.png", b"preview"),
+            "preview": ("mask_preview.png", tiny_png()),
             "pm3": ("exposure.pm3", pm3),
         }
         available["copper"] = ("copper.png", b"copper")
@@ -96,8 +141,8 @@ class Downstream:
             {
                 "1_drill_0.8mm.nc": "M3 S20000\nM5\nM30\n",
                 "2_mill_1.0mm.nc": "M3 S20000\nM5\nM30\n",
-                "preview.svg": "<svg></svg>",
-                "programs.json": json.dumps({"programs": []}),
+                "preview.svg": MILL_SVG,
+                "programs.json": json.dumps(PROGRAMS),
             }
         )
         return httpx.Response(200, content=package, headers={"content-type": "application/zip"})

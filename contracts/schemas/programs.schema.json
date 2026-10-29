@@ -26,7 +26,12 @@
           "title": {"type": "string"},
           "tool": {"type": "string"},
           "holes": {"type": "integer", "minimum": 0},
-          "outlines": {"type": "integer", "minimum": 0}
+          "outlines": {"type": "integer", "minimum": 0},
+          "estimated_s": {
+            "type": "number",
+            "minimum": 0,
+            "description": "How long the program runs, in seconds: moves at their feed rates (rapid moves at 1500 mm/min) and waiting times. Not counted: the pause at M0 (tool change, Z0), the acceleration of the machine."
+          }
         },
         "additionalProperties": false
       }

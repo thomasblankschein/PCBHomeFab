@@ -13,6 +13,7 @@ dependencies = [
     "uvicorn>=0.29",
     "python-multipart>=0.0.9",
     "httpx>=0.27",
+    "reportlab>=4.0",
 ]
 
 [project.optional-dependencies]
@@ -44,3 +45,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.12"
 strict = true
 files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["reportlab", "reportlab.*"]
+ignore_missing_imports = true

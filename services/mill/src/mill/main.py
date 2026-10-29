@@ -129,6 +129,7 @@ def _programs(boards: dict[str, Board], layout: dict[str, Any], settings: dict[s
                     "tool": p.tool,
                     "holes": p.holes,
                     "outlines": p.outlines,
+                    "estimated_s": round(gcode.estimate_seconds(p.code), 1),
                 }
                 for p in programs
             ]

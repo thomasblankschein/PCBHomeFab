@@ -9,6 +9,7 @@ between the programs.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass, replace
 
 from shapely.geometry import MultiPolygon, Polygon
@@ -22,6 +23,9 @@ Point = tuple[float, float]
 MAP_TOLERANCE_MM = 0.005
 #: A board shape: the outer polygon and the polygons of cutouts.
 Shape = tuple[list[Point], list[list[Point]]]
+#: Speed of the rapid moves (G0) assumed for the time estimate, in mm/min. GRBL uses ``$110`` to ``$112``, 1500 is
+#: typical for a hobby mill (the 3D simulation of the frontend assumes the same).
+RAPID_MM_MIN = 1500.0
 
 
 @dataclass(frozen=True)
@@ -483,3 +487,47 @@ def preview_svg(placements: list[Placement], panel: Panel, mill: MillProfile, sc
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{panel.width_mm * scale}" height="{height * scale}" '
         f'viewBox="0 0 {panel.width_mm * scale} {height * scale}">' + "".join(parts) + "</svg>"
     )
+
+
+_WORD = re.compile(r"([GXYZIJFP])(-?\d+(?:\.\d+)?)")
+
+
+def estimate_seconds(code: str, rapid_mm_min: float = RAPID_MM_MIN) -> float:
+    """How long a program runs, in seconds: the moves at their feed rates plus the waiting time of ``G4``.
+
+    The pause at ``M0`` (tool change, setting Z0 by hand) is not counted, and neither is the acceleration of the
+    machine, so the real time is somewhat longer.
+    """
+    x = y = z = 0.0
+    feed = rapid_mm_min
+    mode = 0
+    seconds = 0.0
+    for line in code.splitlines():
+        if line.startswith("("):
+            continue
+        words = {letter: float(number) for letter, number in _WORD.findall(line)}
+        if "G" in words and words["G"] in (0, 1, 2, 3, 4):
+            mode = int(words["G"])
+        if mode == 4 and "P" in words:
+            seconds += words["P"]
+            continue
+        if "F" in words:
+            feed = words["F"]
+        if not any(axis in words for axis in "XYZ") or mode not in (0, 1, 2, 3):
+            continue
+        nx, ny, nz = words.get("X", x), words.get("Y", y), words.get("Z", z)
+        if mode in (2, 3):
+            centre_x, centre_y = x + words.get("I", 0.0), y + words.get("J", 0.0)
+            radius = math.hypot(x - centre_x, y - centre_y)
+            first = math.atan2(y - centre_y, x - centre_x)
+            last = math.atan2(ny - centre_y, nx - centre_x)
+            sweep = (first - last) % math.tau if mode == 2 else (last - first) % math.tau
+            if sweep == 0:
+                sweep = math.tau  # the start is the end: a full circle
+            length = math.hypot(radius * sweep, nz - z)
+        else:
+            length = math.dist((x, y, z), (nx, ny, nz))
+        speed = rapid_mm_min if mode == 0 else feed
+        seconds += length / speed * 60 if speed > 0 else 0.0
+        x, y, z = nx, ny, nz
+    return seconds
