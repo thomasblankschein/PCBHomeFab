@@ -36,7 +36,7 @@ def pack(
     row_height = 0.0
     for spec in boards:
         if spec.width_mm > plate_width_mm - 2 * margin_mm:
-            raise Problem(422, "panel.board_too_wide", f"Board '{spec.id}' is wider than the plate.")
+            raise Problem(422, "panel.board_too_wide", f"Board '{spec.id}' is wider than the panel.")
         for _ in range(spec.count):
             if x + spec.width_mm > plate_width_mm - margin_mm:
                 x = margin_mm
@@ -44,7 +44,7 @@ def pack(
                 row_height = 0.0
             if y + spec.height_mm > plate_height_mm - margin_mm:
                 raise Problem(
-                    422, "panel.does_not_fit", "The boards do not fit on the plate. Reduce the count or the spacing."
+                    422, "panel.does_not_fit", "The boards do not fit on the panel. Reduce the count or the spacing."
                 )
             placements.append(Placement(spec.id, round(x, 3), round(y, 3)))
             x += spec.width_mm + gap_mm

@@ -18,8 +18,7 @@
 </header>
 <main>
 <h1 data-i18n="editor.heading">New job</h1>
-<p class="lead" data-i18n="editor.lead">Gerber ZIP or KiCad PCB file in, exposure file (.pm3) and drill/mill G-code out. Add one or more boards, set how many
-copies you want, check the plate and create the job.</p>
+<p class="lead" data-i18n="editor.lead">Creates the exposure file and the drilling and milling G-code from Gerber ZIP files or KiCad PCB files. Add one or more boards, set the number of copies, check the panel layout and create the job.</p>
 <p id="load-error" class="error" role="alert"></p>
 
 <div id="editor" class="editor" hidden>
@@ -37,7 +36,7 @@ copies you want, check the plate and create the job.</p>
         <thead><tr><th class="num">#</th><th data-i18n="boards.col_board">Board</th><th data-i18n="boards.col_copies">Copies</th><th><span class="sr-only" data-i18n="boards.col_actions">Actions</span></th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
-      <p class="muted" data-i18n="boards.order_hint">The order of the list is the order on the plate and in the G-code.</p>
+      <p class="muted" data-i18n="boards.order_hint">The order of the list is the order on the panel and in the G-code.</p>
     </section>
 
     <form id="settings" class="panel" hidden novalidate>
@@ -49,16 +48,16 @@ copies you want, check the plate and create the job.</p>
       </fieldset>
 
       <fieldset>
-        <legend data-i18n="settings.plate">Plate</legend>
+        <legend data-i18n="settings.plate">Panel</legend>
         <div class="grid">
-          <label><span data-i18n="settings.plate_size">Plate size</span><select name="plate"></select></label>
+          <label><span data-i18n="settings.plate_size">Panel size</span><select name="plate"></select></label>
           <label><span data-i18n="settings.gap">Gap between boards (mm)</span><input type="number" name="gap_mm" value="3" min="0.5" max="20" step="0.5"></label>
           <label><span data-i18n="settings.margin">Margin to the edge (mm)</span><input type="number" name="margin_mm" value="5" min="0" max="20" step="0.5"></label>
           <label><span data-i18n="settings.thickness">Material thickness (mm)</span><input type="number" name="thickness_mm" value="1.6" min="0.4" max="3.2" step="0.1"></label>
         </div>
         <label class="inline"><input type="checkbox" name="marks" checked> <span data-i18n="settings.marks">Positioning marks on the copper layer</span></label>
         <label class="inline"><input type="checkbox" name="mark_labels" checked> <span data-i18n="settings.mark_labels">Coordinates next to the positioning marks</span></label>
-        <p class="muted" data-i18n="settings.marks_hint">Two marks diagonally opposite in the margin show the position and the rotation of the plate on the mill. The lower left mark is X0 Y0 of the G-code. Needs a margin of at least 4.5 mm.</p>
+        <p class="muted" data-i18n="settings.marks_hint">Two marks diagonally opposite in the margin show the position and the rotation of the panel on the mill. The lower left mark is X0 Y0 of the G-code. Needs a margin of at least 4.5 mm.</p>
       </fieldset>
 
       <fieldset>
@@ -77,8 +76,8 @@ copies you want, check the plate and create the job.</p>
         <details>
           <summary data-i18n="settings.calibration">Calibration</summary>
           <div class="grid">
-            <label><span data-i18n="settings.frame_left">Plate offset from the left (mm)</span><input type="number" name="frame_left_mm" step="0.1" min="0" max="20"></label>
-            <label><span data-i18n="settings.frame_bottom">Plate offset from the bottom (mm)</span><input type="number" name="frame_bottom_mm" step="0.1" min="0" max="20"></label>
+            <label><span data-i18n="settings.frame_left">Panel offset from the left (mm)</span><input type="number" name="frame_left_mm" step="0.1" min="0" max="20"></label>
+            <label><span data-i18n="settings.frame_bottom">Panel offset from the bottom (mm)</span><input type="number" name="frame_bottom_mm" step="0.1" min="0" max="20"></label>
             <label class="inline"><input type="checkbox" name="mirror_x"> <span data-i18n="settings.mirror_x">Mirror the image in X</span></label>
           </div>
           <p class="muted" data-i18n="settings.calibration_hint">Values of your printer profile. Change them only after measuring a test exposure.</p>
@@ -89,14 +88,14 @@ copies you want, check the plate and create the job.</p>
         <legend data-i18n="settings.milling">Milling</legend>
         <div class="grid">
           <label><span data-i18n="settings.mill">Mill</span><select name="mill"></select></label>
-          <label><span data-i18n="settings.flip">How the plate is turned over</span>
+          <label><span data-i18n="settings.flip">How the panel is turned over</span>
             <select name="flip">
               <option value="x" data-i18n="settings.flip_x">Around the Y axis (mirror X)</option>
               <option value="y" data-i18n="settings.flip_y">Around the X axis (mirror Y)</option>
               <option value="none" data-i18n="settings.flip_none">Not turned</option>
             </select>
           </label>
-          <label class="inline"><input type="checkbox" name="tabs" checked> <span data-i18n="settings.tabs">Tabs hold the boards in the plate</span></label>
+          <label class="inline"><input type="checkbox" name="tabs" checked> <span data-i18n="settings.tabs">Tabs hold the boards in the panel</span></label>
         </div>
       </fieldset>
 
@@ -112,7 +111,7 @@ copies you want, check the plate and create the job.</p>
   </div>
 
   <section class="panel sticky" aria-labelledby="plate-title">
-    <h2 id="plate-title" data-i18n="plate.title">Plate</h2>
+    <h2 id="plate-title" data-i18n="plate.title">Panel</h2>
     <div class="views" role="group" aria-label="View" data-i18n-attr="aria-label:plate.views">
       <button type="button" id="view-top" class="view" aria-pressed="true" data-i18n="plate.view_top">Design view</button>
       <button type="button" id="view-bottom" class="view" aria-pressed="false" data-i18n="plate.view_bottom">Underside</button>

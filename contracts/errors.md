@@ -25,8 +25,8 @@ its own prefix, plus `common.*`.
 | `ingest.no_outline` | 422 | no board outline layer found |
 | `ingest.empty_outline` | 422 | the board outline layer is empty |
 | `ingest.slots_unsupported` | 422 | routed slots in the drill files are not supported |
-| `panel.board_too_wide` | 422 | a board is wider than the plate |
-| `panel.does_not_fit` | 422 | the boards do not fit on the plate |
+| `panel.board_too_wide` | 422 | a board is wider than the panel |
+| `panel.does_not_fit` | 422 | the boards do not fit on the panel |
 | `exposure.unknown_printer` | 422 | no printer profile with this id |
 | `exposure.invalid_package` | 422 | a board package is not a canonical package |
 | `exposure.unknown_board` | 422 | the layout refers to a board id without package |
@@ -46,8 +46,8 @@ its own prefix, plus `common.*`.
 | `jobs.queue_full` | 503 | the queue is full |
 | `jobs.upstream_unavailable` | 503 | a service that the job needs cannot be reached |
 | `jobs.invalid_upload` | 422 | bad upload (count of files, counts, no output selected) |
-| `jobs.invalid_plate` | 422 | the plate size is missing or not in the list of plate sizes |
-| `jobs.invalid_marks` | 422 | positioning marks asked for, but the margin is too small for them or the plate is too small |
+| `jobs.invalid_plate` | 422 | the panel size is missing or not in the list of panel sizes |
+| `jobs.invalid_marks` | 422 | positioning marks asked for, but the margin is too small for them or the panel is too small |
 | `jobs.upload_too_large` | 413 | a file is larger than the limit |
 
 `jobs` stores the `detail` of a failing downstream call as the error text of the job when the status was 4xx.

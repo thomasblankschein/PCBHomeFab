@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.21.1 - 2026-10-29
+
+- Texts: the blank that carries the boards is called "Nutzen" (German) and "panel" (English) instead of "Platte" and "plate" in
+  the pages and in the error messages of the services. Code, API fields and G-code comments are unchanged.
+- The introduction of the editor is worded more formally and no longer names the `.pm3` file.
+
 ## 0.21.0 - 2026-10-29
 
 - The plate views of the editor (design view and underside) zoom with the mouse wheel (towards the mouse position, up to 40

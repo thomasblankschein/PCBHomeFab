@@ -203,11 +203,11 @@ def test_upload_fails_when_ingest_is_unreachable(client: TestClient, downstream:
 def test_service_error_in_the_worker_fails_the_job_with_its_message(
     client: TestClient, services: Services, downstream: Downstream
 ) -> None:
-    downstream.override["panel"] = lambda _r: problem(422, "panel.does_not_fit", "The boards do not fit on the plate.")
+    downstream.override["panel"] = lambda _r: problem(422, "panel.does_not_fit", "The boards do not fit on the panel.")
     job = _post(client, ("node.zip", ZIP)).json()
     assert process_next(JobStore(services.settings), services)
     status = client.get(f"/v1/jobs/{job['id']}").json()
-    assert status["status"] == FAILED and status["error"] == "The boards do not fit on the plate."
+    assert status["status"] == FAILED and status["error"] == "The boards do not fit on the panel."
 
 
 @pytest.mark.parametrize(
@@ -414,7 +414,7 @@ def test_layout_preview_errors(client: TestClient, downstream: Downstream) -> No
         422,
         "jobs.invalid_upload",
     )
-    downstream.override["panel"] = lambda _r: problem(422, "panel.does_not_fit", "The boards do not fit on the plate.")
+    downstream.override["panel"] = lambda _r: problem(422, "panel.does_not_fit", "The boards do not fit on the panel.")
     response = client.post("/v1/layouts", json={"plate": "160x100", "boards": [board]})
     _problem(response, 422, "panel.does_not_fit")
 

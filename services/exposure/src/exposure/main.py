@@ -166,7 +166,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise Problem(
                 422,
                 "exposure.plate_too_large",
-                f"A {plate.width_mm:g} x {plate.height_mm:g} mm plate does not fit on the display of {printer.name} "
+                f"A {plate.width_mm:g} x {plate.height_mm:g} mm panel does not fit on the display of {printer.name} "
                 f"({printer.display_width_mm:g} x {printer.display_height_mm:g} mm, "
                 f"offsets {left:g} and {bottom:g} mm).",
             )

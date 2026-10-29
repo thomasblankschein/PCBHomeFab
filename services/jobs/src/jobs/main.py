@@ -290,7 +290,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
                 422, "jobs.invalid_marks", f"Positioning marks need a margin of at least {MIN_MARGIN_MM:g} mm."
             )
         if marks and min(chosen_plate.width_mm, chosen_plate.height_mm) < MIN_PLATE_MM:
-            raise Problem(422, "jobs.invalid_marks", f"Positioning marks need a plate of at least {MIN_PLATE_MM:g} mm.")
+            raise Problem(422, "jobs.invalid_marks", f"Positioning marks need a panel of at least {MIN_PLATE_MM:g} mm.")
 
         uploads: list[bytes] = []
         for upload in boards:

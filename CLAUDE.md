@@ -37,6 +37,8 @@ They are the reference for behaviour until the port is finished.
 
 ## Domain knowledge to keep
 
+- Terminology: the blank that carries the boards is called **Nutzen** in German and **panel** in English in all texts the user sees (UI, error
+  messages). Code, API fields, file names and G-code comments still say `plate`; do not rename them.
 - Photon M3: display 4096 x 2560 px, 163.84 x 102.4 mm, **40 µm per pixel**. The plate (160 x 100 mm) sits in a
   frame 1.8 mm from the left and 0.8 mm from the bottom of the display. These offsets are assumptions taken from the
   maintainer's notes and must be **calibration values per profile**, not hard-coded.
