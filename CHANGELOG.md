@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.4 - 2026-10-29
+
+- Fix: the copper in the 3D simulation could show wedge shaped gaps between the tiles it is drawn from when zoomed in
+  (since 0.22.3). The tiles are smaller (48 x 30), overlap by 0.15 mm whatever the resolution, and the extra image smoothing
+  of 0.22.3 is removed again.
+
 ## 0.22.3 - 2026-10-29
 
 - The copper picture of the 3D simulation (`copper.png`) has 20 px/mm instead of 10 px/mm and smooth edges (drawn three times

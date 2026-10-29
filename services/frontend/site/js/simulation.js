@@ -260,18 +260,19 @@ export function createSimulation(container, programs, thickness, panelSize, opti
       const gy = flip === "y" ? PANEL.height - y : y;
       return project([PANEL.x0 + gx, PANEL.y0 + gy, 0], basis, width, height);
     };
-    const columns = 24;
-    const rows = 15;
+    // small tiles keep the error of the flat (affine) drawing of a perspective view small
+    const columns = 48;
+    const rows = 30;
     const sw = iw / columns;
     const sh = ih / rows;
+    // neighbouring tiles overlap by 0.15 mm, so that no seam shows between them when the view is close
+    const overlap = (iw / PANEL.width) * 0.15;
     // the tiles overlap a little: draw them opaque into a picture of their own, then lay that over the panel once
     const sheet = document.createElement("canvas");
     sheet.width = width;
     sheet.height = height;
     const target = ctx;
     ctx = sheet.getContext("2d");
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
     for (let i = 0; i < columns; i++) {
       for (let j = 0; j < rows; j++) {
         const sx = i * sw;
@@ -285,7 +286,7 @@ export function createSimulation(container, programs, thickness, panelSize, opti
         const c = (bl.x - tl.x) / sh;
         const d = (bl.y - tl.y) / sh;
         ctx.setTransform(a, b, c, d, tl.x - a * sx - c * sy, tl.y - b * sx - d * sy);
-        ctx.drawImage(tinted, sx, sy, sw, sh, sx - 0.5, sy - 0.5, sw + 1, sh + 1);
+        ctx.drawImage(tinted, sx, sy, sw, sh, sx - overlap, sy - overlap, sw + 2 * overlap, sh + 2 * overlap);
       }
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
