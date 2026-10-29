@@ -12,6 +12,7 @@
   --copper: #8f2f0c;
   --board: #2d6a4f;
   --board-edge: #0f3d2c;
+  --trace: #e8a35a;
   --focus: #1b5fd1;
 }
 
@@ -29,6 +30,7 @@
     --plate: #8a6a3f;
     --copper: #ffbb77;
     --board: #2f8f6a;
+    --trace: #e8a35a;
     --board-edge: #a8e6cf;
     --focus: #7aa7ff;
   }
@@ -364,6 +366,29 @@ summary {
   fill: var(--board);
   stroke: var(--board-edge);
   stroke-width: 0.25;
+}
+
+.plate-view .copper .fill {
+  fill: var(--trace);
+  stroke: none;
+}
+
+.plate-view .copper .track {
+  fill: none;
+  stroke: var(--trace);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.views {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+}
+
+.views .view[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
 }
 
 .plate-view .hole {

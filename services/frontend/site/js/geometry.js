@@ -49,6 +49,7 @@ export function placedBoards(layout, boardsById) {
       cutouts: shape.cutouts.map((cutout) => move(cutout, placement.x_mm, placement.y_mm)),
       // the other boards of a file that holds several: their outlines and cutouts, drawn with the first one
       extra: (shape.others ?? []).flatMap((part) => [part.outer, ...part.cutouts]).map((polygon) => move(polygon, placement.x_mm, placement.y_mm)),
+      copper: board.copper ?? null,
       holes: board.holes.map((hole) => ({
         x: placement.x_mm + hole.x_mm,
         y: placement.y_mm + hole.y_mm,
@@ -56,6 +57,32 @@ export function placedBoards(layout, boardsById) {
       })),
     };
   });
+}
+
+/**
+ * The copper of a placed board as SVG path data: `tracks` is a list of `{ width, d }` (draw them with that stroke width and
+ * round caps; round pads are tracks of zero length) and `fills` one path for all filled shapes (draw with fill, nonzero).
+ * `copper` is `board.copper`, (`x`, `y`) the lower left corner of the board on the plate, `toX` and `toY` map plate
+ * millimetres to drawing units.
+ */
+export function copperPaths(copper, x, y, toX = (value) => value, toY = (value) => value) {
+  const byWidth = new Map();
+  const add = (width, d) => byWidth.set(width, `${byWidth.get(width) ?? ""}${d}`);
+  const point = (px, py) => `${toX(x + px).toFixed(2)} ${toY(y + py).toFixed(2)}`;
+  for (const [x1, y1, x2, y2, width] of copper.strokes) add(width, `M${point(x1, y1)}L${point(x2, y2)}`);
+  for (const [cx, cy, diameter] of copper.discs) add(diameter, `M${point(cx, cy)}L${point(cx + 0.001, cy)}`);
+  const fills = copper.polygons
+    .map((polygon) => {
+      const area = polygon.reduce((sum, [px, py], i) => {
+        const [qx, qy] = polygon[(i + 1) % polygon.length];
+        return sum + (toX(px) * toY(qy) - toX(qx) * toY(py));
+      }, 0);
+      // all shapes run the same way round, so that overlapping shapes add up under the nonzero fill rule
+      const ordered = area < 0 ? [...polygon].reverse() : polygon;
+      return `M${ordered.map(([px, py]) => point(px, py)).join("L")}Z`;
+    })
+    .join("");
+  return { tracks: [...byWidth].map(([width, d]) => ({ width, d })), fills };
 }
 
 /** SVG path data for polygons. `toX` and `toY` map plate millimetres to drawing units. */

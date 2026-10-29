@@ -45,6 +45,25 @@
       },
       "additionalProperties": false
     },
+    "copper": {
+      "description": "Simple copper geometry for the layout preview of the frontend, in mm relative to the lower left corner of the outline (like `holes`). Only dark polarity objects; arcs are cut into short pieces. Absent when the board has too much copper to draw. `exposure` and `mill` ignore it.",
+      "type": "object",
+      "required": ["strokes", "discs", "polygons"],
+      "properties": {
+        "strokes": {
+          "description": "Tracks: x1, y1, x2, y2, width, drawn with round ends.",
+          "type": "array",
+          "items": {"type": "array", "items": {"type": "number"}, "minItems": 5, "maxItems": 5}
+        },
+        "discs": {
+          "description": "Round pads and vias: x, y, diameter.",
+          "type": "array",
+          "items": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3}
+        },
+        "polygons": {"type": "array", "items": {"$ref": "#/$defs/polygon"}, "description": "Filled shapes: rectangular pads, copper pours."}
+      },
+      "additionalProperties": false
+    },
     "holes": {
       "type": "array",
       "items": {

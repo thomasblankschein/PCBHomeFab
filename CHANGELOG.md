@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.20.0 - 2026-10-29
+
+- The plate preview of the editor has a second view, the underside: the copper side seen from below (mirrored left to
+  right), with the copper tracks, pads and pours, the boards and the holes. A button above the plate switches between the
+  design view and the underside. `ingest` writes the simple copper geometry as `copper` into `board.json` (Gerber ZIP and
+  KiCad file); `exposure` and `mill` ignore it.
+- Fix: the hint above the plate said the copper side is up; the copper side (B.Cu) is at the bottom in the KiCad view.
+
 ## 0.19.1 - 2026-10-29
 
 - Fix: choosing a drill for an unusual hole size took effect only on the second try. The form redrew the rows on the

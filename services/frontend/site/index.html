@@ -113,7 +113,11 @@ copies you want, check the plate and create the job.</p>
 
   <section class="panel sticky" aria-labelledby="plate-title">
     <h2 id="plate-title" data-i18n="plate.title">Plate</h2>
-    <p class="muted" data-i18n="plate.hint">Design view as in KiCad, copper side up. Holes are coloured by diameter.</p>
+    <div class="views" role="group" aria-label="View" data-i18n-attr="aria-label:plate.views">
+      <button type="button" id="view-top" class="view" aria-pressed="true" data-i18n="plate.view_top">Design view</button>
+      <button type="button" id="view-bottom" class="view" aria-pressed="false" data-i18n="plate.view_bottom">Underside</button>
+    </div>
+    <p id="plate-hint" class="muted">Design view as in KiCad (seen from above): the copper side (B.Cu) is at the bottom. Holes are coloured by diameter.</p>
     <svg id="plate" class="plate-view" role="img" aria-label="Boards on the plate" data-i18n-attr="aria-label:plate.aria" viewBox="-2 -2 164 104"></svg>
     <div id="summary" aria-live="polite"></div>
     <p id="layout-error" class="error" role="alert" hidden></p>

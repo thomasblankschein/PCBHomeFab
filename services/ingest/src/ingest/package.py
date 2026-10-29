@@ -20,6 +20,7 @@ from gerbonara import ExcellonFile, GerberFile, LayerStack
 from .common import Problem
 from .contour import contour_of, extract_contour, relative
 from .kicad import read_drawing, write_gerber
+from .preview import copper_preview
 
 #: Hard limits for uploaded archives (zip bombs, absurd uploads).
 MAX_ZIP_FILES = 64
@@ -144,7 +145,9 @@ def _build_from_kicad(data: bytes, name: str) -> bytes:
         }
         for h in drawing.holes
     ]
-    return _pack(name, write_gerber(drawing), contour, (xmin, ymin, xmax, ymax), holes)
+    copper_bytes = write_gerber(drawing)
+    preview = copper_preview(GerberFile.from_string(copper_bytes.decode()), xmin, ymin)
+    return _pack(name, copper_bytes, contour, (xmin, ymin, xmax, ymax), holes, preview)
 
 
 def build_package(data: bytes, name: str) -> bytes:
@@ -184,8 +187,9 @@ def build_package(data: bytes, name: str) -> bytes:
             xmin, ymin, xmax, ymax = _outline_bounds(stack.outline)
         holes = _holes(stack, xmin, ymin)
         copper_bytes = Path(copper.original_path).read_bytes()  # the file as uploaded, read before the folder goes
+        preview = copper_preview(copper, xmin, ymin)
 
-    return _pack(name, copper_bytes, contour, (xmin, ymin, xmax, ymax), holes)
+    return _pack(name, copper_bytes, contour, (xmin, ymin, xmax, ymax), holes, preview)
 
 
 def _pack(
@@ -194,6 +198,7 @@ def _pack(
     contour: Any,
     bounds: tuple[float, float, float, float],
     holes: list[dict[str, Any]],
+    preview: dict[str, Any] | None = None,
 ) -> bytes:
     xmin, ymin, xmax, ymax = bounds
     width, height = round(xmax - xmin, 1), round(ymax - ymin, 1)
@@ -207,6 +212,8 @@ def _pack(
         "height_mm": height,
         "holes": holes,
     }
+    if preview is not None:
+        board["copper"] = preview
     if contour is not None:
         shapes = [
             {"outer": relative(outer, xmin, ymin), "cutouts": [relative(cutout, xmin, ymin) for cutout in cutouts]}

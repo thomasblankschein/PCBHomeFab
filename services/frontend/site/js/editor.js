@@ -4,7 +4,7 @@ import { ApiError, createJob, getBoardInfo, getPlates, getProfiles, getTools, pr
 import { fill, h } from "./dom.js";
 import { mm } from "./format.js";
 import { initI18n, onLanguageChange, t } from "./i18n.js";
-import { holeColors, holeSummary, isRectangle, missingDrills, placedBoards, plateUsage, polygonPath, previewId, suggestDrill, validCount } from "./geometry.js";
+import { copperPaths, holeColors, holeSummary, isRectangle, missingDrills, placedBoards, plateUsage, polygonPath, previewId, suggestDrill, validCount } from "./geometry.js";
 
 const STORAGE_KEY = "pcbhomefab.settings";
 const SAVED_FIELDS = ["plate", "marks", "mark_labels", "printer", "mill", "holes", "gap_mm", "margin_mm", "flip", "thickness_mm", "tabs", "exposure", "mill_gcode"];
@@ -15,12 +15,13 @@ const emptyHint = document.getElementById("empty");
 const fileInput = document.getElementById("files");
 const dropZone = document.getElementById("drop");
 const plate = document.getElementById("plate");
+const plateHint = document.getElementById("plate-hint");
 const summary = document.getElementById("summary");
 const layoutError = document.getElementById("layout-error");
 const submit = document.getElementById("submit");
 const submitError = document.getElementById("submit-error");
 
-const state = { profiles: null, plates: [], drills: [], missing: [], drillMap: {}, rows: [], nextKey: 1, layout: null, layoutError: "", creating: false };
+const state = { profiles: null, plates: [], drills: [], missing: [], drillMap: {}, rows: [], nextKey: 1, layout: null, layoutError: "", creating: false, view: "top" };
 // A row error or the layout error is a message of the server (text) or one of ours ({ key, params }).
 const messageText = (message) => (typeof message === "string" ? message : message ? t(message.key, message.params) : "");
 let previewTimer = 0;
@@ -259,18 +260,35 @@ function boardsById() {
   return Object.fromEntries(readyRows().map((row, i) => [previewId(i), { ...row.info, name: row.file.name.replace(/\.(zip|kicad_pcb)$/i, "") }]));
 }
 
+/** The tracks, pads and copper pours of a placed board, for the underside view. */
+function copperShapes(board, toX, toY) {
+  const { tracks, fills } = copperPaths(board.copper, board.x, board.y, toX, toY);
+  return h(
+    "g",
+    { class: "copper" },
+    h("path", { class: "fill", d: fills }),
+    tracks.map((track) => h("path", { class: "track", d: track.d, "stroke-width": track.width })),
+  );
+}
+
 function renderPlate() {
   const layout = state.layout;
   const width = layout?.plate.width_mm ?? currentPlate().width_mm;
   const height = layout?.plate.height_mm ?? currentPlate().height_mm;
+  const underside = state.view === "bottom";
   plate.setAttribute("viewBox", `-2 -2 ${width + 4} ${height + 4}`);
+  plateHint.textContent = t(underside ? "plate.hint_bottom" : "plate.hint_top");
+  for (const [view, id] of [["top", "view-top"], ["bottom", "view-bottom"]]) {
+    document.getElementById(id).setAttribute("aria-pressed", String(state.view === view));
+  }
   const parts = [h("rect", { class: "plate", x: 0, y: 0, width, height })];
   const rows = readyRows().map((row, i) => ({ id: previewId(i), count: row.count }));
   const byId = boardsById();
   const diameters = holeSummary(rows, byId);
   const colors = holeColors(diameters.map(([d]) => d));
   if (layout) {
-    const toX = (x) => x;
+    // the underside is the design view seen from the copper side: mirrored left to right
+    const toX = underside ? (x) => width - x : (x) => x;
     const toY = (y) => height - y;
     for (const board of placedBoards(layout, byId)) {
       parts.push(
@@ -279,8 +297,9 @@ function renderPlate() {
           {},
           h("title", {}, t("plate.board_title", { name: board.name, width: mm(board.width), height: mm(board.height), x: mm(board.x), y: mm(board.y) })),
           h("path", { class: "board", "fill-rule": "evenodd", d: polygonPath([board.outer, ...board.cutouts, ...board.extra], toX, toY) }),
+          underside && board.copper ? copperShapes(board, toX, toY) : null,
           board.holes.map((hole) =>
-            h("circle", { class: "hole", cx: hole.x, cy: toY(hole.y), r: Math.max(hole.diameter / 2, 0.35), fill: colors.get(hole.diameter) }),
+            h("circle", { class: "hole", cx: toX(hole.x), cy: toY(hole.y), r: Math.max(hole.diameter / 2, 0.35), fill: colors.get(hole.diameter) }),
           ),
         ),
       );
@@ -447,6 +466,12 @@ function wire() {
     renderSubmit();
   });
   for (const name of ["plate", "marks", "gap_mm", "margin_mm"]) field(name).addEventListener("input", onLayoutInputsChanged);
+  for (const view of ["top", "bottom"]) {
+    document.getElementById(`view-${view}`).addEventListener("click", () => {
+      state.view = view;
+      renderPlate();
+    });
+  }
   form.addEventListener("submit", onSubmit);
 }
 

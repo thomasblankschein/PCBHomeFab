@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  copperPaths,
   missingDrills,
   suggestDrill,
   boardShape,
@@ -148,4 +149,27 @@ test("the suggested drill is the next larger one", () => {
   assert.equal(suggestDrill(0.95, drills), 1.0);
   assert.equal(suggestDrill(0.4, drills), 0.6);
   assert.equal(suggestDrill(1.25, drills), 1.2); // nothing larger: the largest
+});
+
+test("copperPaths groups tracks by width and turns every filled shape the same way round", () => {
+  const copper = {
+    strokes: [[0, 0, 1, 0, 0.5], [1, 0, 1, 1, 0.5], [0, 2, 1, 2, 0.2]],
+    discs: [[2, 2, 0.5]],
+    polygons: [
+      [[0, 0], [1, 0], [1, 1], [0, 1]],
+      [[0, 0], [0, 1], [1, 1], [1, 0]],
+    ],
+  };
+  const { tracks, fills } = copperPaths(copper, 10, 20);
+  assert.deepEqual(tracks.map((track) => track.width).sort(), [0.2, 0.5]);
+  assert.match(tracks.find((track) => track.width === 0.5).d, /^M10\.00 20\.00L11\.00 20\.00M11\.00 20\.00L11\.00 21\.00M12\.00 22\.00L12\.00 22\.00$/);
+  const area = (path) => {
+    const points = path.match(/-?\d+\.\d+ -?\d+\.\d+/g).map((p) => p.split(" ").map(Number));
+    return points.reduce((sum, [x, y], i) => sum + (x * points[(i + 1) % points.length][1] - points[(i + 1) % points.length][0] * y), 0);
+  };
+  const [first, second] = fills.split("Z").filter(Boolean);
+  assert.ok(area(first) * area(second) > 0);
+  // mirrored drawing: the x of the first pad end goes from 10 to width - 10
+  const mirrored = copperPaths(copper, 10, 20, (x) => 100 - x, (y) => y);
+  assert.match(mirrored.tracks[0].d, /^M90\.00 /);
 });

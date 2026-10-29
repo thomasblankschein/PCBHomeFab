@@ -192,3 +192,27 @@ def test_kicad_file_with_three_boards_keeps_every_outline() -> None:
     board, _ = _unpack(build_package(_pcb(TRACK, box(0, 20) + box(25, 15) + box(45, 10)), "t"))
     assert (board["width_mm"], board["height_mm"]) == (55.0, 10.0)
     assert len(board["contour"]["others"]) == 2
+
+
+def test_board_json_carries_copper_for_the_preview(data_dir: Path) -> None:
+    from_gerber, _ = _unpack(build_package((data_dir / "fuehlerknoten.zip").read_bytes(), "node"))
+    from_kicad, _ = _unpack(build_package((data_dir / "fuehlerknoten.kicad_pcb").read_bytes(), "node"))
+    for board in (from_gerber, from_kicad):
+        copper = board["copper"]
+        assert copper["strokes"] and copper["discs"] and copper["polygons"]
+        coordinates = [v for s in copper["strokes"] for v in s[:4]] + [v for d in copper["discs"] for v in d[:2]]
+        assert all(-1 <= v <= 27 for v in coordinates)  # inside the 10 x 26 mm board, relative to its corner
+
+
+def test_copper_preview_cuts_arcs_into_pieces() -> None:
+    from gerbonara import GerberFile
+
+    from ingest.preview import copper_preview
+
+    text = (
+        "%FSLAX46Y46*%\n%MOMM*%\n%ADD10C,0.5*%\nD10*\nG75*\nG01*\nX1000000Y0D02*\n"
+        "G03*\nX0Y1000000I-1000000J0D01*\nM02*\n"
+    )
+    preview = copper_preview(GerberFile.from_string(text), 0, 0)
+    assert preview is not None and len(preview["strokes"]) > 4
+    assert all(abs(s[4] - 0.5) < 1e-9 for s in preview["strokes"])
