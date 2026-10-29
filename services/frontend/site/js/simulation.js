@@ -270,6 +270,8 @@ export function createSimulation(container, programs, thickness, panelSize, opti
     sheet.height = height;
     const target = ctx;
     ctx = sheet.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     for (let i = 0; i < columns; i++) {
       for (let j = 0; j < rows; j++) {
         const sx = i * sw;

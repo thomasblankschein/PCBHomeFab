@@ -18,7 +18,9 @@ from .raster import rasterize_copper
 #: Diameter of the center mark that guides the drill (mode "center"), in mm.
 CENTER_MARK_MM = 0.4
 #: Resolution and colour of the copper picture used by the 3D view of the user interface.
-COPPER_PX_MM = 0.1
+COPPER_PX_MM = 0.05
+#: Each board is drawn this many times finer and scaled down, which gives smooth edges (partly transparent pixels).
+COPPER_SUPERSAMPLE = 3
 COPPER_RGB = (214, 138, 62)
 
 #: Positioning mark: two quarter circles of copper that face each other diagonally, inside a free (etched) disc. The
@@ -124,9 +126,12 @@ def build_copper(
     for placement in placements:
         key = id(placement.board)
         if key not in cache:
-            no_copper = ImageOps.invert(rasterize_copper(placement.board, px_mm=pixel))
-            punch_holes(no_copper, placement.board, pixel, "full")
-            cache[key] = ImageOps.invert(no_copper)
+            board = placement.board
+            fine = pixel / COPPER_SUPERSAMPLE
+            no_copper = ImageOps.invert(rasterize_copper(board, px_mm=fine, supersample=1))
+            punch_holes(no_copper, board, fine, "full")
+            size = (round(board.width_mm / pixel), round(board.height_mm / pixel))
+            cache[key] = ImageOps.invert(no_copper).resize(size, Image.Resampling.BOX)
         alpha.paste(
             cache[key],
             (

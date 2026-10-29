@@ -88,13 +88,13 @@ def test_copper_picture_for_the_3d_view(client: TestClient) -> None:
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
         assert archive.namelist() == ["copper.png"]
         picture = Image.open(io.BytesIO(archive.read("copper.png")))
-    assert picture.mode == "RGBA" and picture.size == (1600, 1000)  # 160 x 100 mm at 10 px/mm
+    assert picture.mode == "RGBA" and picture.size == (3200, 2000)  # 160 x 100 mm at 20 px/mm
     alpha = picture.getchannel("A")
     assert alpha.getextrema() == (0, 255)
     copper = sum(1 for v in alpha.tobytes() if v)
-    assert 0.01 < copper / (1600 * 1000) < 0.5  # some copper, far from everything
+    assert 0.01 < copper / (3200 * 2000) < 0.5  # some copper, far from everything
     # the corner of the panel has no board and no copper
-    assert picture.getpixel((1599, 0))[3] == 0
+    assert picture.getpixel((3199, 0))[3] == 0
 
 
 def test_profiles(client: TestClient) -> None:
@@ -184,10 +184,10 @@ def test_positioning_marks_are_drawn_in_mask_and_copper_picture(client: TestClie
     marked = _post(client, settings={**SETTINGS, "outputs": ["copper"], "marks": MARKS})
     with zipfile.ZipFile(io.BytesIO(plain.content)) as a, zipfile.ZipFile(io.BytesIO(marked.content)) as b:
         without, with_marks = (Image.open(io.BytesIO(z.read("copper.png"))) for z in (a, b))
-    # at 10 px/mm the pad (2.4 mm) around (2, 98) is copper in one of its quadrants, and nothing was there before
-    assert without.getpixel((30, 30))[3] == 0
-    assert with_marks.getpixel((20 - 6, 20 - 6))[3] == 255  # copper quadrant (top left for "tr-bl")
-    assert with_marks.getpixel((20 + 6, 20 - 6))[3] == 0  # free quadrant (top right)
+    # at 20 px/mm the pad (2.4 mm) around (2, 98) is copper in one of its quadrants, and nothing was there before
+    assert without.getpixel((60, 60))[3] == 0
+    assert with_marks.getpixel((40 - 12, 40 - 12))[3] == 255  # copper quadrant (top left for "tr-bl")
+    assert with_marks.getpixel((40 + 12, 40 - 12))[3] == 0  # free quadrant (top right)
 
 
 def test_two_marks_are_needed(client: TestClient) -> None:

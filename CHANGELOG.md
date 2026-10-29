@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.3 - 2026-10-29
+
+- The copper picture of the 3D simulation (`copper.png`) has 20 px/mm instead of 10 px/mm and smooth edges (drawn three times
+  finer and scaled down), so tracks and pads no longer look pixelated when zoomed in.
+
 ## 0.22.2 - 2026-10-29
 
 - Fix: the panel was drawn very dark in the 3D simulation since 0.22.0 (the renamed colour variable was not found).
