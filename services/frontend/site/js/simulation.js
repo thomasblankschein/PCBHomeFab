@@ -200,6 +200,9 @@ export function createSimulation(container, programs, thickness, panelSize, opti
     state.projected = true;
   }
 
+  /** A move straight down or up (drilling, plunging), with no sideways travel. */
+  const isPlunge = (m) => Math.abs(m.x1 - m.x0) < 1e-6 && Math.abs(m.y1 - m.y0) < 1e-6;
+
   function strokeMoves(ctx, from, to, test) {
     const { screen, moves } = state;
     ctx.beginPath();
@@ -379,7 +382,14 @@ export function createSimulation(container, programs, thickness, panelSize, opti
     for (const [index, program] of programs.entries()) {
       ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
       ctx.lineWidth = Math.max(1.5 * ratio, program.diameter * mmToPx);
-      strokeMoves(ctx, 0, done, (m) => m.p === index && m.kind === "cut" && m.z0 <= 0 && m.z1 <= 0);
+      const cutAway = (m) => m.p === index && m.kind === "cut" && m.z0 <= 0 && m.z1 <= 0;
+      // a hole or a plunge is a straight drop: its ends are flat (the top is the opening in the surface), a path the tool
+      // travels along has round ends (the shape of the tool)
+      ctx.lineCap = "round";
+      strokeMoves(ctx, 0, done, (m) => cutAway(m) && !isPlunge(m));
+      ctx.lineCap = "butt";
+      strokeMoves(ctx, 0, done, (m) => cutAway(m) && isPlunge(m));
+      ctx.lineCap = "round";
     }
     // the cuts still to come, faint, and the finished ones
     ctx.lineWidth = Math.max(1, ratio);

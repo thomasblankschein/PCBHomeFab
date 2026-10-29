@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.7 - 2026-10-29
+
+- The removed material of holes (drilling and plunging) is drawn with flat ends in the 3D simulation, no longer with half
+  circles; the paths of the mill keep their round ends, the shape of the tool.
+
 ## 0.22.6 - 2026-10-29
 
 - Fix: the copper in the 3D simulation was cut by wedge shaped gaps when the view was steep or zoomed in (the picture was drawn
