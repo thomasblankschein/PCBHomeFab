@@ -328,7 +328,8 @@ function renderDrillMap() {
       state.drillMap[diameter] ??= suggestDrill(diameter, state.drills);
       const select = h(
         "select",
-        { onchange: () => (state.drillMap[diameter] = Number(select.value)) },
+        // "input" (not "change"): it fires first, so the form's own input handler redraws the rows with the new choice
+        { oninput: () => (state.drillMap[diameter] = Number(select.value)) },
         state.drills.map((drill) => h("option", { value: drill, selected: drill === state.drillMap[diameter] }, `${drill} mm`)),
       );
       return h("label", {}, h("span", {}, t("drills.row", { diameter, count })), select);

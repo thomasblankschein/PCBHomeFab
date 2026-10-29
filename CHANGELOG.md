@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.19.1 - 2026-10-29
+
+- Fix: choosing a drill for an unusual hole size took effect only on the second try. The form redrew the rows on the
+  `input` event before the select box had stored its choice; the choice is now stored on `input`.
+
 ## 0.19.0 - 2026-10-29
 
 - Defaults taken over from the maintainer's proven FlatCAM programs: end mill feed 70 mm/min, plunge feed 50 mm/min for
