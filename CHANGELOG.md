@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.1 - 2026-10-29
+
+- Fix: a select box with a long text ("All programs one after the other" in the 3D simulation) no longer reaches over the
+  neighbouring controls, such as the "Exaggerated depth" slider.
+
 ## 0.17.0 - 2026-10-29
 
 - The positioning mark is now two quarter circles of copper that face each other diagonally (inside a free disc, 2.4 mm

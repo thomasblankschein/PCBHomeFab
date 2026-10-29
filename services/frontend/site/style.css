@@ -321,6 +321,15 @@ legend {
   display: grid;
   gap: 0.2rem;
   font-size: 0.95rem;
+  min-width: 0;
+}
+
+/* A long option text must not push the control over the next column */
+.grid select,
+.grid input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 label.inline {
