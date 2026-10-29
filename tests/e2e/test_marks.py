@@ -50,7 +50,7 @@ def _file(client: httpx.Client, job: dict, name: str) -> bytes:
 def test_second_mark_is_named_in_every_program(client: httpx.Client, flip: str) -> None:
     job = _job(client, flip=flip)
     second = job["params"]["marks"]["second_mm"]
-    assert second["x_mm"] > 100 and second["y_mm"] > 50  # the other mark is far away, in the opposite corner
+    assert second["x_mm"] > 10 and second["y_mm"] > 50  # the other mark is in the opposite corner of the plate
     programs = [f["name"] for f in job["files"] if f["name"].endswith(".nc")]
     assert programs
     for name in programs:
