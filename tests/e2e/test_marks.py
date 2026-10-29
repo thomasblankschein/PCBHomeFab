@@ -84,11 +84,11 @@ def test_origin_moves_to_the_mark_and_the_copper_picture_shows_the_marks(
 
     copper = Image.open(io.BytesIO(_file(client, with_marks, "copper.png")))
     plain = Image.open(io.BytesIO(_file(client, without, "copper.png")))
-    # flip x: the second mark is at the upper left (2, 98) of the design view, 20 px/mm; the origin mark is next to the boards
-    assert copper.getpixel((28, 28))[3] == 255 and plain.getpixel((28, 28))[3] == 0
+    # flip x: the second mark is at the upper left (2, 98) of the design view, 10 px/mm; the origin mark is next to the boards
+    assert copper.getpixel((14, 14))[3] == 255 and plain.getpixel((14, 14))[3] == 0
     near = next(p for p in with_marks["params"]["marks"]["points"] if p["x_mm"] > 5)
-    x, y = round(near["x_mm"] * 20), round((100 - near["y_mm"]) * 20)
-    assert copper.getpixel((x + 12, y + 12))[3] == 255 and plain.getpixel((x + 12, y + 12))[3] == 0
+    x, y = round(near["x_mm"] * 10), round((100 - near["y_mm"]) * 10)
+    assert copper.getpixel((x + 6, y + 6))[3] == 255 and plain.getpixel((x + 6, y + 6))[3] == 0
     mask = Image.open(io.BytesIO(_file(client, with_marks, "mask.png"))).convert("L")
     assert mask.getbbox() is not None
 

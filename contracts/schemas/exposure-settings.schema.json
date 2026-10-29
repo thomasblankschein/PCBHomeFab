@@ -24,7 +24,7 @@
       "uniqueItems": true,
       "minItems": 1,
       "default": ["mask", "preview", "pm3"],
-      "description": "`copper` is a picture of the copper on the panel (RGBA, 20 px/mm, top view, not mirrored) for the 3D view."
+      "description": "`copper` is a picture of the copper on the panel (RGBA, 10 px/mm, top view, not mirrored) for the 3D view."
     }
   },
   "additionalProperties": false

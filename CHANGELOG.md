@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.5 - 2026-10-29
+
+- Back to the state of 0.22.2: the finer copper picture of 0.22.3 and the tile changes of 0.22.4 are taken out again, because
+  the copper of the 3D simulation showed gaps for the maintainer. The copper picture has 10 px/mm again.
+
 ## 0.22.4 - 2026-10-29
 
 - Fix: the copper in the 3D simulation could show wedge shaped gaps between the tiles it is drawn from when zoomed in
