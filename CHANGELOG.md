@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.2 - 2026-10-29
+
+- Fix: the panel was drawn very dark in the 3D simulation since 0.22.0 (the renamed colour variable was not found).
+
 ## 0.22.1 - 2026-10-29
 
 - The time in the 3D simulation shows hours (h:mm:ss) from 60 minutes on, below that it stays m:ss.

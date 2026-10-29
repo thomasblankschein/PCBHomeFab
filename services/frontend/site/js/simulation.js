@@ -229,7 +229,7 @@ export function createSimulation(container, programs, thickness, panelSize, opti
       ctx.beginPath();
       face.projected.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
       ctx.closePath();
-      ctx.fillStyle = css("--panel");
+      ctx.fillStyle = css("--blank");
       ctx.fill();
       if (face.shade) {
         ctx.fillStyle = `rgba(0, 0, 0, ${face.shade})`;
@@ -295,7 +295,7 @@ export function createSimulation(container, programs, thickness, panelSize, opti
   /** The panel (with the copper) only changes with the view, so it is kept in a picture while the tool moves. */
   function drawPanelLayer(ctx, basis, width, height) {
     const showCopper = state.copper && state.copperReady && basis.eye[2] > 0;
-    const key = [JSON.stringify(state.camera), state.zScale, width, height, showCopper, css("--panel"), css("--border"), css("--copper")].join("|");
+    const key = [JSON.stringify(state.camera), state.zScale, width, height, showCopper, css("--blank"), css("--border"), css("--copper")].join("|");
     if (key !== state.layerKey || layer.width !== width || layer.height !== height) {
       layer.width = width;
       layer.height = height;
