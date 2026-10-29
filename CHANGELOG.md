@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.1 - 2026-10-29
+
+- Fix: a mounting hole that is also drawn as a circle on Edge.Cuts was milled twice (once as a hole, once as a cutout
+  of the outline). A hole whose centre and diameter agree with a cutout of the outline (0.15 mm) is now skipped.
+
 ## 0.18.0 - 2026-10-29
 
 - Hole sizes without a drill of their own in the tool library can be assigned to an existing drill. The editor shows a select

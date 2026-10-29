@@ -83,6 +83,21 @@ class _Frame:
         return x + self.mill.offset_x_mm, y + self.mill.offset_y_mm
 
 
+#: A hole counts as the same as a cutout of the outline when centre and diameter agree this closely, in mm.
+SAME_HOLE_MM = 0.15
+
+
+def _is_cutout(x: float, y: float, diameter: float, cutouts: list[list[Point]]) -> bool:
+    """Whether the hole is already a cutout of the outline (a mounting hole drawn on Edge.Cuts and drilled)."""
+    for cutout in cutouts:
+        polygon = Polygon(cutout)
+        centre = polygon.centroid
+        equivalent = 2 * math.sqrt(polygon.area / math.pi)
+        if math.hypot(centre.x - x, centre.y - y) <= SAME_HOLE_MM and abs(equivalent - diameter) <= SAME_HOLE_MM:
+            return True
+    return False
+
+
 def build_layout(placements: list[Placement], plate: Plate, mill: MillProfile) -> Layout:
     frame = _Frame(plate, mill)
     holes: dict[float, list[Point]] = {}
@@ -92,8 +107,12 @@ def build_layout(placements: list[Placement], plate: Plate, mill: MillProfile) -
         def move(points: list[Point], p: Placement = placement) -> list[Point]:
             return [frame.point(p.x_mm + x, p.y_mm + y) for x, y in points]
 
-        outlines += [(move(outer), [move(cutout) for cutout in cutouts]) for outer, cutouts in placement.shapes()]
+        shapes = placement.shapes()
+        outlines += [(move(outer), [move(cutout) for cutout in cutouts]) for outer, cutouts in shapes]
+        cutouts = [cutout for _, cutouts in shapes for cutout in cutouts]
         for x, y, diameter in placement.holes:
+            if _is_cutout(x, y, diameter, cutouts):
+                continue  # the outline is milled around it already, a second pass would only cut the same circle again
             holes.setdefault(diameter, []).append(frame.point(placement.x_mm + x, placement.y_mm + y))
     return Layout(holes, outlines)
 

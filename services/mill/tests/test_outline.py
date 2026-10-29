@@ -189,3 +189,17 @@ def test_every_board_of_a_file_with_several_outlines_is_milled() -> None:
     programs = gcode.generate([placement], Plate(), MILL_3018PRO, gcode.load_tools())
     mill = next(p for p in programs if p.tool.startswith("endmill"))
     assert mill.outlines == 2
+
+
+def test_a_hole_that_is_a_cutout_of_the_outline_is_milled_only_once() -> None:
+    outer = [(0.0, 0.0), (40.0, 0.0), (40.0, 30.0), (0.0, 30.0)]
+    contour: Shape = (outer, [circle(10.0, 15.0, 3.6)])
+    mounting = (10.0, 15.0, 7.2)  # the same circle as a drilled hole
+    other = (30.0, 15.0, 7.2)  # no cutout there: milled as a hole
+    both = Placement(3.0, 3.0, 40.0, 30.0, [mounting, other], contour)
+    layout = gcode.build_layout([both], Plate(), MILL_3018PRO)
+    assert [len(points) for points in layout.holes.values()] == [1]
+    only_outline = Placement(3.0, 3.0, 40.0, 30.0, [mounting], contour)
+    assert gcode.build_layout([only_outline], Plate(), MILL_3018PRO).holes == {}
+    # a hole of the same size somewhere else is not a cutout
+    assert gcode.build_layout([replace(only_outline, holes=[(20.0, 15.0, 7.2)])], Plate(), MILL_3018PRO).holes
