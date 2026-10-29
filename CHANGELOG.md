@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.9 - 2026-10-29
+
+- Fix: the holes of the 3D simulation started below the copper level when the drill works in steps (pecking). Every hole now
+  starts at the surface and goes as deep as the tool got there.
+
 ## 0.22.8 - 2026-10-29
 
 - Fix: the holes of the 3D simulation looked like flat rectangles from above since 0.22.7. Every hole (drilling and plunging) is

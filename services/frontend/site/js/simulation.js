@@ -210,24 +210,27 @@ export function createSimulation(container, programs, thickness, panelSize, opti
    * and bottom circle seen from the camera, which gives a round opening from above and a flat top from the side.
    */
   function drawHoles(ctx, basis, width, height, done, mmToPx, ratio) {
-    const seen = new Set();
-    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
-    ctx.beginPath();
+    // every hole opens in the surface (Z 0) and goes as deep as the tool got; a drop that starts above the surface or
+    // a peck that starts inside the hole belong to the same hole
+    const holes = new Map();
     for (let i = 0; i < done; i++) {
       const m = state.moves[i];
-      if (m.kind !== "cut" || !isPlunge(m) || m.z0 > 0 || m.z1 > 0) continue;
-      const program = programs[m.p];
-      const top = Math.max(m.z0, m.z1);
       const bottom = Math.min(m.z0, m.z1);
-      const key = `${m.p}|${m.x0.toFixed(3)}|${m.y0.toFixed(3)}|${top}|${bottom}`;
-      if (seen.has(key)) continue; // the way up is the same hole again
-      seen.add(key);
-      const radius = Math.max(program.diameter / 2, (0.75 * ratio) / mmToPx);
+      if (m.kind !== "cut" || !isPlunge(m) || bottom >= 0) continue;
+      const key = `${m.p}|${m.x0.toFixed(3)}|${m.y0.toFixed(3)}`;
+      const hole = holes.get(key);
+      if (hole) hole.bottom = Math.min(hole.bottom, bottom);
+      else holes.set(key, { p: m.p, x: m.x0, y: m.y0, bottom });
+    }
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.beginPath();
+    for (const hole of holes.values()) {
+      const radius = Math.max(programs[hole.p].diameter / 2, (0.75 * ratio) / mmToPx);
       const rim = [];
       for (let k = 0; k < HOLE_POINTS; k++) {
         const angle = (2 * Math.PI * k) / HOLE_POINTS;
-        for (const z of [top, bottom]) {
-          const point = project([m.x0 + radius * Math.cos(angle), m.y0 + radius * Math.sin(angle), z * state.zScale], basis, width, height);
+        for (const z of [0, hole.bottom]) {
+          const point = project([hole.x + radius * Math.cos(angle), hole.y + radius * Math.sin(angle), z * state.zScale], basis, width, height);
           if (point) rim.push([point.x, point.y]);
         }
       }
