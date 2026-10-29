@@ -28,7 +28,7 @@ def process_next(store: JobStore, services: Services) -> bool:
         log.error("Job failed:\n%s", traceback.format_exc())
         store.fail(job.id, INTERNAL_ERROR)
     else:
-        store.finish(job.id, files)
+        store.finish(job.id, files, job.params)
     return True
 
 

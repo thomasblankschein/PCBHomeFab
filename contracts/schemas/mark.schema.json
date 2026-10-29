@@ -11,7 +11,7 @@
     "voids": {
       "enum": ["tl-br", "tr-bl"],
       "default": "tl-br",
-      "description": "Which two quadrants of the mark are etched free (top left and bottom right, or top right and bottom left), in the design view."
+      "description": "Which two quadrants of the mark have no copper (top left and bottom right, or top right and bottom left), in the design view. The other two quadrants are quarter circles of copper."
     },
     "label": {
       "type": "string",

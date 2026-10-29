@@ -491,10 +491,11 @@ def test_positioning_marks_reach_exposure_and_mill(
     job = _post(client, ("a.zip", ZIP), marks="true", mark_labels="false", margin_mm="5", flip="x").json()
     process_next(JobStore(services.settings), services)
     params = client.get(f"/v1/jobs/{job['id']}").json()["params"]
-    expected = [{"x_mm": 2.0, "y_mm": 98.0, "voids": "tr-bl"}, {"x_mm": 158.0, "y_mm": 2.0, "voids": "tr-bl"}]
+    # the board (10 x 10 mm at 3, 3) ends at x = 13: the origin mark stands 2 mm right of it (the plate is turned in X)
+    expected = [{"x_mm": 2.0, "y_mm": 98.0, "voids": "tr-bl"}, {"x_mm": 15.0, "y_mm": 2.0, "voids": "tr-bl"}]
     assert params["marks"]["points"] == expected
-    assert params["marks"]["second_mm"] == {"x_mm": 156.0, "y_mm": 96.0}
-    assert params["marks"]["plate_origin_mm"] == {"x_mm": -2.0, "y_mm": -2.0}
+    assert params["marks"]["second_mm"] == {"x_mm": 13.0, "y_mm": 96.0}
+    assert params["marks"]["plate_origin_mm"] == {"x_mm": -145.0, "y_mm": -2.0}
     assert seen["exposure"]["marks"] == expected and seen["mill"]["marks"] == expected
 
 

@@ -117,9 +117,11 @@ docker-compose.yaml
 ## Positioning marks
 - The plate is not always at the same place on the mill and not exactly square. With `marks` (default on, margin of at least
   4.5 mm) the copper layer gets two marks diagonally opposite in the margin (`services/exposure/src/exposure/mask.py`:
-  copper square, two diagonal quadrants etched free, free ring around it; the centre is where the two free squares touch, so
+  two quarter circles of copper facing each other diagonally inside a free disc; the centre is where their tips touch, so
   it stays put when too much is etched). `jobs` (`marks.py`) places them so that, after turning the plate over (`flip`), one
-  is at the lower left and one at the upper right. `mill` makes the lower left mark X0 Y0 of every program and names the
+  is at the lower left and one at the upper right. The origin mark (lower left on the mill) is set as close to the boards as possible (outside the corner of the area of
+  all placed boards, `NEAR_BOARDS_MM`; the workflow computes it after panelizing and stores the result in `params.marks`), the
+  other one stays in the opposite corner of the plate. `mill` makes the lower left mark X0 Y0 of every program and names the
   other one in the header and in `programs.json`; `jobs` stores the same position as `params.marks.second_mm`.
   With `mark_labels` (default on) `exposure` also writes the G-code coordinates (`X0 Y0`, `X156 Y96`) next to each mark; the
   margin stays copper, so the letters are exposed (etched free), and they are mirrored like the plate is turned (`label_flip`)

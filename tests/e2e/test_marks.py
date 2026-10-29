@@ -49,13 +49,13 @@ def _file(client: httpx.Client, job: dict, name: str) -> bytes:
 @pytest.mark.parametrize("flip", ["x", "y", "none"])
 def test_second_mark_is_named_in_every_program(client: httpx.Client, flip: str) -> None:
     job = _job(client, flip=flip)
-    marks = job["params"]["marks"]
-    assert marks["second_mm"] == {"x_mm": 156.0, "y_mm": 96.0}
+    second = job["params"]["marks"]["second_mm"]
+    assert second["x_mm"] > 100 and second["y_mm"] > 50  # the other mark is far away, in the opposite corner
     programs = [f["name"] for f in job["files"] if f["name"].endswith(".nc")]
     assert programs
     for name in programs:
         code = _file(client, job, name).decode()
-        assert "(Second positioning mark, upper right: X156.000 Y96.000)" in code
+        assert f"(Second positioning mark, upper right: X{second['x_mm']:.3f} Y{second['y_mm']:.3f})" in code
         assert "centre of the lower left positioning mark" in code
 
 
@@ -76,16 +76,19 @@ def test_origin_moves_to_the_mark_and_the_copper_picture_shows_the_marks(
             for x, y in re.findall(r"^G0 X(-?[\d.]+) Y(-?[\d.]+)", code, re.M)
         }
 
+    origin = with_marks["params"]["marks"]["plate_origin_mm"]  # the lower left corner of the plate in G-code coordinates
     shifted = {
-        (round(x - 2.0, 3), round(y - 2.0, 3)) for x, y in moves(without) - {(0.0, 0.0)}
+        (round(x + origin["x_mm"], 3), round(y + origin["y_mm"], 3)) for x, y in moves(without) - {(0.0, 0.0)}
     }
     assert shifted == moves(with_marks) - {(0.0, 0.0)}
 
     copper = Image.open(io.BytesIO(_file(client, with_marks, "copper.png")))
     plain = Image.open(io.BytesIO(_file(client, without, "copper.png")))
-    # flip x: the marks are at the upper left (2, 98) and the lower right (158, 2) of the design view, 10 px/mm
+    # flip x: the second mark is at the upper left (2, 98) of the design view, 10 px/mm; the origin mark is next to the boards
     assert copper.getpixel((14, 14))[3] == 255 and plain.getpixel((14, 14))[3] == 0
-    assert copper.getpixel((1580 + 6, 1000 - 20 + 6))[3] == 255
+    near = next(p for p in with_marks["params"]["marks"]["points"] if p["x_mm"] > 5)
+    x, y = round(near["x_mm"] * 10), round((100 - near["y_mm"]) * 10)
+    assert copper.getpixel((x + 6, y + 6))[3] == 255 and plain.getpixel((x + 6, y + 6))[3] == 0
     mask = Image.open(io.BytesIO(_file(client, with_marks, "mask.png"))).convert("L")
     assert mask.getbbox() is not None
 

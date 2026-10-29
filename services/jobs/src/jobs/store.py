@@ -113,12 +113,15 @@ class JobStore:
         record.status = RUNNING
         return record
 
-    def finish(self, job_id: str, files: list[dict[str, Any]]) -> None:
+    def finish(self, job_id: str, files: list[dict[str, Any]], params: dict[str, Any] | None = None) -> None:
+        """Mark the job as done. ``params`` replaces the stored ones when the workflow has completed them."""
         with self._connect() as db:
             db.execute(
                 "UPDATE jobs SET status = ?, updated = ?, files = ?, error = NULL WHERE id = ?",
                 (DONE, time.time(), json.dumps(files), job_id),
             )
+            if params is not None:
+                db.execute("UPDATE jobs SET params = ? WHERE id = ?", (json.dumps(params), job_id))
 
     def fail(self, job_id: str, error: str) -> None:
         with self._connect() as db:

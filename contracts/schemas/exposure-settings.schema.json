@@ -16,7 +16,7 @@
       "items": {"$ref": "mark.schema.json"},
       "minItems": 2,
       "maxItems": 2,
-      "description": "Positioning marks to draw (about 3.4 mm square each, with a free ring around them). Without it no marks are drawn."
+      "description": "Positioning marks to draw (two diagonal quarter circles of copper, about 3.4 mm across with their free ring). Without it no marks are drawn."
     },
     "outputs": {
       "type": "array",

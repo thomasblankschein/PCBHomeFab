@@ -126,7 +126,8 @@ class Placement:
 
 @dataclass(frozen=True)
 class Mark:
-    """A positioning mark: centre in plate coordinates and which two quadrants are etched free."""
+    """A positioning mark: centre in plate coordinates and which two quadrants have no copper (the other two are
+    quarter circles of copper)."""
 
     x_mm: float
     y_mm: float

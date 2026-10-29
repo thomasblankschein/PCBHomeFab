@@ -81,10 +81,10 @@ def _mark_mask(voids: str, base: Board) -> tuple[Image.Image, float, float]:
     return mask.convert("L"), cx, cy
 
 
-def test_mark_has_copper_pad_free_quadrants_and_free_ring(base: Board) -> None:
+def test_mark_has_two_copper_quarter_circles_and_a_free_ring(base: Board) -> None:
     mask, cx, cy = _mark_mask("tl-br", base)
     x, y = round(cx), round(cy)
-    d = 15  # pixels from the centre, well inside a quadrant (a quadrant is about 26 px)
+    d = 15  # pixels from the centre, well inside a quadrant (the radius is 30 px)
     assert mask.getpixel((x - d, y - d)) == 255 and mask.getpixel((x + d, y + d)) == 255  # free quadrants
     assert mask.getpixel((x + d, y - d)) == 0 and mask.getpixel((x - d, y + d)) == 0  # copper quadrants
     ring = round((2.4 / 2 + 0.25) / PHOTON_M3.pixel_mm)  # in the free ring around the pad
@@ -101,8 +101,8 @@ def test_other_mark_pattern_swaps_the_quadrants(base: Board) -> None:
 
 
 def test_mark_centre_stays_where_it_is_when_too_much_is_etched(base: Board) -> None:
-    """Both free squares touch at the centre. Etching a little too much grows them equally, so the middle of the part
-    where they overlap is still the centre."""
+    """The two quarter circles touch at the centre. Etching a little too much shrinks both equally, so the middle of the
+    part that disappears is still the centre."""
     from PIL import ImageFilter
 
     mask, cx, cy = _mark_mask("tl-br", base)
@@ -166,3 +166,12 @@ def test_mask_is_not_mirrored_by_default(base: Board) -> None:
     gray = plain.convert("L")
     assert max(gray.crop((0, 1600, left - 2, 2400)).tobytes()) == 0
     assert max(gray.crop((left, 1600, left + 400, 2400)).tobytes()) == 255
+
+
+def test_mark_is_round(base: Board) -> None:
+    mask, cx, cy = _mark_mask("tl-br", base)
+    x, y = round(cx), round(cy)
+    inner = round(0.7 / PHOTON_M3.pixel_mm)  # 0.99 mm from the centre along the diagonal: inside the circle
+    assert mask.getpixel((x + inner, y - inner)) == 0  # copper quarter circle (top right)
+    corner = round(0.99 / PHOTON_M3.pixel_mm)  # 1.4 mm away: copper on a square pad of 2.4 mm, not on a circle
+    assert mask.getpixel((x + corner, y - corner)) == 255

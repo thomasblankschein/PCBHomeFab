@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.17.0 - 2026-10-29
+
+- The positioning mark is now two quarter circles of copper that face each other diagonally (inside a free disc, 2.4 mm
+  across plus a 0.5 mm ring) instead of a square with two free quadrants. The centre is where the tips touch.
+- The mark that is X0 Y0 of the G-code stands as close to the boards as possible: diagonally outside the corner of the area
+  of all placed boards (2 mm in X and Y) instead of in the corner of the plate. The other mark stays in the opposite corner.
+  The marks are therefore computed when the job runs, after panelizing; `params.marks` (positions, `second_mm`,
+  `plate_origin_mm`) is updated then, and the coordinates in the program headers and on the labels follow.
+
 ## 0.16.0 - 2026-10-27
 
 - Fix: a file that holds several boards, each with its own outline in Edge.Cuts, is milled along every outline. Before, such

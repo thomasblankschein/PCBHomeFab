@@ -9,6 +9,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+from .marks import alignment_marks
 from .services import Services, Unavailable, UserError
 
 CONTENT_TYPES = {
@@ -66,6 +67,20 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
         },
         step("panel"),
     )
+
+    if marks:
+        # the origin mark goes as close to the boards as possible, which is known only now
+        sizes = {e["name"]: (e["width_mm"], e["height_mm"]) for e in entries}
+        placed = [(p["x_mm"], p["y_mm"], *sizes[p["board_id"]]) for p in layout["placements"]]
+        box = (
+            min(x for x, _, _, _ in placed),
+            min(y for _, y, _, _ in placed),
+            max(x + w for x, _, w, _ in placed),
+            max(y + h for _, y, _, h in placed),
+        )
+        labels = "label" in marks[0]
+        params["marks"] = alignment_marks(plate["width_mm"], plate["height_mm"], params["flip"], labels, box)
+        marks = params["marks"]["points"]
 
     output = job_dir / "output"
     output.mkdir(exist_ok=True)

@@ -21,14 +21,12 @@ CENTER_MARK_MM = 0.4
 COPPER_PX_MM = 0.1
 COPPER_RGB = (214, 138, 62)
 
-#: Positioning mark: a copper square with two diagonal quadrants etched free, inside a free ring. Where the two free
-#: quadrants touch is the centre, and it stays there when too much is etched (both squares grow the same way).
+#: Positioning mark: two quarter circles of copper that face each other diagonally, inside a free (etched) disc. The
+#: tips of the quarter circles meet at the centre, and it stays there when too much is etched (both shrink the same
+#: way).
 MARK_PAD_MM = 2.4
-#: Width of the copper border around the two free quadrants, as a share of the pad.
-MARK_BORDER = 0.06
-#: Free ring around the pad, so that the pad is no part of a copper pour.
+#: Free ring around the copper circle, so that the mark is no part of a copper pour.
 MARK_CLEARANCE_MM = 0.5
-MARK_CORNER_MM = 0.2
 #: Text next to a mark (the G-code coordinates of the mark): height of the font and the
 #: gap between the free ring of the mark and the first letter.
 #: Font of the label: DejaVu Sans Mono Bold, equal width and thick strokes (licence next to it).
@@ -39,24 +37,42 @@ LABEL_GAP_MM = 0.2
 MARK_FOOTPRINT_MM = MARK_PAD_MM + 2 * MARK_CLEARANCE_MM
 
 
+#: The mark is drawn this many times larger and scaled down, which gives round edges and exact quadrants.
+_MARK_SUPERSAMPLING = 8
+
+
 def draw_mark(image: Image.Image, cx: float, cy: float, pixel_mm: float, voids: str, copper: int, clear: int) -> None:
     """Draw one positioning mark with its centre at pixel (cx, cy), in place. ``copper`` and ``clear`` are the grey
-    values of copper and of etched-free area in this image."""
-    draw = ImageDraw.Draw(image)
-    half = MARK_PAD_MM / 2 / pixel_mm
+    values of copper and of etched-free area in this image. ``voids`` names the two quadrants without copper."""
+    radius = MARK_PAD_MM / 2 / pixel_mm
     ring = (MARK_PAD_MM / 2 + MARK_CLEARANCE_MM) / pixel_mm
-    border = MARK_BORDER * MARK_PAD_MM / pixel_mm
-    corner = MARK_CORNER_MM / pixel_mm
-    # the centre lies on a pixel boundary, so that the two free squares touch exactly there
-    x, y = round(cx), round(cy)
-    draw.rounded_rectangle([x - ring, y - ring, x + ring - 1, y + ring - 1], radius=corner, fill=clear)
-    draw.rounded_rectangle([x - half, y - half, x + half - 1, y + half - 1], radius=corner, fill=copper)
-    low, high = round(half - border), round(half - border)
-    left, right = (x - low, x - 1), (x, x + high - 1)
-    top, bottom = (y - low, y - 1), (y, y + high - 1)
-    squares = [(right, top), (left, bottom)] if voids == "tr-bl" else [(left, top), (right, bottom)]
-    for (x0, x1), (y0, y1) in squares:
-        draw.rectangle([x0, y0, x1, y1], fill=clear)
+    size = 2 * ceil(ring)  # even, so that the centre of the tile lies on a pixel boundary
+    big, middle = size * _MARK_SUPERSAMPLING, size * _MARK_SUPERSAMPLING / 2
+    disc = Image.new("L", (big, big), 0)
+    ImageDraw.Draw(disc).ellipse(
+        [
+            middle - ring * _MARK_SUPERSAMPLING,
+            middle - ring * _MARK_SUPERSAMPLING,
+            middle + ring * _MARK_SUPERSAMPLING,
+            middle + ring * _MARK_SUPERSAMPLING,
+        ],
+        fill=255,
+    )
+    quarters = Image.new("L", (big, big), 0)
+    box = [
+        middle - radius * _MARK_SUPERSAMPLING,
+        middle - radius * _MARK_SUPERSAMPLING,
+        middle + radius * _MARK_SUPERSAMPLING,
+        middle + radius * _MARK_SUPERSAMPLING,
+    ]
+    # PIL angles run clockwise from the right: 0-90 is bottom right, 90-180 bottom left, 180-270 top left, 270-360
+    # top right
+    spans = [(0, 90), (180, 270)] if voids == "tr-bl" else [(90, 180), (270, 360)]
+    for start, end in spans:
+        ImageDraw.Draw(quarters).pieslice(box, start, end, fill=255)
+    corner = (round(cx) - size // 2, round(cy) - size // 2)
+    image.paste(clear, corner, disc.resize((size, size), Image.Resampling.BOX))
+    image.paste(copper, corner, quarters.resize((size, size), Image.Resampling.BOX))
 
 
 def punch_holes(no_copper: Image.Image, board: Board, px_mm: float, mode: str) -> None:
