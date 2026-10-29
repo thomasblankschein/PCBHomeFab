@@ -43,15 +43,15 @@
       "size": 281518
     },
     "mill/1_drill_0.8mm.nc": {
-      "sha256": "b0340f28806855dcb11c40767a16b19ab8d7bb6dab6700526f4c884b93445a13",
+      "sha256": "8c97d3b6c9cccd4a964187f2240cf1e9b9cbbf74cd9f7da243b1e0b6988d9a39",
       "size": 14242
     },
     "mill/2_drill_1.0mm.nc": {
-      "sha256": "3eb659c598ed1cd0de6509591985794aad3bbbb11e4b878e5e861651ce2df36c",
+      "sha256": "abc565dfbc563e5e8b9c6d50eb5a8497614a7245dbe97e6845ca5f91f9d22a2c",
       "size": 7552
     },
     "mill/3_mill_1.0mm.nc": {
-      "sha256": "1b1382beedcada6a05149fdb7ebcc3f4cc4ce813736e7a10b50b2625f9ae2b46",
+      "sha256": "cb7f1fbabb0e115f2c72410acce51a5cb624fc2a1f515d89e55054f14b03afe2",
       "size": 31804
     },
     "mill_preview.svg": {
