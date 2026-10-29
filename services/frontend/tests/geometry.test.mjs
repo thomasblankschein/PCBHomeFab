@@ -173,3 +173,20 @@ test("copperPaths groups tracks by width and turns every filled shape the same w
   const mirrored = copperPaths(copper, 10, 20, (x) => 100 - x, (y) => y);
   assert.match(mirrored.tracks[0].d, /^M90\.00 /);
 });
+
+test("zoomAt keeps the point under the mouse and panBy stays inside the drawing", async () => {
+  const { MAX_SCALE, panBy, resetView, zoomAt, zoomedBox } = await import("../site/js/panzoom.js");
+  const base = { x: -2, y: -2, w: 164, h: 104 };
+  let view = resetView(base);
+  assert.deepEqual(zoomedBox(base, view), base);
+  view = zoomAt(base, view, 4, 100, 50);
+  const box = zoomedBox(base, view);
+  assert.equal(box.w, 41);
+  assert.ok(Math.abs((100 - box.x) / box.w - (100 - base.x) / base.w) < 1e-9); // same place on the screen
+  assert.equal(zoomAt(base, view, 1e6, 100, 50).scale, MAX_SCALE);
+  assert.equal(zoomAt(base, view, 1e-6, 100, 50).scale, 1);
+  const panned = panBy(base, view, -1000, 1000); // far beyond the edge
+  const edge = zoomedBox(base, panned);
+  assert.ok(edge.x + edge.w <= base.x + base.w + 1e-9 && edge.y >= base.y - 1e-9);
+  assert.deepEqual(zoomedBox(base, zoomAt(base, view, 1e-6, 0, 0)), base); // zoomed out completely: the whole drawing
+});

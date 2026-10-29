@@ -78,6 +78,7 @@
   "plate.view_bottom": "Unterseite",
   "plate.hint_top": "Entwurfsansicht wie in KiCad (Draufsicht): die Kupferseite (B.Cu) liegt unten. Bohrungen sind nach Durchmesser eingefärbt.",
   "plate.hint_bottom": "Unterseite: die Kupferseite von unten gesehen, gegenüber der Entwurfsansicht links und rechts vertauscht. Zu sehen sind Leiterbahnen, Pads und Kupferflächen, die Platinen und die Bohrungen (nach Durchmesser eingefärbt).",
+  "plate.zoom_hint": "Mausrad: zoomen. Mittlere Maustaste gedrückt halten: verschieben. Doppelklick: alles anzeigen.",
   "plate.aria": "Platinen auf der Platte",
   "plate.check_inputs": "Stückzahlen, Abstand und Rand prüfen.",
   "plate.board_title": "{name}: {width} × {height} bei {x}, {y}",

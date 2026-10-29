@@ -78,6 +78,7 @@
   "plate.view_bottom": "Underside",
   "plate.hint_top": "Design view as in KiCad (seen from above): the copper side (B.Cu) is at the bottom. Holes are coloured by diameter.",
   "plate.hint_bottom": "Underside: the copper side seen from below, mirrored left to right compared with the design view. Copper tracks, pads and pours, the boards and the holes (coloured by diameter) are shown.",
+  "plate.zoom_hint": "Mouse wheel: zoom. Middle mouse button held: move. Double click: show everything.",
   "plate.aria": "Boards on the plate",
   "plate.check_inputs": "Check the copies, the gap and the margin.",
   "plate.board_title": "{name}: {width} × {height} at {x}, {y}",

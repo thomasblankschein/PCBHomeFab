@@ -380,6 +380,14 @@ summary {
   stroke-linejoin: round;
 }
 
+.plate-view.zoomed {
+  cursor: grab;
+}
+
+.plate-view.panning {
+  cursor: grabbing;
+}
+
 .views {
   display: flex;
   gap: 0.5rem;

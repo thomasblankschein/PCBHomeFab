@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.21.0 - 2026-10-29
+
+- The plate views of the editor (design view and underside) zoom with the mouse wheel (towards the mouse position, up to 40
+  times), move with the held middle mouse button and show everything again on a double click.
+
 ## 0.20.0 - 2026-10-29
 
 - The plate preview of the editor has a second view, the underside: the copper side seen from below (mirrored left to

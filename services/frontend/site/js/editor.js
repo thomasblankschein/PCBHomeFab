@@ -2,6 +2,7 @@
 
 import { ApiError, createJob, getBoardInfo, getPlates, getProfiles, getTools, previewLayout } from "./api.js";
 import { fill, h } from "./dom.js";
+import { attachPanZoom } from "./panzoom.js";
 import { mm } from "./format.js";
 import { initI18n, onLanguageChange, t } from "./i18n.js";
 import { copperPaths, holeColors, holeSummary, isRectangle, missingDrills, placedBoards, plateUsage, polygonPath, previewId, suggestDrill, validCount } from "./geometry.js";
@@ -16,6 +17,7 @@ const fileInput = document.getElementById("files");
 const dropZone = document.getElementById("drop");
 const plate = document.getElementById("plate");
 const plateHint = document.getElementById("plate-hint");
+const plateZoom = attachPanZoom(plate);
 const summary = document.getElementById("summary");
 const layoutError = document.getElementById("layout-error");
 const submit = document.getElementById("submit");
@@ -276,7 +278,7 @@ function renderPlate() {
   const width = layout?.plate.width_mm ?? currentPlate().width_mm;
   const height = layout?.plate.height_mm ?? currentPlate().height_mm;
   const underside = state.view === "bottom";
-  plate.setAttribute("viewBox", `-2 -2 ${width + 4} ${height + 4}`);
+  plateZoom.setBase({ x: -2, y: -2, w: width + 4, h: height + 4 });
   plateHint.textContent = t(underside ? "plate.hint_bottom" : "plate.hint_top");
   for (const [view, id] of [["top", "view-top"], ["bottom", "view-bottom"]]) {
     document.getElementById(id).setAttribute("aria-pressed", String(state.view === view));
@@ -469,6 +471,7 @@ function wire() {
   for (const view of ["top", "bottom"]) {
     document.getElementById(`view-${view}`).addEventListener("click", () => {
       state.view = view;
+      plateZoom.reset(); // the underside is mirrored, the zoomed part would not match
       renderPlate();
     });
   }
