@@ -87,6 +87,20 @@ def _job_json(record: JobRecord) -> dict[str, Any]:
     }
 
 
+def _parse_drill_map(text: str | None) -> dict[str, float]:
+    """``{"0.95": 1.0}``: hole diameter to the drill to use. Whether the drill exists is for ``mill`` to say."""
+    if not text:
+        return {}
+    try:
+        data = json.loads(text)
+        mapping = {str(float(key)): float(value) for key, value in data.items()}
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise Problem(422, "jobs.invalid_drill_map", "drill_map must be a JSON object of diameters in mm.") from exc
+    if len(mapping) > 50 or any(not 0 < d < 50 for d in [*map(float, mapping), *mapping.values()]):
+        raise Problem(422, "jobs.invalid_drill_map", "drill_map has too many entries or diameters out of range.")
+    return mapping
+
+
 def _unique_names(filenames: list[str]) -> list[str]:
     """Board ids from the file names: safe characters only, at most 40 characters, no duplicates."""
     names: list[str] = []
@@ -253,6 +267,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         plate: Annotated[str | None, Form()] = None,
         marks: Annotated[bool, Form()] = True,
         mark_labels: Annotated[bool, Form()] = True,
+        drill_map: Annotated[str | None, Form()] = None,
     ) -> JSONResponse:
         client = _client_hash(request, settings)
         if store.recent_count(client) >= settings.rate_limit_per_hour:
@@ -269,6 +284,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         if not exposure and not mill_gcode:
             raise Problem(422, "jobs.invalid_upload", "Select at least one output (exposure or mill_gcode).")
         chosen_plate = find_plate(plate)
+        mapping = _parse_drill_map(drill_map)
         if marks and margin_mm < MIN_MARGIN_MM:
             raise Problem(
                 422, "jobs.invalid_marks", f"Positioning marks need a margin of at least {MIN_MARGIN_MM:g} mm."
@@ -322,6 +338,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             "marks": alignment_marks(chosen_plate.width_mm, chosen_plate.height_mm, flip, mark_labels)
             if marks
             else None,
+            "drill_map": mapping,
             "boards": entries,
         }
         record = store.create(job_id, params, client)

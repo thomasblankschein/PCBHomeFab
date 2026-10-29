@@ -206,5 +206,9 @@
   "settings.mark_labels": "Koordinaten neben den Positionsmarken",
   "job.archive": "Alle Dateien",
   "job.archive_hint": "Alles in einem ZIP-Archiv, in den Ordnern exposure und drill-mill.",
-  "job.archive_link": "Alle Ergebnisdateien (ZIP)"
+  "job.archive_link": "Alle Ergebnisdateien (ZIP)",
+  "drills.title": "Bohrer für ungewöhnliche Lochgrößen",
+  "drills.hint": "Für diese Lochgrößen gibt es in der Werkzeugliste keinen Bohrer. Wähle, mit welchem Bohrer sie gebohrt werden. Ein kleinerer Bohrer macht die Löcher zu klein, ein größerer zu groß.",
+  "drills.row": "Löcher mit {diameter} mm ({count}×) werden gebohrt mit",
+  "job.drill_map": "Bohrer-Zuordnung"
 }

@@ -34,7 +34,7 @@ def _with_holes(*diameters: float) -> list[gcode.Placement]:
 
 def test_default_library_has_drills_and_endmills() -> None:
     library = load_tools()
-    assert [t.diameter_mm for t in library.drills()] == [0.6, 0.7, 0.8, 0.9, 0.95, 1.0, 1.1, 1.2]
+    assert [t.diameter_mm for t in library.drills()] == [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]
     assert [t.diameter_mm for t in library.endmills()] == [1.0, 2.0]
     assert library.endmill(2.0).feed == 180 and library.endmill(1.0).feed == 150  # per tool and from defaults
 
@@ -112,3 +112,27 @@ def test_hole_between_drill_sizes_is_refused_with_a_hint() -> None:
     with pytest.raises(Problem, match="No drill for a 1.05 mm hole") as caught:
         gcode.generate(_with_holes(1.05), Plate(), MILL_3018PRO, load_tools())
     assert caught.value.code == "mill.no_drill"
+
+
+def test_hole_without_a_drill_uses_the_chosen_one() -> None:
+    programs = gcode.generate(_with_holes(1.0, 1.05, 1.05), Plate(), MILL_3018PRO, load_tools(), drill_map={1.05: 1.1})
+    assert [(p.tool, p.holes) for p in programs] == [("drill-1.0", 1), ("drill-1.1", 2), ("endmill-1.0", 0)]
+    assert "(2 of them for holes of 1.05 mm)" in programs[1].code
+
+
+def test_mapping_can_use_a_drill_that_is_in_use_anyway() -> None:
+    programs = gcode.generate(_with_holes(1.0, 1.05), Plate(), MILL_3018PRO, load_tools(), drill_map={1.05: 1.0})
+    drill = programs[0]
+    assert drill.tool == "drill-1.0" and drill.holes == 2
+    assert "1 of them for holes of 1.05 mm" in drill.code
+
+
+def test_mapping_is_ignored_for_holes_that_have_a_drill() -> None:
+    programs = gcode.generate(_with_holes(1.0), Plate(), MILL_3018PRO, load_tools(), drill_map={1.0: 1.2})
+    assert [p.tool for p in programs if p.holes] == ["drill-1.0"]
+
+
+def test_mapping_to_a_missing_drill_is_refused() -> None:
+    with pytest.raises(Problem) as caught:
+        gcode.generate(_with_holes(1.05), Plate(), MILL_3018PRO, load_tools(), drill_map={1.05: 1.07})
+    assert caught.value.code == "mill.invalid_drill_map"

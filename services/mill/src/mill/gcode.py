@@ -18,6 +18,8 @@ from .profiles import MillProfile, Plate
 from .tools import Tool, ToolLibrary, load_tools
 
 Point = tuple[float, float]
+#: Hole diameters of the drill mapping match the diameters of the board this closely.
+MAP_TOLERANCE_MM = 0.005
 #: A board shape: the outer polygon and the polygons of cutouts.
 Shape = tuple[list[Point], list[list[Point]]]
 
@@ -336,26 +338,49 @@ def origin_of_marks(plate: Plate, mill: MillProfile, marks: list[Point]) -> tupl
     return shifted, (dx, dy)
 
 
+def _mapped_drill(tools: ToolLibrary, drill_map: dict[float, float] | None, diameter: float) -> Tool | None:
+    """The drill the user chose for holes of this diameter, ``None`` when nothing is mapped for it."""
+    for hole, wanted in (drill_map or {}).items():
+        if abs(hole - diameter) <= MAP_TOLERANCE_MM:
+            drill = tools.find_drill(wanted)
+            if drill is None:
+                sizes = ", ".join(f"{t.diameter_mm:g}" for t in tools.drills())
+                raise Problem(
+                    422,
+                    "mill.invalid_drill_map",
+                    f"No {wanted:g} mm drill in the library for the holes of {diameter:g} mm (drills: {sizes} mm).",
+                )
+            return drill
+    return None
+
+
 def generate(
     placements: list[Placement],
     plate: Plate,
     mill: MillProfile,
     tools: ToolLibrary | None = None,
     second_mark: Point | None = None,
+    drill_map: dict[float, float] | None = None,
 ) -> list[Program]:
     """Programs in tool order: one per drill bit, then one per end mill (large holes and outlines).
 
-    ``second_mark`` (from :func:`origin_of_marks`) is named in the program headers."""
+    ``second_mark`` (from :func:`origin_of_marks`) is named in the program headers. ``drill_map`` says which drill
+    (by diameter) is used for holes without a drill of their own size: ``{hole diameter: drill diameter}``."""
     tools = tools or load_tools()
     layout = build_layout(placements, plate, mill)
     outline_tool = tools.endmill(mill.outline_endmill_mm)
     drilled: dict[str, tuple[Tool, list[Point]]] = {}
+    borrowed: dict[str, dict[float, int]] = {}  # drill id -> hole diameter -> holes drilled with it in place of its own
     milled: dict[str, tuple[Tool, dict[float, list[Point]]]] = {outline_tool.id: (outline_tool, {})}
     for diameter in sorted(layout.holes):
         holes = layout.holes[diameter]
         drill = tools.find_drill(diameter)
-        if drill is not None:
-            drilled.setdefault(drill.id, (drill, []))[1].extend(holes)
+        mapped = _mapped_drill(tools, drill_map, diameter) if drill is None else None
+        chosen = drill or mapped
+        if chosen is not None:
+            drilled.setdefault(chosen.id, (chosen, []))[1].extend(holes)
+            if mapped is not None:
+                borrowed.setdefault(mapped.id, {})[diameter] = len(holes)
         elif diameter > tools.largest_drill():
             cutter = tools.mill_for_hole(diameter, outline_tool.diameter_mm)
             milled.setdefault(cutter.id, (cutter, {}))[1][diameter] = holes
@@ -368,6 +393,8 @@ def generate(
     programs: list[Program] = []
     for drill, holes in sorted(drilled.values(), key=lambda entry: entry[0].diameter_mm):
         title = f"Drill {drill.diameter_mm:.1f} mm, {len(holes)} holes"
+        for diameter, count in sorted(borrowed.get(drill.id, {}).items()):
+            title += f" ({count} of them for holes of {diameter:g} mm)"
         message = f"Insert the {drill.diameter_mm:.1f} mm drill and set Z0 to the plate surface"
         writer = _Writer(title, mill, drill, message, second_mark)
         _drill(writer, holes, plate, mill)

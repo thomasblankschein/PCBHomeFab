@@ -78,6 +78,24 @@ export function holeSummary(rows, boardsById) {
   return [...counts.entries()].sort((a, b) => a[0] - b[0]);
 }
 
+/** How closely a hole must match a drill (as in the mill service). */
+export const DRILL_TOLERANCE_MM = 0.02;
+
+/**
+ * The hole sizes `[diameter, count]` that no drill of the library fits and that are too small to be milled out
+ * (larger than the largest drill): the user has to say which drill to use for them.
+ */
+export function missingDrills(diameters, drills) {
+  const largest = Math.max(0, ...drills);
+  return diameters.filter(([d]) => d <= largest + DRILL_TOLERANCE_MM && !drills.some((x) => Math.abs(x - d) <= DRILL_TOLERANCE_MM));
+}
+
+/** The drill to suggest for a hole: the next larger one (the hole stays usable), else the largest. */
+export function suggestDrill(diameter, drills) {
+  const larger = drills.filter((x) => x > diameter).sort((a, b) => a - b);
+  return larger.length ? larger[0] : Math.max(...drills);
+}
+
 /** Share of the plate covered by the boxes of the boards, 0 to 1. */
 export function plateUsage(layout, boardsById) {
   const plate = layout.plate.width_mm * layout.plate.height_mm;

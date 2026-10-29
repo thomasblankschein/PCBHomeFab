@@ -130,6 +130,39 @@ def test_hole_without_drill_is_a_problem(client: TestClient) -> None:
     _problem(_post(client, layout=layout, files=[("packages", ("odd.zip", raw.getvalue()))]), 422, "mill.no_drill")
 
 
+def test_drill_map_makes_a_board_with_an_odd_hole_work(client: TestClient) -> None:
+    raw = io.BytesIO()
+    board = {
+        "schema_version": 1,
+        "name": "odd",
+        "outline": {"xmin": 0, "ymin": 0, "xmax": 10, "ymax": 10},
+        "width_mm": 10,
+        "height_mm": 10,
+        "holes": [{"x_mm": 5, "y_mm": 5, "diameter_mm": 1.05, "plated": True}],
+    }
+    with zipfile.ZipFile(raw, "w") as archive:
+        archive.writestr("board.json", json.dumps(board))
+        archive.writestr("copper.gbr", "G04*\nM02*\n")
+    layout = {**LAYOUT, "placements": [{"board_id": "odd", "x_mm": 3, "y_mm": 3, "rotation_deg": 0}]}
+    files = [("packages", ("odd.zip", raw.getvalue()))]
+    mapped = {**SETTINGS, "drill_map": {"1.05": 1.1}}
+    validate("mill-settings", mapped)
+    response = _post(client, layout=layout, files=files, settings=mapped)
+    assert response.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        assert any(name.endswith("_drill_1.1mm.nc") for name in archive.namelist())
+    _problem(
+        _post(client, layout=layout, files=files, settings={**SETTINGS, "drill_map": {"1.05": 1.07}}),
+        422,
+        "mill.invalid_drill_map",
+    )
+    _problem(
+        _post(client, layout=layout, files=files, settings={**SETTINGS, "drill_map": {"big": 1.1}}),
+        422,
+        "mill.invalid_drill_map",
+    )
+
+
 def test_isolated_request() -> None:
     isolated = TestClient(create_app(Settings(isolate=True)))
     assert _post(isolated).status_code == 200

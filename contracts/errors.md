@@ -16,6 +16,8 @@ its own prefix, plus `common.*`.
 | `ingest.too_many_files` | 422 | the ZIP has more files than allowed |
 | `ingest.too_large_unpacked` | 422 | the ZIP is too large when unpacked |
 | `ingest.unreadable_gerber` | 422 | the Gerber files could not be read |
+| `mill.invalid_drill_map` | 422 | the drill mapping names a drill that is not in the tool library, or a key that is no diameter |
+| `jobs.invalid_drill_map` | 422 | `drill_map` is not a JSON object of diameters |
 | `ingest.no_copper` | 422 | no bottom copper layer (or no copper on B.Cu of a KiCad file) found |
 | `ingest.invalid_kicad` | 422 | the KiCad PCB file cannot be read |
 | `ingest.unsupported_kicad` | 422 | the KiCad file uses something that is not supported (trapezoid pads, bezier curves) |

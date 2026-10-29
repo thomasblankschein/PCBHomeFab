@@ -1,10 +1,10 @@
 // The editor page: choose Gerber ZIPs, set copies and spacing, see the plate, create the job.
 
-import { ApiError, createJob, getBoardInfo, getPlates, getProfiles, previewLayout } from "./api.js";
+import { ApiError, createJob, getBoardInfo, getPlates, getProfiles, getTools, previewLayout } from "./api.js";
 import { fill, h } from "./dom.js";
 import { mm } from "./format.js";
 import { initI18n, onLanguageChange, t } from "./i18n.js";
-import { holeColors, holeSummary, isRectangle, placedBoards, plateUsage, polygonPath, previewId, validCount } from "./geometry.js";
+import { holeColors, holeSummary, isRectangle, missingDrills, placedBoards, plateUsage, polygonPath, previewId, suggestDrill, validCount } from "./geometry.js";
 
 const STORAGE_KEY = "pcbhomefab.settings";
 const SAVED_FIELDS = ["plate", "marks", "mark_labels", "printer", "mill", "holes", "gap_mm", "margin_mm", "flip", "thickness_mm", "tabs", "exposure", "mill_gcode"];
@@ -20,7 +20,7 @@ const layoutError = document.getElementById("layout-error");
 const submit = document.getElementById("submit");
 const submitError = document.getElementById("submit-error");
 
-const state = { profiles: null, plates: [], rows: [], nextKey: 1, layout: null, layoutError: "", creating: false };
+const state = { profiles: null, plates: [], drills: [], missing: [], drillMap: {}, rows: [], nextKey: 1, layout: null, layoutError: "", creating: false };
 // A row error or the layout error is a message of the server (text) or one of ours ({ key, params }).
 const messageText = (message) => (typeof message === "string" ? message : message ? t(message.key, message.params) : "");
 let previewTimer = 0;
@@ -307,7 +307,33 @@ function renderPlate() {
       : null,
   );
   for (const chip of summary.querySelectorAll(".chip")) chip.style.background = chip.dataset.color;
+  state.missing = state.drills.length ? missingDrills(diameters, state.drills) : [];
+  renderDrillMap();
   renderSubmit();
+}
+
+// --- drills for hole sizes the tool library does not have -------------------------------------------------
+
+/** The hole sizes that need a drill chosen, while the mill output is on. */
+function drillsToChoose() {
+  return value("mill_gcode") ? state.missing : [];
+}
+
+function renderDrillMap() {
+  const wanted = drillsToChoose();
+  document.getElementById("drill-map").hidden = wanted.length === 0;
+  fill(
+    document.getElementById("drill-rows"),
+    wanted.map(([diameter, count]) => {
+      state.drillMap[diameter] ??= suggestDrill(diameter, state.drills);
+      const select = h(
+        "select",
+        { onchange: () => (state.drillMap[diameter] = Number(select.value)) },
+        state.drills.map((drill) => h("option", { value: drill, selected: drill === state.drillMap[diameter] }, `${drill} mm`)),
+      );
+      return h("label", {}, h("span", {}, t("drills.row", { diameter, count })), select);
+    }),
+  );
 }
 
 // --- creating the job -------------------------------------------------------------------------------------
@@ -350,6 +376,8 @@ function jobFormData() {
   if (number("frame_left_mm") !== printer.frame_left_mm) data.append("frame_left_mm", value("frame_left_mm"));
   if (number("frame_bottom_mm") !== printer.frame_bottom_mm) data.append("frame_bottom_mm", value("frame_bottom_mm"));
   if (value("mirror_x") !== printer.mirror_x) data.append("mirror_x", String(value("mirror_x")));
+  const chosen = Object.fromEntries(drillsToChoose().map(([diameter]) => [String(diameter), state.drillMap[diameter]]));
+  if (Object.keys(chosen).length) data.append("drill_map", JSON.stringify(chosen));
   return data;
 }
 
@@ -414,6 +442,7 @@ function wire() {
   });
   form.addEventListener("input", () => {
     saveSettings();
+    renderDrillMap();
     renderSubmit();
   });
   for (const name of ["plate", "marks", "gap_mm", "margin_mm"]) field(name).addEventListener("input", onLayoutInputsChanged);
@@ -423,7 +452,9 @@ function wire() {
 async function start() {
   await initI18n();
   try {
-    [state.profiles, { plates: state.plates }] = await Promise.all([getProfiles(), getPlates()]);
+    let library;
+    [state.profiles, { plates: state.plates }, library] = await Promise.all([getProfiles(), getPlates(), getTools()]);
+    state.drills = library.tools.filter((tool) => tool.kind === "drill" && tool.enabled).map((tool) => tool.diameter_mm).sort((a, b) => a - b);
   } catch (error) {
     document.getElementById("load-error").textContent = t("editor.load_failed", { message: error.message });
     return;

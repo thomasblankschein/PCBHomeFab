@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  missingDrills,
+  suggestDrill,
   boardShape,
   holeColors,
   isRectangle,
@@ -130,4 +132,20 @@ test("a file with several boards draws all of their outlines", () => {
   const [placed] = placedBoards({ plate: { width_mm: 160, height_mm: 100 }, placements: [{ board_id: "t", x_mm: 3, y_mm: 3, rotation_deg: 0 }] }, { t: two });
   assert.equal(placed.extra.length, 2);
   assert.deepEqual(placed.extra[0][0], [33, 3]);
+});
+
+test("hole sizes without a drill need a choice, large holes are milled", () => {
+  const drills = [0.6, 0.8, 1.0, 1.2];
+  const holes = [[0.6, 3], [0.7, 2], [0.95, 4], [1.0, 1], [1.2, 1], [1.3, 5], [3.2, 2], [0.4, 1]];
+  assert.deepEqual(missingDrills(holes, drills), [[0.7, 2], [0.95, 4], [0.4, 1]]);
+  assert.deepEqual(missingDrills([[0.605, 1], [1.21, 1]], drills), []); // within the tolerance
+  assert.deepEqual(missingDrills(holes, []), []);
+});
+
+test("the suggested drill is the next larger one", () => {
+  const drills = [0.6, 0.8, 1.0, 1.2];
+  assert.equal(suggestDrill(0.7, drills), 0.8);
+  assert.equal(suggestDrill(0.95, drills), 1.0);
+  assert.equal(suggestDrill(0.4, drills), 0.6);
+  assert.equal(suggestDrill(1.25, drills), 1.2); // nothing larger: the largest
 });

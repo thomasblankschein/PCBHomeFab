@@ -111,8 +111,11 @@ docker-compose.yaml
 
 ## Tools (mill)
 - The tool library is data: `services/mill/src/mill/data/tools.toml`, parsed by `tools.py`. The owner has drills 0.6–1.2 mm in
-  0.1 mm steps plus 0.95 mm and end mills 1 mm and 2 mm; holes larger than 1.2 mm are milled. Cutting values in the file are
+  0.1 mm steps and end mills 1 mm and 2 mm; holes larger than 1.2 mm are milled. Cutting values in the file are
   starting values, to be tuned on the real mill.
+- A hole size without a drill of its own (tolerance 0.02 mm) that is not larger than the largest drill is refused by `mill`
+  (`mill.no_drill`) unless the job carries `drill_map` ({hole diameter: drill diameter}); the editor lists such sizes
+  with a select box per size (default: the next larger drill), `jobs` stores the choice in `params.drill_map`.
 
 ## Positioning marks
 - The plate is not always at the same place on the mill and not exactly square. With `marks` (default on, margin of at least

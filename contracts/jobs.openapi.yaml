@@ -151,6 +151,7 @@ paths:
                 thickness_mm: {type: number, minimum: 0.4, maximum: 3.2, default: 1.5}
                 tabs: {type: boolean, default: true}
                 mark_labels: {type: boolean, default: true, description: Write the G-code coordinates of the mark next to each positioning mark on the copper layer (mirrored so that they read correctly on the finished copper). Only with marks.}
+                drill_map: {type: string, description: 'JSON object {hole diameter in mm: diameter of the drill to use}. For holes without a drill of their own size in the tool library; without a mapping such a board is refused (mill.no_drill).'}
                 marks: {type: boolean, default: true, description: Add positioning marks to the copper layer; X0 Y0 of the G-code is then the centre of the lower left mark. Needs a margin of at least 4.5 mm.}
                 frame_left_mm: {type: number, minimum: 0, maximum: 20}
                 frame_bottom_mm: {type: number, minimum: 0, maximum: 20}

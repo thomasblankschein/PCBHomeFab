@@ -206,5 +206,9 @@
   "settings.mark_labels": "Coordinates next to the positioning marks",
   "job.archive": "All files",
   "job.archive_hint": "Everything in one ZIP archive, in the folders exposure and drill-mill.",
-  "job.archive_link": "All result files (ZIP)"
+  "job.archive_link": "All result files (ZIP)",
+  "drills.title": "Drills for odd hole sizes",
+  "drills.hint": "The tool library has no drill for these hole sizes. Choose which drill is used for them. A smaller drill makes the holes too small, a larger one too big.",
+  "drills.row": "Holes of {diameter} mm ({count}×) are drilled with",
+  "job.drill_map": "Drill assignment"
 }

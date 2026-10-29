@@ -9,6 +9,13 @@
     "flip": {"enum": ["x", "y", "none"], "description": "How the plate is turned over, default from the profile."},
     "tabs": {"type": "boolean", "description": "Default from the profile."},
     "thickness_mm": {"type": "number", "minimum": 0.4, "maximum": 3.2, "default": 1.5},
+    "drill_map": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[0-9]+(\\.[0-9]+)?$"},
+      "additionalProperties": {"type": "number", "exclusiveMinimum": 0},
+      "maxProperties": 50,
+      "description": "Which drill is used for holes without a drill of their own size: hole diameter in mm (as text) to the diameter of a drill of the tool library. The holes are drilled together with that drill's own holes. An unknown drill is refused (`mill.invalid_drill_map`)."
+    },
     "marks": {
       "type": "array",
       "items": {"$ref": "mark.schema.json"},

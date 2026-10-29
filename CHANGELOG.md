@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.18.0 - 2026-10-29
+
+- Hole sizes without a drill of their own in the tool library can be assigned to an existing drill. The editor shows a select
+  box for every such size (default: the next larger drill); the choice is sent as `drill_map` (`{"0.95": 1.0}`), stored in
+  the job (`params.drill_map`) and shown on the job page. `mill` drills these holes with the chosen drill, together with its
+  own holes, and names them in the program title. Without a mapping the board is still refused (`mill.no_drill`); an unknown
+  drill gives `mill.invalid_drill_map`, a bad `drill_map` gives `jobs.invalid_drill_map`.
+- Tool library: the 0.95 mm drill is removed again.
+
 ## 0.17.1 - 2026-10-29
 
 - Fix: a select box with a long text ("All programs one after the other" in the 3D simulation) no longer reaches over the

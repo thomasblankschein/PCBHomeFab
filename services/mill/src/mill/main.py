@@ -40,6 +40,7 @@ class MillSettings(BaseModel):
     tabs: bool | None = None
     thickness_mm: float = Field(default=1.5, ge=0.4, le=3.2)
     marks: list[MarkModel] | None = Field(default=None, min_length=2, max_length=2)
+    drill_map: dict[str, float] | None = Field(default=None, max_length=50)
 
 
 @dataclass(frozen=True)
@@ -110,7 +111,11 @@ def _programs(boards: dict[str, Board], layout: dict[str, Any], settings: dict[s
     second_mark = None
     if settings.get("marks"):
         mill, second_mark = gcode.origin_of_marks(plate, mill, [(m["x_mm"], m["y_mm"]) for m in settings["marks"]])
-    programs = gcode.generate(placements, plate, mill, load_tools(), second_mark)
+    try:
+        drill_map = {float(hole): drill for hole, drill in (settings.get("drill_map") or {}).items()}
+    except ValueError as exc:
+        raise Problem(422, "mill.invalid_drill_map", "The keys of drill_map must be hole diameters in mm.") from exc
+    programs = gcode.generate(placements, plate, mill, load_tools(), second_mark, drill_map)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         for program in programs:

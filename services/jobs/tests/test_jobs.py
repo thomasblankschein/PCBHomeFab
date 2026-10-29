@@ -527,3 +527,23 @@ def test_no_marks_no_settings(client: TestClient, services: Services, downstream
 
 def test_marks_need_room(client: TestClient) -> None:
     _problem(_post(client, ("a.zip", ZIP), marks="true", margin_mm="3"), 422, "jobs.invalid_marks")
+
+
+def test_drill_map_is_stored_and_sent_to_the_mill(
+    client: TestClient, services: Services, downstream: Downstream
+) -> None:
+    seen = _spy_settings(services, downstream)
+    job = _post(client, ("a.zip", ZIP), drill_map='{"0.95": 1.0, "1.05": 1.1}').json()
+    process_next(JobStore(services.settings), services)
+    params = client.get(f"/v1/jobs/{job['id']}").json()["params"]
+    assert params["drill_map"] == {"0.95": 1.0, "1.05": 1.1}
+    assert seen["mill"]["drill_map"] == {"0.95": 1.0, "1.05": 1.1}
+    job = _post(client, ("a.zip", ZIP)).json()
+    process_next(JobStore(services.settings), services)
+    assert client.get(f"/v1/jobs/{job['id']}").json()["params"]["drill_map"] == {}
+    assert "drill_map" not in seen["mill"]
+
+
+@pytest.mark.parametrize("bad", ["not json", "[1]", '{"a": 1}', '{"1.0": "x"}', '{"1.0": 0}', '{"1.0": 99}'])
+def test_invalid_drill_map_is_refused(client: TestClient, bad: str) -> None:
+    _problem(_post(client, ("a.zip", ZIP), drill_map=bad), 422, "jobs.invalid_drill_map")

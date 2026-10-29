@@ -40,6 +40,9 @@ function summaryOf(job) {
     h("dd", {}, boards),
     h("dt", {}, t("job.outputs")),
     h("dd", {}, outputs.join(", ")),
+    Object.keys(p.drill_map ?? {}).length
+      ? [h("dt", {}, t("job.drill_map")), h("dd", {}, Object.entries(p.drill_map).map(([hole, drill]) => `${hole} → ${drill} mm`).join(", "))]
+      : null,
     h("dt", {}, t("job.marks")),
     h("dd", {}, p.marks ? t("job.marks_on", { x: p.marks.second_mm.x_mm, y: p.marks.second_mm.y_mm }) : t("job.marks_off")),
     h("dt", {}, t("job.plate")),

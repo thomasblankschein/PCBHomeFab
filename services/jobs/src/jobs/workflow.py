@@ -131,6 +131,7 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
                 "tabs": params["tabs"],
                 "thickness_mm": params["thickness_mm"],
                 **({"marks": marks} if marks else {}),
+                **({"drill_map": params["drill_map"]} if params.get("drill_map") else {}),
             },
             step("mill"),
         )
