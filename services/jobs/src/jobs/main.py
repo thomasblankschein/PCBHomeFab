@@ -259,7 +259,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         gap_mm: Annotated[float, Form(ge=0.5, le=20)] = 3.0,
         margin_mm: Annotated[float, Form(ge=0, le=20)] = 3.0,
         flip: Annotated[Literal["x", "y", "none"], Form()] = "x",
-        thickness_mm: Annotated[float, Form(ge=0.4, le=3.2)] = 1.5,
+        thickness_mm: Annotated[float, Form(ge=0.4, le=3.2)] = 1.6,
         tabs: Annotated[bool, Form()] = True,
         frame_left_mm: Annotated[float | None, Form(ge=0, le=20)] = None,
         frame_bottom_mm: Annotated[float | None, Form(ge=0, le=20)] = None,

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.19.0 - 2026-10-29
+
+- Defaults taken over from the maintainer's proven FlatCAM programs: end mill feed 70 mm/min, plunge feed 50 mm/min for
+  end mills and drills, cutting and drilling depth 1.75 mm for a 1.6 mm board (overshoot below the board 0.15 mm),
+  tool change height Z 30.
+- Default material thickness is 1.6 mm (was 1.5 mm).
+- Tool library: drills from 0.6 to 1.5 mm in 0.1 mm steps (1.3, 1.4 and 1.5 mm added), end mill 3 mm added; the 2 mm end mill
+  uses the same cutting values as the 1 mm end mill.
+
 ## 0.18.1 - 2026-10-29
 
 - Fix: a mounting hole that is also drawn as a circle on Edge.Cuts was milled twice (once as a hole, once as a cutout

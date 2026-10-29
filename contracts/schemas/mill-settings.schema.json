@@ -8,7 +8,7 @@
     "mill": {"type": "string", "description": "Mill profile id, see GET /v1/profiles."},
     "flip": {"enum": ["x", "y", "none"], "description": "How the plate is turned over, default from the profile."},
     "tabs": {"type": "boolean", "description": "Default from the profile."},
-    "thickness_mm": {"type": "number", "minimum": 0.4, "maximum": 3.2, "default": 1.5},
+    "thickness_mm": {"type": "number", "minimum": 0.4, "maximum": 3.2, "default": 1.6},
     "drill_map": {
       "type": "object",
       "propertyNames": {"pattern": "^[0-9]+(\\.[0-9]+)?$"},

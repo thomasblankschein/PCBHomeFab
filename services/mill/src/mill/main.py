@@ -38,7 +38,7 @@ class MillSettings(BaseModel):
     mill: str
     flip: Literal["x", "y", "none"] | None = None
     tabs: bool | None = None
-    thickness_mm: float = Field(default=1.5, ge=0.4, le=3.2)
+    thickness_mm: float = Field(default=1.6, ge=0.4, le=3.2)
     marks: list[MarkModel] | None = Field(default=None, min_length=2, max_length=2)
     drill_map: dict[str, float] | None = Field(default=None, max_length=50)
 

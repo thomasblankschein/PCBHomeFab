@@ -148,7 +148,7 @@ paths:
                 gap_mm: {type: number, minimum: 0.5, maximum: 20, default: 3}
                 margin_mm: {type: number, minimum: 0, maximum: 20, default: 3}
                 flip: {type: string, enum: [x, y, none], default: x}
-                thickness_mm: {type: number, minimum: 0.4, maximum: 3.2, default: 1.5}
+                thickness_mm: {type: number, minimum: 0.4, maximum: 3.2, default: 1.6}
                 tabs: {type: boolean, default: true}
                 mark_labels: {type: boolean, default: true, description: Write the G-code coordinates of the mark next to each positioning mark on the copper layer (mirrored so that they read correctly on the finished copper). Only with marks.}
                 drill_map: {type: string, description: 'JSON object {hole diameter in mm: diameter of the drill to use}. For holes without a drill of their own size in the tool library; without a mapping such a board is refused (mill.no_drill).'}

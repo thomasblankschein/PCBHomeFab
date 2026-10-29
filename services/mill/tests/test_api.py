@@ -69,8 +69,8 @@ def test_profiles_and_tools(client: TestClient) -> None:
     profiles = client.get("/v1/profiles").json()
     assert profiles["mills"]["3018pro"]["max_spindle_rpm"] == 20000
     assert profiles["mills"]["3018pro"]["safe_z_mm"] == 3.0
-    assert profiles["mills"]["3018pro"]["tool_change_z_mm"] == 50.0
-    assert profiles["mills"]["3018pro"]["default_thickness_mm"] == 1.5
+    assert profiles["mills"]["3018pro"]["tool_change_z_mm"] == 30.0
+    assert profiles["mills"]["3018pro"]["default_thickness_mm"] == 1.6
     tools = client.get("/v1/tools").json()
     assert tools["source"] == "built-in"
     assert "drill-0.8" in [t["id"] for t in tools["tools"]]

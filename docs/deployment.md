@@ -69,7 +69,7 @@ in use.
 
 ## Own tool library
 
-The built-in tool library (drills 0.6-1.2 mm, end mills 1 and 2 mm) can be replaced. Copy it out, edit it, put it
+The built-in tool library (drills 0.6-1.5 mm, end mills 1, 2 and 3 mm) can be replaced. Copy it out, edit it, put it
 into the `mill_data` volume and point the mill service to it:
 
 ```bash

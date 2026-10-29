@@ -34,9 +34,9 @@ def _with_holes(*diameters: float) -> list[gcode.Placement]:
 
 def test_default_library_has_drills_and_endmills() -> None:
     library = load_tools()
-    assert [t.diameter_mm for t in library.drills()] == [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]
-    assert [t.diameter_mm for t in library.endmills()] == [1.0, 2.0]
-    assert library.endmill(2.0).feed == 180 and library.endmill(1.0).feed == 150  # per tool and from defaults
+    assert [t.diameter_mm for t in library.drills()] == [0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5]
+    assert [t.diameter_mm for t in library.endmills()] == [1.0, 2.0, 3.0]
+    assert library.endmill(2.0).feed == 70 and library.endmill(1.0).feed == 70  # both from the defaults
 
 
 def test_defaults_are_inherited_and_tools_can_be_disabled() -> None:
@@ -78,9 +78,9 @@ def test_environment_variable_selects_the_file(tmp_path: Path, monkeypatch: pyte
 
 
 def test_every_hole_size_gets_its_own_tool() -> None:
-    programs = gcode.generate(_with_holes(0.6, 0.9, 1.1, 1.2, 1.3, 7.2), Plate(), MILL_3018PRO, load_tools())
+    programs = gcode.generate(_with_holes(0.6, 0.9, 1.1, 1.2, 1.6, 7.2), Plate(), MILL_3018PRO, load_tools())
     assert [p.tool for p in programs] == ["drill-0.6", "drill-0.9", "drill-1.1", "drill-1.2", "endmill-1.0"]
-    assert [p.holes for p in programs] == [1, 1, 1, 1, 2]  # 1.3 and 7.2 mm are milled
+    assert [p.holes for p in programs] == [1, 1, 1, 1, 2]  # 1.6 and 7.2 mm are milled
     assert "M3 S20000" in programs[0].code
 
 
@@ -94,11 +94,11 @@ def test_cutting_data_comes_from_the_tool() -> None:
 
 def test_larger_outline_endmill_and_fallback_for_small_holes() -> None:
     mill = replace(MILL_3018PRO, outline_endmill_mm=2.0)
-    programs = gcode.generate(_with_holes(1.3, 5.0), Plate(), mill, load_tools())
+    programs = gcode.generate(_with_holes(1.6, 5.0), Plate(), mill, load_tools())
     assert [p.tool for p in programs] == ["endmill-2.0", "endmill-1.0"]
     outline = programs[0]
     assert outline.outlines == 1 and outline.holes == 1  # 5 mm circled with the 2 mm mill
-    assert programs[1].holes == 1 and programs[1].outlines == 0  # 1.3 mm needs the 1 mm mill
+    assert programs[1].holes == 1 and programs[1].outlines == 0  # 1.6 mm needs the 1 mm mill
 
 
 def test_spindle_speed_above_machine_limit_is_refused() -> None:

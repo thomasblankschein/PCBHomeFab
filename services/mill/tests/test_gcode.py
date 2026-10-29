@@ -61,15 +61,15 @@ def test_depths_and_bounds(programs: list[gcode.Program]) -> None:
         assert min(xs) >= 0 and max(xs) <= Plate().width_mm
         assert min(ys) >= 0 and max(ys) <= Plate().height_mm
         assert max(zs) <= MILL_3018PRO.tool_change_z_mm
-    assert min(float(z) for z in re.findall(r"Z(-?[\d.]+)", programs[0].code)) == pytest.approx(-1.9)
-    assert min(float(z) for z in re.findall(r"Z(-?[\d.]+)", programs[2].code)) == pytest.approx(-1.65)
+    assert min(float(z) for z in re.findall(r"Z(-?[\d.]+)", programs[0].code)) == pytest.approx(-1.75)
+    assert min(float(z) for z in re.findall(r"Z(-?[\d.]+)", programs[2].code)) == pytest.approx(-1.75)
 
 
 def test_programs_are_self_contained(programs: list[gcode.Program]) -> None:
     for program in programs:
         lines = program.code.splitlines()
         assert "M3 S20000" in lines
-        assert lines[-4:] == ["G0 Z50.000", "G0 X0.000 Y0.000", "M5", "M30"]  # parked, spindle off
+        assert lines[-4:] == ["G0 Z30.000", "G0 X0.000 Y0.000", "M5", "M30"]  # parked, spindle off
 
 
 def test_hole_without_drill_or_room_is_rejected() -> None:
@@ -97,7 +97,7 @@ def test_every_program_starts_with_a_tool_change(programs: list[gcode.Program]) 
     for program in programs:
         lines = program.code.splitlines()
         start = lines.index("M5")
-        assert lines[start : start + 3] == ["M5", "G0 Z50.000", "G0 X0.000 Y0.000"]
+        assert lines[start : start + 3] == ["M5", "G0 Z30.000", "G0 X0.000 Y0.000"]
         assert lines[start + 3].startswith("(MSG, Insert the ") and lines[start + 3].endswith(", then resume)")
         assert lines[start + 4] == "M0"  # pause: tool change and Z0, then resume
         assert lines.index("M0") < lines.index("M3 S20000")  # the spindle only starts after the tool change
