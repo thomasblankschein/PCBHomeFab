@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.22.8 - 2026-10-29
+
+- Fix: the holes of the 3D simulation looked like flat rectangles from above since 0.22.7. Every hole (drilling and plunging) is
+  now drawn as a cylinder: round opening from above, flat top edge from the side, an ellipse in between. The paths of the
+  mill keep their round ends.
+
 ## 0.22.7 - 2026-10-29
 
 - The removed material of holes (drilling and plunging) is drawn with flat ends in the 3D simulation, no longer with half

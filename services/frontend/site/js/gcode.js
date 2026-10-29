@@ -133,3 +133,20 @@ export function formatClock(seconds) {
   if (minutes < 60) return `${minutes}:${pad(total % 60)}`;
   return `${Math.floor(minutes / 60)}:${pad(minutes % 60)}:${pad(total % 60)}`;
 }
+
+/** The convex hull of points [[x, y], ...] as a list of corners, always going the same way round (Andrew's monotone chain). */
+export function convexHull(points) {
+  const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  if (sorted.length < 3) return sorted;
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const build = (list) => {
+    const chain = [];
+    for (const point of list) {
+      while (chain.length >= 2 && cross(chain[chain.length - 2], chain[chain.length - 1], point) <= 0) chain.pop();
+      chain.push(point);
+    }
+    chain.pop();
+    return chain;
+  };
+  return [...build(sorted), ...build([...sorted].reverse())];
+}

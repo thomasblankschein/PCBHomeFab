@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { basisOf, makeCamera, orbit, pan, project, topView, triangleTransform, zoom } from "../site/js/camera.js";
-import { buildTimeline, formatClock, parseGcode, positionAt } from "../site/js/gcode.js";
+import { buildTimeline, convexHull, formatClock, parseGcode, positionAt } from "../site/js/gcode.js";
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} is not ${b}`);
 
@@ -141,4 +141,15 @@ test("triangleTransform maps the three corners exactly", () => {
     assert.ok(Math.abs(a * x + c * y + e - to[i].x) < 1e-9);
     assert.ok(Math.abs(b * x + d * y + f - to[i].y) < 1e-9);
   });
+});
+
+test("convexHull keeps the outer corners and always turns the same way", () => {
+  const hull = convexHull([[0, 0], [4, 0], [4, 4], [0, 4], [2, 2], [2, 0], [1, 3]]);
+  assert.equal(hull.length, 4);
+  const turns = hull.map((p, i) => {
+    const q = hull[(i + 1) % hull.length];
+    const r = hull[(i + 2) % hull.length];
+    return Math.sign((q[0] - p[0]) * (r[1] - q[1]) - (q[1] - p[1]) * (r[0] - q[0]));
+  });
+  assert.ok(turns.every((turn) => turn === turns[0] && turn !== 0));
 });

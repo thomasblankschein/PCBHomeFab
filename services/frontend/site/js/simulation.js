@@ -5,7 +5,7 @@ import { fileUrl } from "./api.js";
 import { basisOf, isoView, makeCamera, orbit, pan, project, topView, triangleTransform, zoom } from "./camera.js";
 import { fill, h } from "./dom.js";
 import { programInfo, programTitle } from "./format.js";
-import { buildTimeline, formatClock as clock, parseGcode, positionAt } from "./gcode.js";
+import { buildTimeline, convexHull, formatClock as clock, parseGcode, positionAt } from "./gcode.js";
 import { onLanguageChange, t } from "./i18n.js";
 
 const RAPID_FEED = 1500;
@@ -16,6 +16,8 @@ const TOOL_HEIGHT = 14;
 const COPPER_ALPHA = 0.45;
 // Each triangle of the copper picture is clipped this many pixels wider than it is, so that no seams show between them.
 const TRIANGLE_GROW_PX = 0.7;
+// Points on the rim of a hole that is drawn in the simulation.
+const HOLE_POINTS = 24;
 
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -203,6 +205,39 @@ export function createSimulation(container, programs, thickness, panelSize, opti
   /** A move straight down or up (drilling, plunging), with no sideways travel. */
   const isPlunge = (m) => Math.abs(m.x1 - m.x0) < 1e-6 && Math.abs(m.y1 - m.y0) < 1e-6;
 
+  /**
+   * The holes that are finished (every straight drop of the tool): each is a cylinder, drawn as the outline of its top
+   * and bottom circle seen from the camera, which gives a round opening from above and a flat top from the side.
+   */
+  function drawHoles(ctx, basis, width, height, done, mmToPx, ratio) {
+    const seen = new Set();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.beginPath();
+    for (let i = 0; i < done; i++) {
+      const m = state.moves[i];
+      if (m.kind !== "cut" || !isPlunge(m) || m.z0 > 0 || m.z1 > 0) continue;
+      const program = programs[m.p];
+      const top = Math.max(m.z0, m.z1);
+      const bottom = Math.min(m.z0, m.z1);
+      const key = `${m.p}|${m.x0.toFixed(3)}|${m.y0.toFixed(3)}|${top}|${bottom}`;
+      if (seen.has(key)) continue; // the way up is the same hole again
+      seen.add(key);
+      const radius = Math.max(program.diameter / 2, (0.75 * ratio) / mmToPx);
+      const rim = [];
+      for (let k = 0; k < HOLE_POINTS; k++) {
+        const angle = (2 * Math.PI * k) / HOLE_POINTS;
+        for (const z of [top, bottom]) {
+          const point = project([m.x0 + radius * Math.cos(angle), m.y0 + radius * Math.sin(angle), z * state.zScale], basis, width, height);
+          if (point) rim.push([point.x, point.y]);
+        }
+      }
+      const hull = convexHull(rim);
+      hull.forEach(([x, y], index) => (index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+      if (hull.length) ctx.closePath();
+    }
+    ctx.fill("nonzero");
+  }
+
   function strokeMoves(ctx, from, to, test) {
     const { screen, moves } = state;
     ctx.beginPath();
@@ -383,14 +418,10 @@ export function createSimulation(container, programs, thickness, panelSize, opti
       ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
       ctx.lineWidth = Math.max(1.5 * ratio, program.diameter * mmToPx);
       const cutAway = (m) => m.p === index && m.kind === "cut" && m.z0 <= 0 && m.z1 <= 0;
-      // a hole or a plunge is a straight drop: its ends are flat (the top is the opening in the surface), a path the tool
-      // travels along has round ends (the shape of the tool)
-      ctx.lineCap = "round";
+      // a path the tool travels along has round ends (the shape of the tool), a hole is a cylinder (drawn below)
       strokeMoves(ctx, 0, done, (m) => cutAway(m) && !isPlunge(m));
-      ctx.lineCap = "butt";
-      strokeMoves(ctx, 0, done, (m) => cutAway(m) && isPlunge(m));
-      ctx.lineCap = "round";
     }
+    drawHoles(ctx, basis, width, height, done, mmToPx, ratio);
     // the cuts still to come, faint, and the finished ones
     ctx.lineWidth = Math.max(1, ratio);
     for (const [index, program] of programs.entries()) {
