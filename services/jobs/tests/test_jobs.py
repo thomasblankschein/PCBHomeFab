@@ -121,7 +121,11 @@ def test_job_from_upload_to_download(client: TestClient, services: Services, dow
         "exposure/exposure.pm3",
         "exposure/mask.png",
         "exposure/mask_preview.png",
+        "job-description.pdf",
     ]
+    german = zipfile.ZipFile(io.BytesIO(client.get(f"/v1/jobs/{job['id']}/archive?lang=de").content))
+    assert "auftragsbeschreibung.pdf" in german.namelist()
+    assert german.read("auftragsbeschreibung.pdf").startswith(b"%PDF")
     preview = client.get(f"/v1/jobs/{job['id']}/files/mask_preview.png")
     assert preview.headers["content-type"] == "image/png" and preview.headers["content-disposition"].startswith(
         "inline"

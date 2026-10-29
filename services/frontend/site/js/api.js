@@ -57,8 +57,8 @@ export function createJob(formData) {
   return json("/jobs", { method: "POST", body: formData });
 }
 
-export function archiveUrl(jobId) {
-  return `${API}/jobs/${encodeURIComponent(jobId)}/archive`;
+export function archiveUrl(jobId, lang) {
+  return `${API}/jobs/${encodeURIComponent(jobId)}/archive?lang=${lang === "de" ? "de" : "en"}`;
 }
 
 /** The job description as a PDF; the report is written in German or English (`lang`). */

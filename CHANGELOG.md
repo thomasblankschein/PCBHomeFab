@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.1 - 2026-10-29
+
+- The ZIP archive with all files now also holds the job description as `auftragsbeschreibung.pdf` or `job-description.pdf`
+  (language of the page, `lang` parameter of `/archive`).
+
 ## 0.23.0 - 2026-10-29
 
 - New: job description as a PDF (`GET /v1/jobs/{id}/report.pdf?lang=de|en`, link on the job page). It holds the header data of

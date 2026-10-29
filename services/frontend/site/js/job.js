@@ -150,7 +150,7 @@ function showDone(job) {
       { class: "panel" },
       h("h2", {}, t("job.archive")),
       h("p", { class: "muted" }, t("job.archive_hint")),
-      h("ul", { class: "files" }, h("li", {}, h("a", { href: archiveUrl(job.id), download: `pcbhomefab-${job.id.slice(0, 8)}.zip` }, t("job.archive_link")))),
+      h("ul", { class: "files" }, h("li", {}, h("a", { href: archiveUrl(job.id, currentLanguage()), download: `pcbhomefab-${job.id.slice(0, 8)}.zip` }, t("job.archive_link")))),
     ),
   );
 

@@ -384,7 +384,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         )
 
     @app.get("/v1/jobs/{job_id}/archive")
-    async def get_archive(job_id: str) -> Response:
+    async def get_archive(job_id: str, lang: Annotated[str, Query(pattern="^(de|en)$")] = "en") -> Response:
         record = _find(job_id)
         if record.status != DONE:
             raise Problem(404, "jobs.not_found", "The job is not finished.")
@@ -395,6 +395,8 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             for folder, files in ARCHIVE_FOLDERS.items():
                 for name in sorted(n for n in names if n in files or (folder == "drill-mill" and n.endswith(".nc"))):
                     archive.write(output / name, f"{folder}/{Path(name).name}")
+            pdf = await run_in_threadpool(build_report, record, output, lang)
+            archive.writestr("auftragsbeschreibung.pdf" if lang == "de" else "job-description.pdf", pdf)
         return Response(
             buffer.getvalue(),
             media_type="application/zip",

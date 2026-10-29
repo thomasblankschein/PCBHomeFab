@@ -230,9 +230,10 @@ paths:
     get:
       operationId: getJobArchive
       summary: All result files of a finished job in one ZIP archive
-      description: Folders `exposure/` (exposure.pm3, mask.png, mask_preview.png) and `drill-mill/` (the G-code programs and mill_preview.svg).
+      description: Folders `exposure/` (exposure.pm3, mask.png, mask_preview.png) and `drill-mill/` (the G-code programs and mill_preview.svg) and the job description as `auftragsbeschreibung.pdf` or `job-description.pdf` in the root.
       parameters:
         - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: lang, in: query, required: false, schema: {type: string, enum: [de, en], default: en}, description: Language of the job description.}
       responses:
         "200":
           description: The ZIP archive.
