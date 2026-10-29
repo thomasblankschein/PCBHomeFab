@@ -5,7 +5,7 @@ import { fileUrl } from "./api.js";
 import { basisOf, isoView, makeCamera, orbit, pan, project, topView, zoom } from "./camera.js";
 import { fill, h } from "./dom.js";
 import { programInfo, programTitle } from "./format.js";
-import { buildTimeline, parseGcode, positionAt } from "./gcode.js";
+import { buildTimeline, formatClock as clock, parseGcode, positionAt } from "./gcode.js";
 import { onLanguageChange, t } from "./i18n.js";
 
 const RAPID_FEED = 1500;
@@ -16,11 +16,6 @@ const TOOL_HEIGHT = 14;
 const COPPER_ALPHA = 0.45;
 
 const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-
-function clock(seconds) {
-  const total = Math.round(seconds);
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
-}
 
 export async function loadPrograms(jobId, files) {
   return Promise.all(

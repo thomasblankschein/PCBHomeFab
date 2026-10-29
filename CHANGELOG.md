@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.1 - 2026-10-29
+
+- The time in the 3D simulation shows hours (h:mm:ss) from 60 minutes on, below that it stays m:ss.
+
 ## 0.22.0 - 2026-10-29
 
 - The blank is called "panel" in the code as well (it was "plate"): API field and form field `panel`, endpoint `/api/v1/panels`,

@@ -124,3 +124,12 @@ export function positionAt(moves, timeline, time) {
   const f = span > 0 ? Math.min(1, Math.max(0, (time - begin) / span)) : 1;
   return { done: low, point: [m.x0 + (m.x1 - m.x0) * f, m.y0 + (m.y1 - m.y0) * f, m.z0 + (m.z1 - m.z0) * f] };
 }
+
+/** Time as minutes:seconds, with hours (hours:minutes:seconds) from 60 minutes on. */
+export function formatClock(seconds) {
+  const total = Math.round(seconds);
+  const pad = (value) => String(value).padStart(2, "0");
+  const minutes = Math.floor(total / 60);
+  if (minutes < 60) return `${minutes}:${pad(total % 60)}`;
+  return `${Math.floor(minutes / 60)}:${pad(minutes % 60)}:${pad(total % 60)}`;
+}

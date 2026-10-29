@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { basisOf, makeCamera, orbit, pan, project, topView, zoom } from "../site/js/camera.js";
-import { buildTimeline, parseGcode, positionAt } from "../site/js/gcode.js";
+import { buildTimeline, formatClock, parseGcode, positionAt } from "../site/js/gcode.js";
 
 const near = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} is not ${b}`);
 
@@ -123,3 +123,12 @@ test("panning moves the scene with the mouse and stays on the panel", () => {
   const down = project([0, 0, 0], basisOf(pan(camera, 0, 30, 600)), 800, 600);
   assert.ok(down.y > before.y, "dragging down moves the scene down");
 });
+
+test("the clock shows hours from 60 minutes on", () => {
+  assert.equal(formatClock(0), "0:00");
+  assert.equal(formatClock(75), "1:15");
+  assert.equal(formatClock(59 * 60 + 59), "59:59");
+  assert.equal(formatClock(3600), "1:00:00");
+  assert.equal(formatClock(3600 + 5 * 60 + 7), "1:05:07");
+  assert.equal(formatClock(10 * 3600 + 59.6), "10:01:00");
+}); 
