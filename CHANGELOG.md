@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.2 - 2026-10-30
+
+- Docs: the README has a section "Configure Keycloak" (settings in the `.env`, creating accounts, changing passwords, optional features).
+
 ## 0.24.1 - 2026-10-30
 
 - Fix: `scripts/create_user.sh` made accounts without a first and last name, which Keycloak counts as not fully set up

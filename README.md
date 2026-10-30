@@ -90,6 +90,38 @@ Your `.env` and the Docker volumes (jobs, accounts, own tool library) are not to
 the new version in [CHANGELOG.md](CHANGELOG.md) for changed settings. To remove everything: `docker compose down -v` (this
 also deletes the stored jobs and the accounts).
 
+## Configure Keycloak
+
+The login is Keycloak, published by the gateway under `/auth`. The realm `pcbhomefab` (clients, password policy, brute-force
+protection) is created from `services/keycloak/realm/pcbhomefab-realm.json` at the first start with an empty database;
+later starts leave it alone, so changes you make in the console stay.
+
+**What you set in the `.env`:**
+
+| Variable | Meaning |
+|---|---|
+| `PCBHOMEFAB_PUBLIC_URL` | The address users type, for example `http://localhost` or `https://pcb.example.org`, no trailing slash. It is part of the token issuer and of the redirect addresses: if you change it after the first start, change the redirect addresses of the client `pcbhomefab-web` in the console too (or start with an empty Keycloak database). |
+| `KEYCLOAK_ADMIN_PASSWORD` | Password of the Keycloak administrator (user `KEYCLOAK_ADMIN_USER`, default `admin`). Only used to create the administrator at the first start; change it later in the console. |
+| `KEYCLOAK_DB_PASSWORD` | Password of the PostgreSQL database of Keycloak. |
+| `PCBHOMEFAB_MAX_JOBS_PER_USER` | Jobs an account may keep (default 200, 0 = unlimited). |
+
+**Create accounts.** Self-registration is off; the administrator creates every account, with the script
+
+```bash
+KEYCLOAK_ADMIN_PASSWORD=... scripts/create_user.sh http://localhost anna 'a-password-of-10-or-more-characters' anna@example.org Anna Meier
+```
+
+or in the console at `<PCBHOMEFAB_PUBLIC_URL>/auth/admin`: log in as the administrator, switch to the realm `pcbhomefab`
+(top left), Users, Add user. Fill in e-mail, first name and last name (without them the account cannot log in), then
+Credentials, Set password, and turn "Temporary" off. Passwords need at least 10 characters.
+
+**Change a password or remove an account:** console, realm `pcbhomefab`, Users. Deleting an account does not delete its jobs
+from the disk.
+
+**Optional:** e-mail (registration, password reset), two-factor login, passkeys and social login are settings of the realm in
+the console; `jobs` does not change. For a public server, restrict `/auth/admin` at the gateway. Details and backup:
+[docs/deployment.md](docs/deployment.md#login-keycloak).
+
 ## Use it
 
 After the login you land in the editor. There you add one or more Gerber ZIPs or KiCad PCB files (`.kicad_pcb`, zones filled; drag and drop), see size, holes and board
