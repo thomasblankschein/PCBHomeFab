@@ -6,6 +6,9 @@ FROM caddy:2
 RUN cp /usr/bin/caddy /usr/local/bin/caddy-static
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY site /srv
+# The files keep the mode they have in the checkout. After a pull under a restrictive umask (0077, for example from a
+# non-login shell) they are unreadable for the user 10001 and every page answers 403.
+RUN chmod -R a+rX,go-w /srv /etc/caddy/Caddyfile
 
 USER 10001
 ENV XDG_DATA_HOME=/tmp/caddy-data \

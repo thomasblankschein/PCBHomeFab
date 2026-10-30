@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.2 - 2026-10-30
+
+- Fix: the `frontend` image now sets the file modes of the pages and the Caddyfile itself. After a `git pull` under a restrictive
+  umask (0077, for example from a non-login shell) the files were unreadable for the container user and every page
+  answered 403.
+
 ## 0.25.1 - 2026-10-30
 
 - Fix: the login did not start when the site was opened over plain http under a name other than `localhost` (for example
