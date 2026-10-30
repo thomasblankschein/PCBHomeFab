@@ -237,5 +237,11 @@
   "login.page_title": "Login - PCBHomeFab",
   "login.working": "Logging in ...",
   "login.failed": "The login failed: {message}",
-  "login.again": "Log in again"
+  "login.again": "Log in again",
+  "job.rotation": "Rotation of the panel",
+  "job.rotation_hint": "The panel is hardly ever exactly square on the mill. Set X0 Y0 at the lower left mark, move to the centre of the upper right mark and type the X and Y the control shows into the fields (they start with the place the mark should have: X {x}, Y {y} mm). Enter the result as the rotation in the control, then start the programs.",
+  "job.rotation_result": "Rotation for the control:",
+  "job.rotation_command": "rotate {angle}",
+  "job.rotation_detail": "The distance from X0 Y0 differs by {mm} mm ({percent} %). A large value means a misread position or a wrong scale.",
+  "job.rotation_invalid": "Enter X and Y of the upper right mark."
 }

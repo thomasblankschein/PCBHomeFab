@@ -328,6 +328,15 @@ input.count {
   width: 5rem;
 }
 
+input.coordinate {
+  width: 7rem;
+}
+
+.rotation-command {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
 input[aria-invalid="true"] {
   border-color: var(--error);
 }

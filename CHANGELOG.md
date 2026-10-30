@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.25.0 - 2026-10-30
+
+- New on the job page: "Rotation of the panel". After X0 Y0 is set at the lower left mark, the X and Y of the upper right mark
+  read in the control are typed in (they start with the place the mark should have) and the rotation for the control
+  (`drehen 0,0876`) is calculated, together with the deviation of the distance as a check. The manual describes the procedure.
+
 ## 0.24.2 - 2026-10-30
 
 - Docs: the README has a section "Configure Keycloak" (settings in the `.env`, creating accounts, changing passwords, optional features).

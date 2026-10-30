@@ -124,7 +124,21 @@ that:
   text next to each mark. They are mirrored so that they read correctly on the finished copper.
 
 On the mill: jog the tool to the centre of the lower left mark and set X0 Y0 there. Move to the upper right mark and
-check its position. If it is off, the panel is turned; turn it until both marks fit.
+check its position. If it is off, the panel is turned. Either turn it until both marks fit, or let the job page work out the
+rotation (next paragraph) and enter it in the control.
+
+**Rotation of the panel.** The job page has a section "Rotation of the panel" for this:
+
+1. Move to the lower left mark and set X0 Y0 in the control.
+2. Move to the centre of the upper right mark and read X and Y in the control.
+3. Type X and Y into the two fields of the section (they start with the place the mark should have, so a panel that sits
+   perfectly gives a rotation of 0).
+4. Enter the result (`drehen 0,0876` / `rotate 0.0876`, in degrees) as the rotation in the control, for example the
+   command `drehen` of Estlcam, and start the programs.
+
+The section also shows how much the distance from X0 Y0 differs from the expected one. A larger value (more than a few
+hundredths of a percent) points to a misread position or a wrong scale of the mill, not to a rotation. The angle is
+−(angle of the measured mark − angle of the expected mark), the angle taken from the Y axis towards X.
 
 ## 6. The job page
 
@@ -135,6 +149,7 @@ The page shows the progress ("This page updates itself"). The job stays in "My j
 |---|---|
 | Boards, outputs, panel | The data of the job. |
 | Positioning marks | Where the marks are and how to use them. |
+| Rotation of the panel | Calculates the rotation for the control from the position of the second mark, see section 5. |
 | Drill assignment | Your choice for hole sizes without a drill of their own. |
 | Exposure | Picture of the mask and the downloads `exposure.pm3` and `mask.png`. |
 | Drill and mill | Picture of the panel with outlines and holes (colour = diameter) and one download per G-code program. |

@@ -237,5 +237,11 @@
   "login.page_title": "Anmeldung - PCBHomeFab",
   "login.working": "Anmeldung läuft ...",
   "login.failed": "Die Anmeldung ist fehlgeschlagen: {message}",
-  "login.again": "Erneut anmelden"
+  "login.again": "Erneut anmelden",
+  "job.rotation": "Drehung des Nutzens",
+  "job.rotation_hint": "Der Nutzen liegt an der Fräse selten genau rechtwinklig. Setze X0 Y0 an der Marke unten links, fahre den Mittelpunkt der Marke oben rechts an und trage X und Y aus der Steuerung in die Felder ein (sie sind mit der Sollposition der Marke vorbelegt: X {x}, Y {y} mm). Gib das Ergebnis in der Steuerung als Drehung ein und starte dann die Programme.",
+  "job.rotation_result": "Drehung für die Steuerung:",
+  "job.rotation_command": "drehen {angle}",
+  "job.rotation_detail": "Der Abstand von X0 Y0 weicht um {mm} mm ({percent} %) ab. Ein großer Wert deutet auf eine falsch abgelesene Position oder einen falschen Maßstab hin.",
+  "job.rotation_invalid": "Gib X und Y der Marke oben rechts ein."
 }

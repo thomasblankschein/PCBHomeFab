@@ -2,6 +2,7 @@ import { ApiError, archiveBlob, fileBlob, getJob, reportBlob } from "./api.js";
 import { fill, h } from "./dom.js";
 import { formatSize, mm, programTitle } from "./format.js";
 import { currentLanguage, initI18n, onLanguageChange, t } from "./i18n.js";
+import { distanceDeviation, rotationDegrees } from "./rotation.js";
 
 const jobId = decodeURIComponent(window.location.pathname.split("/").filter(Boolean).pop() ?? "");
 const state = document.getElementById("state");
@@ -100,6 +101,50 @@ function download(job, file, label, note) {
     fileLink(label ?? file.name, () => fileBlob(job.id, file.name), (blob) => save(blob, filename)),
     h("span", { class: "muted" }, ` ${formatSize(file.size)}`),
     note ? h("div", { class: "muted" }, note) : null,
+  );
+}
+
+// The panel is rarely square on the mill: the second mark is approached after X0 Y0 is set, the position the control shows is
+// typed in (it starts with the position the mark should have) and the rotation for the control comes out.
+function rotationPanel(second) {
+  const field = (value, label) => {
+    const input = h("input", { type: "number", step: "any", value, inputmode: "decimal", class: "coordinate" });
+    return { input, label: h("label", { class: "inline" }, label, " ", input) };
+  };
+  const x = field(second.x_mm, "X");
+  const y = field(second.y_mm, "Y");
+  const command = h("code", { class: "rotation-command" });
+  const detail = h("p", { class: "muted" });
+
+  const update = () => {
+    const nominal = { x: second.x_mm, y: second.y_mm };
+    const measured = { x: x.input.valueAsNumber, y: y.input.valueAsNumber };
+    const turn = rotationDegrees(nominal, measured);
+    if (turn === null) {
+      command.textContent = "";
+      detail.textContent = t("job.rotation_invalid");
+      return;
+    }
+    const language = currentLanguage();
+    command.textContent = t("job.rotation_command", { angle: turn.toLocaleString(language, { maximumFractionDigits: 4 }) });
+    const deviation = distanceDeviation(nominal, measured);
+    detail.textContent = t("job.rotation_detail", {
+      mm: deviation.mm.toLocaleString(language, { maximumFractionDigits: 3 }),
+      percent: deviation.percent.toLocaleString(language, { maximumFractionDigits: 3 }),
+    });
+  };
+  x.input.addEventListener("input", update);
+  y.input.addEventListener("input", update);
+  update();
+
+  return h(
+    "section",
+    { class: "panel" },
+    h("h2", {}, t("job.rotation")),
+    h("p", { class: "muted" }, t("job.rotation_hint", { x: second.x_mm, y: second.y_mm })),
+    h("p", {}, x.label, " ", y.label),
+    h("p", {}, t("job.rotation_result"), " ", command),
+    detail,
   );
 }
 
@@ -208,6 +253,7 @@ function showDone(job) {
     );
   }
 
+  if (programs.length && job.params.marks) sections.push(rotationPanel(job.params.marks.second_mm));
   if (programs.length) sections.push(simulationPanel(job, programs));
 
   sections.push(
