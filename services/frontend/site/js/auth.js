@@ -1,7 +1,9 @@
 // Login with OpenID Connect against Keycloak, which the gateway publishes under /auth: authorization code flow with PKCE,
 // no library. The access token goes with every API call (api.js). The password is typed on the page of Keycloak only.
 
-const REALM = "/auth/realms/pcbhomefab";
+import { sha256 } from "./sha256.js";
+
+const REALM ="/auth/realms/pcbhomefab";
 const CLIENT_ID = "pcbhomefab-web";
 const TOKENS_KEY = "pcbhomefab.tokens";
 const PENDING_KEY = "pcbhomefab.login";
@@ -23,7 +25,9 @@ export function randomString(length = 32) {
 
 /** The PKCE code challenge (S256) of a verifier, RFC 7636. */
 export async function pkceChallenge(verifier) {
-  return base64Url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
+  const bytes = new TextEncoder().encode(verifier);
+  // crypto.subtle exists only on https and localhost; over plain http the hash is calculated here.
+  return base64Url(globalThis.crypto?.subtle ? await crypto.subtle.digest("SHA-256", bytes) : sha256(bytes));
 }
 
 export function authorizeUrl(endpoint, { redirectUri, state, challenge }) {

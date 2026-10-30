@@ -136,15 +136,46 @@ shows the library in use.
 
 Run the compose project in a VM, or in an LXC container with Docker:
 
-1. Create a Debian 12 (or Ubuntu LTS) container, 2 cores, 3 GB RAM, 8 GB disk are enough for a few users. Enable the
-   container features **nesting** and **keyctl** (Options -> Features), without them Docker does not start in an LXC.
-2. Install Docker Engine and the compose plugin (see the Docker documentation for Debian).
+1. Create a container (Alpine, Debian 12 or Ubuntu LTS) with **2 cores, 2 GB RAM and 10 GB disk**; that is enough for one or
+   two users working one after the other (see "Sizing" below). Enable the container features **nesting** and **keyctl**
+   (Options -> Features), without them Docker does not start in an LXC.
+2. Install Docker Engine and the compose plugin (see the Docker documentation for Debian; for Alpine see below).
 3. Follow "First start". Give the container a fixed address and point a DNS name of your network to it.
 4. Back up the volumes `keycloak_db` (the accounts; better a `pg_dump` of the database) and `jobs_data` (the jobs of the
    accounts, which are kept for good now).
 
 Memory: rasterizing one board needs about 100 MB, a panel with many boards a few hundred MB per running request.
 The limits in the compose file (`exposure` 1 GB, `ingest`, `mill` and `jobs` 512 MB) fit two parallel requests.
+
+### Sizing
+
+Measured at rest: the nine containers use about 1.1 GB, of which Keycloak takes about 830 MB (its limit is 1 GB). The images
+need about 2 GB on disk, and a build leaves a little cache behind. On a 10 GB disk made by the Alpine installer about 7 GB are left for the root file system (the rest is `/boot` and swap); a running installation with the images used 3.4 GB of it.
+
+| | Small (2 cores, 2 GB, 10 GB) | Comfortable (2 cores, 4 GB, 20 GB) |
+|---|---|---|
+| For | one or two users, one after the other | several users at the same time |
+| Host system | Alpine (about 0.2 GB RAM, 0.5 GB disk) | Debian or Ubuntu |
+| `PCBHOMEFAB_WORKERS` | 1 (one rasterization at a time) | 2 (default) |
+| Swap | the 2.5 GB partition the Alpine installer makes is enough | optional |
+
+With the small size, free the build cache after every update (`docker builder prune -f`, `docker image prune -f`; it is small, so do not expect much), watch the
+disk (the jobs are never deleted automatically) and lower `PCBHOMEFAB_MAX_JOBS_PER_USER` if needed. If a container is
+killed for lack of memory (`docker inspect` shows `OOMKilled`), give the machine more RAM.
+
+### Alpine as the host
+
+Alpine has no Bash, which `scripts/create_user.sh` and `scripts/smoke_test.sh` need:
+
+```bash
+apk add docker docker-cli-compose bash curl git python3 openssl
+rc-update add docker default
+service docker start
+```
+
+In an LXC container Swap is set in the container resources in Proxmox. In a VM the Alpine installer already makes a swap partition of about 2.5 GB, so no swap file is needed (a swap file would only use up the small disk). The containers bring their own
+system, so nothing else differs from Debian. The scripts were run on Debian only; if a command of BusyBox behaves differently,
+install the full package (`apk add coreutils sed grep`).
 
 ## Moving to a root server on the internet
 

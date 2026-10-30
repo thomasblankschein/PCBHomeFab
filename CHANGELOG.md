@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.25.1 - 2026-10-30
+
+- Fix: the login did not start when the site was opened over plain http under a name other than `localhost` (for example
+  `http://pcbhomefab.example.intranet`); the page showed "Cannot read properties of undefined (reading 'digest')". Browsers offer
+  `crypto.subtle` only on https and localhost, so the PKCE hash is now calculated in JavaScript (`sha256.js`) when it is missing.
+  Use https for access from outside the home network.
+- Docs: sizing for a small Alpine VM (2 cores, 2 GB, 10 GB), with the real figures from a running installation; the Alpine
+  installer already makes a swap partition, no swap file is needed.
+
 ## 0.25.0 - 2026-10-30
 
 - New on the job page: "Rotation of the panel". After X0 Y0 is set at the lower left mark, the X and Y of the upper right mark
