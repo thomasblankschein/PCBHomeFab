@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.2 - 2026-10-30
+
+- Documentation: the README describes the installation from git and the features; new manual `docs/manual.md` (from the KiCad
+  file to the finished board, all settings, mill procedure, maintaining tool and machine data, REST API, troubleshooting).
+
 ## 0.23.1 - 2026-10-29
 
 - The ZIP archive with all files now also holds the job description as `auftragsbeschreibung.pdf` or `job-description.pdf`
