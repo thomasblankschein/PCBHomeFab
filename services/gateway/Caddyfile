@@ -25,6 +25,11 @@
 		reverse_proxy jobs:8000
 	}
 
+	# The login (Keycloak). It lives under /auth with its own pages, scripts and API.
+	handle /auth/* {
+		reverse_proxy keycloak:8080
+	}
+
 	handle {
 		reverse_proxy frontend:8080
 	}

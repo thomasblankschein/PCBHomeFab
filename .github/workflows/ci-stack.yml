@@ -10,6 +10,7 @@ on:
       - "tests/e2e/**"
       - "tests/golden/**"
       - "scripts/smoke_test.sh"
+      - "scripts/create_user.sh"
       - ".github/workflows/ci-stack.yml"
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - "tests/e2e/**"
       - "tests/golden/**"
       - "scripts/smoke_test.sh"
+      - "scripts/create_user.sh"
       - ".github/workflows/ci-stack.yml"
 
 jobs:
@@ -31,14 +33,25 @@ jobs:
           python-version: "3.12"
       - name: Start all services
         run: |
-          echo "PCBHOMEFAB_IP_SALT=ci" > .env
+          echo "PCBHOMEFAB_PUBLIC_URL=http://localhost" > .env
+          echo "KEYCLOAK_ADMIN_PASSWORD=ci-admin-password" >> .env
+          echo "KEYCLOAK_DB_PASSWORD=ci-db-password" >> .env
           echo "SITE_ADDRESS=:80" >> .env
+          echo "PCBHOMEFAB_RATE_LIMIT_PER_HOUR=300" >> .env
           docker compose up -d --build --wait
+      - name: Create an account for the tests
+        run: KEYCLOAK_ADMIN_PASSWORD=ci-admin-password scripts/create_user.sh http://localhost ci-user ci-user-password-1
       - name: Smoke test through the gateway
         run: scripts/smoke_test.sh http://localhost || (docker compose logs; exit 1)
+        env:
+          PCBHOMEFAB_USER: ci-user
+          PCBHOMEFAB_PASSWORD: ci-user-password-1
       - name: Outputs equal the golden outputs
         run: |
           pip install httpx pytest pillow
           PCBHOMEFAB_URL=http://localhost pytest tests/e2e -q || (docker compose logs; exit 1)
+        env:
+          PCBHOMEFAB_USER: ci-user
+          PCBHOMEFAB_PASSWORD: ci-user-password-1
       - run: docker compose down -v
         if: always()

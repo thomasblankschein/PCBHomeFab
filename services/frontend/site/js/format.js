@@ -22,7 +22,3 @@ export function programTitle(name) {
   if (!info) return name;
   return t(info.kind === "drill" ? "job.program_drill" : "job.program_mill", { step: info.step, diameter: info.diameter });
 }
-
-export function daysLeft(expires) {
-  return Math.max(1, Math.round((expires - Date.now() / 1000) / 86400));
-}

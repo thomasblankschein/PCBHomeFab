@@ -432,7 +432,6 @@ function renderLimits() {
     files: l.max_files,
     mb: l.max_upload_mb,
     boards: l.max_boards,
-    count: Math.round(l.job_ttl_hours / 24),
   });
 }
 

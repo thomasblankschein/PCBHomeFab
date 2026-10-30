@@ -107,6 +107,37 @@ code {
   margin-left: auto;
 }
 
+.top .account {
+  margin-left: auto;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.top .account + .language {
+  margin-left: 0;
+}
+
+.top .account .who {
+  color: var(--muted, inherit);
+}
+
+button.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.pager {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
 /* The text is filled in by script (js/i18n.js); hide the markup until the language is applied. */
 html:not([data-ready]) .top nav,
 html:not([data-ready]) main {

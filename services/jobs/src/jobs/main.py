@@ -1,12 +1,12 @@
-"""The jobs service: anonymous jobs with upload, queue, status and download.
+"""The jobs service: jobs of logged-in users with upload, queue, status and download.
 
-There are no accounts. Creating a job returns a random id; the job link is the only credential. This service owns
+Users log in at the identity provider (Keycloak); every request carries its access token, which is checked in
+``auth.py``. A job belongs to the account that created it and is kept until the owner deletes it. This service owns
 all state (job database, input and output files) and runs the workflow over the other services.
 """
 
 from __future__ import annotations
 
-import hashlib
 import io
 import json
 import re
@@ -20,12 +20,13 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import FastAPI, File, Form, Query, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from starlette.concurrency import run_in_threadpool
 
 from . import common
+from .auth import OidcVerifier, TokenVerifier, User, authenticate
 from .common import Problem
 from .config import Settings
 from .marks import MIN_MARGIN_MM, MIN_PANEL_MM, alignment_marks
@@ -68,12 +69,18 @@ def _unavailable() -> Problem:
     return Problem(503, "jobs.upstream_unavailable", "A required service is not reachable. Try again later.")
 
 
-def _client_hash(request: Request, settings: Settings) -> str:
-    address = request.client.host if request.client else "unknown"
-    if settings.trust_proxy:
-        forwarded = request.headers.get("x-forwarded-for", "")
-        address = forwarded.split(",")[0].strip() or address
-    return hashlib.sha256(f"{settings.ip_salt}:{address}".encode()).hexdigest()[:32]
+def _current_user(request: Request) -> User:
+    return authenticate(request.app.state.verifier, request.headers.get("authorization"))
+
+
+#: The account that makes the request. Every endpoint of the API except the health check needs one.
+CurrentUser = Annotated[User, Depends(_current_user)]
+
+
+def _verifier(settings: Settings) -> TokenVerifier:
+    if not settings.oidc_issuer or not settings.oidc_jwks_url:
+        raise RuntimeError("OIDC_ISSUER and OIDC_JWKS_URL must be set: this service does not run without a login.")
+    return OidcVerifier(settings.oidc_issuer, settings.oidc_jwks_url, settings.oidc_clients)
 
 
 def _job_json(record: JobRecord) -> dict[str, Any]:
@@ -81,10 +88,25 @@ def _job_json(record: JobRecord) -> dict[str, Any]:
         "id": record.id,
         "status": record.status,
         "created": record.created,
-        "expires": record.expires,
+        "expires": record.expires or None,
         "error": record.error,
         "params": record.params,
         "files": record.files,
+    }
+
+
+def _summary(record: JobRecord) -> dict[str, Any]:
+    """What the list of jobs shows: no files and no full parameters."""
+    params = record.params
+    return {
+        "id": record.id,
+        "status": record.status,
+        "created": record.created,
+        "error": record.error,
+        "boards": [{"name": b["name"], "count": b["count"]} for b in params.get("boards", [])],
+        "panel": params.get("panel"),
+        "exposure": bool(params.get("exposure")),
+        "mill_gcode": bool(params.get("mill_gcode")),
     }
 
 
@@ -125,8 +147,11 @@ def _board_size(package: bytes) -> tuple[float, float]:
         raise _unavailable() from exc
 
 
-def create_app(settings: Settings | None = None, services: Services | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None, services: Services | None = None, verifier: TokenVerifier | None = None
+) -> FastAPI:
     settings = settings or Settings.from_env()
+    verifier = verifier or _verifier(settings)
     services = services or Services(settings)
     store = JobStore(settings)
     panels = load_panels()
@@ -157,12 +182,13 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app = FastAPI(title="PCBHomeFab jobs", version="1.0.0", lifespan=lifespan, root_path=settings.root_path)
     common.install(app, "jobs")
     app.state.store = store
+    app.state.verifier = verifier
     previews: dict[str, deque[float]] = defaultdict(deque)
     preview_lock = threading.Lock()
 
-    def check_preview_rate(request: Request) -> None:
+    def check_preview_rate(user: User) -> None:
         """Previews cost a call to ingest or panel, so they get a limit of their own (kept in memory)."""
-        client = _client_hash(request, settings)
+        client = user.id
         now = time.monotonic()
         with preview_lock:
             window = previews[client]
@@ -176,18 +202,18 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
                     del previews[key]
 
     @app.get("/v1/tools")
-    def tool_library() -> dict[str, Any]:
+    def tool_library(user: CurrentUser) -> dict[str, Any]:
         try:
             return services.get_json(f"{settings.mill_url}/v1/tools", secrets.token_hex(6))
         except Unavailable as exc:
             raise _unavailable() from exc
 
     @app.get("/v1/panels")
-    def panel_sizes() -> dict[str, Any]:
+    def panel_sizes(user: CurrentUser) -> dict[str, Any]:
         return panels.to_dict()
 
     @app.get("/v1/profiles")
-    def profiles() -> dict[str, Any]:
+    def profiles(user: CurrentUser) -> dict[str, Any]:
         request_id = secrets.token_hex(6)
         try:
             printers = services.get_json(f"{settings.exposure_url}/v1/profiles", f"{request_id}-exposure")
@@ -201,14 +227,14 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
                 "max_upload_mb": settings.max_upload_bytes // (1024 * 1024),
                 "max_files": settings.max_files,
                 "max_boards": settings.max_boards,
-                "job_ttl_hours": settings.job_ttl_s / 3600,
+                "max_jobs_per_user": settings.max_jobs_per_user,
             },
         }
 
     @app.post("/v1/boards")
-    async def board_info(request: Request, file: Annotated[UploadFile, File()]) -> dict[str, Any]:
+    async def board_info(user: CurrentUser, file: Annotated[UploadFile, File()]) -> dict[str, Any]:
         """Size, holes and contour of one uploaded Gerber ZIP, for the layout preview. Nothing is stored."""
-        check_preview_rate(request)
+        check_preview_rate(user)
         try:
             data = await common.read_limited(file, settings.max_upload_bytes)
         except Problem as exc:
@@ -225,9 +251,9 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         return board
 
     @app.post("/v1/layouts")
-    def layout_preview(request: Request, body: PreviewLayoutRequest) -> dict[str, Any]:
+    def layout_preview(user: CurrentUser, body: PreviewLayoutRequest) -> dict[str, Any]:
         """Where the boards would sit on the panel. Asks the panel service, stores nothing."""
-        check_preview_rate(request)
+        check_preview_rate(user)
         if sum(b.count for b in body.boards) > settings.max_boards:
             raise Problem(422, "jobs.invalid_upload", f"At most {settings.max_boards} boards fit in one job.")
         panel = find_panel(body.panel)
@@ -248,7 +274,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
 
     @app.post("/v1/jobs", status_code=201)
     async def post_job(
-        request: Request,
+        user: CurrentUser,
         boards: Annotated[list[UploadFile], File(description="Gerber ZIP files, one per board design")],
         counts: Annotated[list[int] | None, Form(description="Copies per file, same order")] = None,
         printer: Annotated[str, Form(pattern=PROFILE_ID)] = "photon-m3",
@@ -270,9 +296,14 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         mark_labels: Annotated[bool, Form()] = True,
         drill_map: Annotated[str | None, Form()] = None,
     ) -> JSONResponse:
-        client = _client_hash(request, settings)
-        if store.recent_count(client) >= settings.rate_limit_per_hour:
+        if store.recent_count(user.id) >= settings.rate_limit_per_hour:
             raise Problem(429, "jobs.rate_limited", "Too many jobs. Try again later.", {"Retry-After": "3600"})
+        if settings.max_jobs_per_user and store.count_for(user.id) >= settings.max_jobs_per_user:
+            raise Problem(
+                403,
+                "jobs.quota_exceeded",
+                f"You have {settings.max_jobs_per_user} jobs, the limit. Delete jobs you no longer need.",
+            )
         if store.queued_count() >= settings.max_queued:
             raise Problem(503, "jobs.queue_full", "The queue is full. Try again later.", {"Retry-After": "300"})
         if not boards or len(boards) > settings.max_files:
@@ -342,22 +373,45 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             "drill_map": mapping,
             "boards": entries,
         }
-        record = store.create(job_id, params, client)
+        record = store.create(job_id, params, user.id)
         return JSONResponse({"id": record.id, "status": record.status}, status_code=201)
 
-    def _find(job_id: str) -> JobRecord:
-        record = store.get(job_id) if JOB_ID.match(job_id) else None
+    def _find(job_id: str, user: User) -> JobRecord:
+        # a job of another account looks the same as a job that does not exist
+        record = store.get(job_id, user.id) if JOB_ID.match(job_id) else None
         if record is None:
-            raise Problem(404, "jobs.not_found", "Job not found or expired.")
+            raise Problem(404, "jobs.not_found", "Job not found.")
         return record
 
+    @app.get("/v1/me")
+    async def me(user: CurrentUser) -> dict[str, str]:
+        return {"id": user.id, "name": user.name}
+
+    @app.get("/v1/jobs")
+    async def list_jobs(
+        user: CurrentUser,
+        limit: Annotated[int, Query(ge=1, le=100)] = 25,
+        offset: Annotated[int, Query(ge=0)] = 0,
+    ) -> dict[str, Any]:
+        records, total = await run_in_threadpool(store.list_for, user.id, limit, offset)
+        return {"jobs": [_summary(r) for r in records], "total": total, "limit": limit, "offset": offset}
+
     @app.get("/v1/jobs/{job_id}")
-    async def get_job(job_id: str) -> dict[str, Any]:
-        return _job_json(_find(job_id))
+    async def get_job(job_id: str, user: CurrentUser) -> dict[str, Any]:
+        return _job_json(_find(job_id, user))
+
+    @app.delete("/v1/jobs/{job_id}", status_code=204)
+    async def delete_job(job_id: str, user: CurrentUser) -> Response:
+        outcome = store.delete(job_id, user.id) if JOB_ID.match(job_id) else "missing"
+        if outcome == "missing":
+            raise Problem(404, "jobs.not_found", "Job not found.")
+        if outcome == "running":
+            raise Problem(409, "jobs.running", "The job is running. Delete it when it is finished.")
+        return Response(status_code=204)
 
     @app.get("/v1/jobs/{job_id}/files/{name:path}")
-    async def get_file(job_id: str, name: str) -> FileResponse:
-        record = _find(job_id)
+    async def get_file(job_id: str, name: str, user: CurrentUser) -> FileResponse:
+        record = _find(job_id, user)
         info = next((f for f in record.files if f["name"] == name), None)
         if record.status != DONE or info is None:
             raise Problem(404, "jobs.not_found", "File not found.")
@@ -372,8 +426,10 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         )
 
     @app.get("/v1/jobs/{job_id}/report.pdf")
-    async def get_report(job_id: str, lang: Annotated[str, Query(pattern="^(de|en)$")] = "en") -> Response:
-        record = _find(job_id)
+    async def get_report(
+        job_id: str, user: CurrentUser, lang: Annotated[str, Query(pattern="^(de|en)$")] = "en"
+    ) -> Response:
+        record = _find(job_id, user)
         if record.status != DONE:
             raise Problem(404, "jobs.not_found", "The job is not finished.")
         pdf = await run_in_threadpool(build_report, record, store.job_dir(job_id) / "output", lang)
@@ -384,8 +440,10 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         )
 
     @app.get("/v1/jobs/{job_id}/archive")
-    async def get_archive(job_id: str, lang: Annotated[str, Query(pattern="^(de|en)$")] = "en") -> Response:
-        record = _find(job_id)
+    async def get_archive(
+        job_id: str, user: CurrentUser, lang: Annotated[str, Query(pattern="^(de|en)$")] = "en"
+    ) -> Response:
+        record = _find(job_id, user)
         if record.status != DONE:
             raise Problem(404, "jobs.not_found", "The job is not finished.")
         output = store.job_dir(job_id) / "output"

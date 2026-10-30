@@ -6,6 +6,10 @@ its own prefix, plus `common.*`.
 
 | Code | Status | Meaning |
 |---|---|---|
+| `jobs.unauthorized` | 401 | no access token, or it is invalid or expired; log in again |
+| `jobs.auth_unavailable` | 503 | the identity provider could not be reached to check the token |
+| `jobs.quota_exceeded` | 403 | the account has reached its limit of jobs; delete jobs it no longer needs |
+| `jobs.running` | 409 | a running job cannot be deleted |
 | `common.busy` | 503 | too many parallel requests, retry after `Retry-After` seconds |
 | `common.timeout` | 503 | the request took longer than the time limit and was stopped |
 | `common.invalid_request` | 422 | the request does not match the contract (missing part, bad JSON, wrong value) |
@@ -41,7 +45,7 @@ its own prefix, plus `common.*`.
 | `mill.invalid_tools` | 422 | the tool library file is invalid |
 | `mill.cutout_too_small` | 422 | a cutout in the board outline is too small for the end mill |
 | `mill.invalid_marks` | 422 | the two positioning marks do not stand diagonally opposite |
-| `jobs.not_found` | 404 | no such job (or it expired) |
+| `jobs.not_found` | 404 | no such job, or it belongs to another account |
 | `jobs.rate_limited` | 429 | too many jobs from this client |
 | `jobs.queue_full` | 503 | the queue is full |
 | `jobs.upstream_unavailable` | 503 | a service that the job needs cannot be reached |

@@ -3,9 +3,14 @@ info:
   title: PCBHomeFab jobs
   version: 1.0.0
   description: >
-    The API the browser uses (behind the gateway under /api). Anonymous: creating a job returns a random id and the
-    job link is the only credential. Jobs and their files expire. Runs the workflow ingest, panel, exposure and
-    mill and is the only service with state.
+    The API the browser uses (behind the gateway under /api). Every endpoint except /healthz needs a login: an access
+    token of the identity provider (Keycloak, OpenID Connect) in the header `Authorization: Bearer <token>`; without
+    one, or with a token that is invalid or expired, the answer is 401 (`jobs.unauthorized`). A job belongs to the
+    account that created it (the `sub` of the token), only the owner can see it, and a job of another account is
+    answered like a job that does not exist (404). Jobs are kept until the owner deletes them. Runs the workflow
+    ingest, panel, exposure and mill and is the only service with state.
+security:
+  - bearer: []
 paths:
   /healthz:
     get:
@@ -13,6 +18,23 @@ paths:
       responses:
         "200":
           description: The service is running.
+  /v1/me:
+    get:
+      operationId: getMe
+      description: The account of the token, for the user interface.
+      responses:
+        "200":
+          description: Id (the `sub` of the token) and the name to show.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name]
+                properties:
+                  id: {type: string}
+                  name: {type: string}
+        "401":
+          $ref: "#/components/responses/Problem"
   /v1/profiles:
     get:
       operationId: listProfiles
@@ -120,6 +142,21 @@ paths:
         "503":
           $ref: "#/components/responses/Problem"
   /v1/jobs:
+    get:
+      operationId: listJobs
+      description: The jobs of the account, the newest first.
+      parameters:
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+        - {name: offset, in: query, required: false, schema: {type: integer, minimum: 0, default: 0}}
+      responses:
+        "200":
+          description: One page of jobs (a summary of each) and the number of all jobs of the account.
+          content:
+            application/json:
+              schema:
+                $ref: schemas/job-list.schema.json
+        "401":
+          $ref: "#/components/responses/Problem"
     post:
       operationId: createJob
       requestBody:
@@ -189,6 +226,18 @@ paths:
                 $ref: schemas/job.schema.json
         "404":
           $ref: "#/components/responses/Problem"
+    delete:
+      operationId: deleteJob
+      description: Deletes the job and all its files for good. A running job cannot be deleted (409, `jobs.running`).
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "204":
+          description: Deleted.
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
   /v1/jobs/{id}/files/{name}:
     get:
       operationId: getJobFile
@@ -245,6 +294,14 @@ paths:
         "404":
           $ref: "#/components/responses/Problem"
 components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Access token of the realm `pcbhomefab` of the identity provider. The user interface gets it with the
+        authorization code flow with PKCE (client `pcbhomefab-web`); scripts can use the client `pcbhomefab-cli`.
   responses:
     Problem:
       description: Error, codes in errors.md.

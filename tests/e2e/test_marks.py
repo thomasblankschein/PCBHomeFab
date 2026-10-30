@@ -8,6 +8,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+from conftest import auth_headers
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -21,6 +22,7 @@ def client() -> httpx.Client:
         http.get("/healthz").raise_for_status()
     except httpx.HTTPError:
         pytest.skip(f"no PCBHomeFab stack at {BASE}")
+    http.headers.update(auth_headers(BASE))
     return http
 
 

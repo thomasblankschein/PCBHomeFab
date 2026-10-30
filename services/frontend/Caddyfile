@@ -11,7 +11,7 @@
 	respond /healthz 200
 
 	header {
-		Content-Security-Policy "default-src 'self'; img-src 'self'; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; img-src 'self' blob:; frame-ancestors 'none'"
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
 		-Server
@@ -20,6 +20,12 @@
 	# /jobs/<id> is one page, the script reads the id from the address.
 	@job path_regexp job ^/jobs/[A-Za-z0-9_-]+$
 	rewrite @job /job.html
+
+	@joblist path /jobs
+	rewrite @joblist /jobs.html
+
+	@callback path /auth-callback
+	rewrite @callback /auth-callback.html
 
 	@tools path /tools
 	rewrite @tools /tools.html

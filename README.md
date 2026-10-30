@@ -8,8 +8,9 @@ Turn the Gerber files or the KiCad PCB file of a single-sided board into everyth
 - **Panelizing:** several boards (and copies of a board) are packed onto one blank, so one exposure and one
   milling run makes the whole batch.
 
-PCBHomeFab is a small web service that many users can use at the same time, with anonymous sessions and a link per
-job. It consists of independent services that talk to each other only through REST APIs.
+PCBHomeFab is a small web service that many users can use at the same time. Every user has an account (login with
+Keycloak) and finds the jobs again in a list. It consists of independent services that talk to each other only through
+REST APIs.
 
 ## Features
 
@@ -28,7 +29,9 @@ job. It consists of independent services that talk to each other only through RE
   estimated run times.
 - **Job description (PDF):** header data, mask, drill and mill view, tools with their `.nc` files and the production time.
 - **Downloads:** every file, all programs as ZIP, or everything (including the PDF) in one ZIP.
-- **Service:** anonymous jobs with a link, upload and rate limits, expiry after seven days, Docker Compose with TLS
+- **Accounts:** login with Keycloak (OpenID Connect); every account has its own list of jobs, which are kept until the
+  owner deletes them (limit of jobs per account). Accounts are created by the administrator.
+- **Service:** upload and rate limits per account, Docker Compose with TLS
   (Caddy), English and German pages, REST API with OpenAPI contracts.
 
 How to use it: [docs/manual.md](docs/manual.md).
@@ -66,13 +69,15 @@ built from the repository.
 git clone https://github.com/thomasblankschein/PCBHomeFab.git
 cd PCBHomeFab
 git checkout vX.Y.Z             # optional: a released version instead of main (list: git tag, notes: CHANGELOG.md)
-cp .env.example .env            # set PCBHOMEFAB_IP_SALT (openssl rand -hex 32)
+cp .env.example .env            # set PCBHOMEFAB_PUBLIC_URL and the two Keycloak passwords (openssl rand -hex 24)
 docker compose up -d --build    # the first build takes a few minutes
-scripts/smoke_test.sh http://localhost
+scripts/create_user.sh http://localhost thomas 'a-password-of-10-or-more-characters'   # your first account
+PCBHOMEFAB_USER=thomas PCBHOMEFAB_PASSWORD='...' scripts/smoke_test.sh http://localhost
 ```
 
-Open `http://localhost/`. With the default `SITE_ADDRESS=:80` the gateway serves plain HTTP on port 80; for a public
-name with HTTPS, other ports or a homelab see [docs/deployment.md](docs/deployment.md).
+`create_user.sh` needs `KEYCLOAK_ADMIN_PASSWORD` of your `.env` in the environment. Open `http://localhost/` and log in
+with the account. With the default `SITE_ADDRESS=:80` the gateway serves plain HTTP on port 80; for a public name with
+HTTPS, other ports, more accounts or a homelab see [docs/deployment.md](docs/deployment.md).
 
 To update an installation:
 
@@ -81,29 +86,34 @@ git pull                        # or: git fetch --tags && git checkout vX.Y.Z
 docker compose up -d --build    # jobs in the queue survive the restart
 ```
 
-Your `.env` and the Docker volumes (jobs, own tool library) are not touched by an update; read the entry of the new
-version in [CHANGELOG.md](CHANGELOG.md) for changed settings. To remove everything: `docker compose down -v` (this
-also deletes the stored jobs).
+Your `.env` and the Docker volumes (jobs, accounts, own tool library) are not touched by an update; read the entry of
+the new version in [CHANGELOG.md](CHANGELOG.md) for changed settings. To remove everything: `docker compose down -v` (this
+also deletes the stored jobs and the accounts).
 
 ## Use it
 
-In the editor you add one or more Gerber ZIPs or KiCad PCB files (`.kicad_pcb`, zones filled; drag and drop), see size, holes and board
+After the login you land in the editor. There you add one or more Gerber ZIPs or KiCad PCB files (`.kicad_pcb`, zones filled; drag and drop), see size, holes and board
 shape of each, set the copies, the order and the spacing, and watch the boards on the panel (design view, holes coloured
 by diameter). Printer, mill, exposure time, hole mode, tabs, flip and the calibration of the printer are in the settings;
 they are remembered in the browser. "Create job" leads to the job page with the exposure mask, the mill preview and
 the files to download (`exposure.pm3`, one G-code program per tool, all programs as ZIP, everything in one ZIP), a job description as PDF (tools, run times) and a 3D simulation of
 the drill and mill paths (turn, zoom, play with the tool moving along the paths, copper of the boards shown faintly on the panel; it
 can be switched off). `/tools` shows the tool
-library. Without accounts, every job gets a random id and the job link `/jobs/<id>` is the only credential. Jobs and
-files are deleted after seven days.
+library. "My jobs" lists all jobs of your account, the newest first; open one again whenever you need it or delete it.
+Nothing is deleted automatically.
 
-The same through the REST API (the gateway publishes the `jobs` service under `/api`):
+The same through the REST API (the gateway publishes the `jobs` service under `/api`). Every call needs the access token of
+an account; scripts get it from Keycloak with the client `pcbhomefab-cli`:
 
 ```bash
-curl -F boards=@base.zip -F boards=@node.zip -F counts=1 -F counts=15 -F panel=160x100 -F exposure_s=120 http://localhost/api/v1/jobs
+TOKEN=$(curl -s -d client_id=pcbhomefab-cli -d grant_type=password -d username=thomas --data-urlencode password='...' \
+    http://localhost/auth/realms/pcbhomefab/protocol/openid-connect/token | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+AUTH="Authorization: Bearer $TOKEN"          # the token is valid for 15 minutes
+curl -H "$AUTH" -F boards=@base.zip -F boards=@node.zip -F counts=1 -F counts=15 -F panel=160x100 -F exposure_s=120 http://localhost/api/v1/jobs
 # {"id":"...","status":"queued"}
-curl http://localhost/api/v1/jobs/<id>                       # status and file list
-curl -O http://localhost/api/v1/jobs/<id>/files/exposure.pm3
+curl -H "$AUTH" http://localhost/api/v1/jobs/<id>                       # status and file list
+curl -H "$AUTH" -O http://localhost/api/v1/jobs/<id>/files/exposure.pm3
+curl -H "$AUTH" http://localhost/api/v1/jobs                            # the jobs of the account
 ```
 
 `panel` (required) is the id of a panel size from `GET /api/v1/panels` (160x100, 75x100 and 100x75 mm built in, the list

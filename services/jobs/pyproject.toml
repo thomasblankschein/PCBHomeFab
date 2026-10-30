@@ -5,11 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "pcbhomefab-jobs"
 version = "1.0.0"
-description = "PCBHomeFab jobs service: anonymous jobs and workflow"
+description = "PCBHomeFab jobs service: jobs of logged-in users and the workflow"
 license = { text = "MIT" }
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.110",
+    "pyjwt[crypto]>=2.8",
     "uvicorn>=0.29",
     "python-multipart>=0.0.9",
     "httpx>=0.27",

@@ -1,5 +1,10 @@
 # Architecture
 
+## Decisions
+
+- [ADR-001](#decision-independent-services-that-talk-only-through-rest-adr-001-2026-10-26): independent services that talk only through REST.
+- [ADR-002](#decision-logins-with-keycloak-instead-of-anonymous-jobs-adr-002-2026-10-30): logins with Keycloak instead of anonymous jobs.
+
 ## Decision: independent services that talk only through REST (ADR-001, 2026-10-26)
 
 **Status:** accepted and implemented, see [migration.md](migration.md) for how the code got here.
@@ -35,7 +40,8 @@ architecture principle that is kept everywhere.
 ```
 Browser ─▶ gateway (Caddy: TLS, size limits, routing)
               ├─▶ frontend     static pages
-              └─▶ jobs         uploads, job state, files, expiry, workflow
+              ├─▶ keycloak     login (OpenID Connect, /auth), database keycloak-db     (ADR-002)
+              └─▶ jobs         uploads, job state, files, workflow; checks the access tokens
                      ├─▶ ingest     Gerber ZIP  ─▶ canonical board package
                      ├─▶ panel      boards + counts ─▶ placements on the blank
                      ├─▶ exposure   packages + placements ─▶ mask PNG / .pm3
@@ -44,9 +50,10 @@ Browser ─▶ gateway (Caddy: TLS, size limits, routing)
 
 | Service | Task | Owns | State |
 |---|---|---|---|
-| `gateway` | TLS, request size limits, routing | Caddy config | none |
+| `gateway` | TLS, request size limits, routing (`/` frontend, `/api` jobs, `/auth` keycloak) | Caddy config | none |
+| `keycloak` | the login: accounts, passwords, tokens (ADR-002); with `keycloak-db` (PostgreSQL) | realm `pcbhomefab` | **yes** (its own) |
 | `frontend` | user interface: editor with panel preview, job page, tool library (plain ES modules, no build step); 3D simulation of the G-code on the job page (canvas, no library; the programs are read in the browser); English and German from JSON language files in `site/locales/` (`js/i18n.js`) | static files | none |
-| `jobs` | accept uploads, run the workflow (ingest → panel → exposure / mill), store results, expire jobs, give anonymous job links, rate limits, the list of panel sizes (`panels.toml`, configurable like the tool library) | job database, job files | **yes** |
+| `jobs` | accept uploads, run the workflow (ingest → panel → exposure / mill), store results, check the access tokens, keep the jobs of each account until it deletes them, rate limits and a limit of jobs per account, the list of panel sizes (`panels.toml`, configurable like the tool library) | job database, job files | **yes** |
 | `ingest` | unpack a ZIP safely, detect the layers, build the canonical board package | ZIP and layer rules | none |
 | `panel` | place boards (with counts) on the blank | packing rules | none |
 | `exposure` | rasterize copper, build the mask, write `.pm3` | printer profiles, `.pm3` writer | none |
@@ -89,8 +96,8 @@ Endpoints (the OpenAPI files are authoritative):
 | `exposure` | `POST /v1/masks` | packages, layout, settings in; ZIP with `mask.png`, `mask_preview.png`, `exposure.pm3` out |
 | `mill` | `GET /v1/profiles`, `GET /v1/tools` | mill profiles, tool library |
 | `mill` | `POST /v1/programs` | packages, layout, settings in; ZIP with one `.nc` per tool, `preview.svg`, `programs.json` (with the estimated run time of every program) out |
-| `jobs` | `POST /v1/jobs`, `GET /v1/jobs/{id}`, `GET /v1/jobs/{id}/files/{name}`, `GET /v1/profiles`, `GET /v1/tools` | what the browser uses (behind `/api` at the gateway) |
-| `jobs` | `POST /v1/boards`, `POST /v1/layouts` | previews for the editor: board info from `ingest`, placement from `panel`; nothing is stored, limited per client |
+| `jobs` | `POST /v1/jobs`, `GET /v1/jobs`, `GET /v1/jobs/{id}`, `DELETE /v1/jobs/{id}`, `GET /v1/jobs/{id}/files/{name}`, `GET /v1/me`, `GET /v1/profiles`, `GET /v1/tools` | what the browser uses (behind `/api` at the gateway), all with a login |
+| `jobs` | `POST /v1/boards`, `POST /v1/layouts` | previews for the editor: board info from `ingest`, placement from `panel`; nothing is stored, limited per account |
 
 ### Consequences
 
@@ -104,12 +111,58 @@ Endpoints (the OpenAPI files are authoritative):
   `exposure/pm3.py` but is not reachable through the API yet.
 - Redis stays out of the design. The queue is the job table inside `jobs`.
 
-## Anonymous sessions (owned by `jobs`)
+## Decision: logins with Keycloak instead of anonymous jobs (ADR-002, 2026-10-30)
 
-- Creating a job returns a random, unguessable job id; the link `/jobs/<id>` is the only credential.
-- Jobs and files expire after a fixed time (default 7 days).
-- Limits per job: upload size, number of files, number of boards. Rate limit per client (hashed address) and a
-  limit for the queue length. Time and memory limits per request live in the processing services.
+**Status:** accepted and implemented (0.24.0).
+
+### Context
+
+The service ran for everybody without accounts: a job id was the only credential and jobs expired after seven days. The
+maintainer wants accounts, a list of the jobs of each account that can be opened again, and no automatic deletion.
+
+### Decision
+
+1. **Identity is not built here.** Accounts, passwords, brute-force protection, sessions and (later) e-mail
+   confirmation, password reset, two-factor login and social login are the job of an identity provider: **Keycloak**
+   (OpenID Connect), chosen because it is the most widely used and longest maintained open-source choice. Zitadel was the
+   lighter alternative; both speak standard OpenID Connect, so a change touches only the compose file and the settings.
+2. **New services in the compose file:** `keycloak` (our image with the realm `pcbhomefab`, see `services/keycloak/`) and
+   `keycloak-db` (PostgreSQL, only for Keycloak). The gateway publishes Keycloak under `/auth`. Keycloak is an external
+   component with its own state; the rule "only `jobs` owns state" applies to our own services.
+3. **The browser logs in** with the authorization code flow with PKCE (client `pcbhomefab-web`, `js/auth.js`, no library)
+   and sends the access token (`Authorization: Bearer`) with every API call. Scripts use the client `pcbhomefab-cli`
+   (password grant, can be switched off in the realm).
+4. **`jobs` only checks tokens** (`auth.py`): signature against the public keys of the realm (fetched on the internal
+   address, cached), issuer, expiry and the client (`azp`). It has no sessions and never sees a password. The `sub` of the
+   token owns the job. No call of `jobs` works without a valid token except `/healthz`; the other services are still
+   reachable from `jobs` only.
+5. **Jobs belong to one account** (`owner` column). A job of another account is answered like one that does not exist
+   (404). New: `GET /v1/jobs` (the list of the account), `DELETE /v1/jobs/{id}`, `GET /v1/me`.
+6. **No automatic deletion.** A job stays until its owner deletes it. To keep the disk from filling up there is a limit
+   of jobs per account (`MAX_JOBS_PER_USER`, default 200) and the rate limit per hour counts per account instead of per
+   address. Anonymous jobs of earlier versions have no owner, nobody can reach them, they expire as before and are
+   deleted.
+7. **Files go with the token.** A picture or link of a page cannot send a header, so the frontend fetches files through
+   the API and shows or saves them as blobs (`js/job.js`).
+8. **Accounts** are created by the administrator in the Keycloak console or with `scripts/create_user.sh`. Registration
+   by the users is off in the delivered realm; it needs an SMTP server for the confirmation of the e-mail address (the
+   internal network has no access to the internet, see `docs/deployment.md`).
+
+### Consequences
+
+- Positive: no password handling in our code, a mature login with the options that come later, jobs are private.
+- Negative: two more containers (about 1 GB of memory for Keycloak), the public address must be configured
+  (`PCBHOMEFAB_PUBLIC_URL`, it is part of the token issuer), and the API cannot be used without a login any more.
+- The one-way door: accounts own the jobs by their Keycloak `sub`. Moving to another provider means a migration of the
+  owner ids.
+
+## Accounts and jobs (owned by `jobs`, login by Keycloak)
+
+- Every call of the API carries the access token of a logged-in account (ADR-002). A job belongs to the account that
+  created it and is kept until the account deletes it.
+- Limits per job: upload size, number of files, number of boards. Per account: jobs per hour, number of jobs kept
+  (`MAX_JOBS_PER_USER`) and previews per hour; for the whole service a limit for the queue length. Time and memory limits
+  per request live in the processing services.
 
 ## Pipeline
 

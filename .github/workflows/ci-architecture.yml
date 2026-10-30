@@ -20,5 +20,7 @@ jobs:
         run: python scripts/check_boundaries.py
       - name: Compose file is valid
         run: |
-          echo "PCBHOMEFAB_IP_SALT=ci" > .env
+          echo "PCBHOMEFAB_PUBLIC_URL=http://localhost" > .env
+          echo "KEYCLOAK_ADMIN_PASSWORD=ci-admin-password" >> .env
+          echo "KEYCLOAK_DB_PASSWORD=ci-db-password" >> .env
           docker compose config -q

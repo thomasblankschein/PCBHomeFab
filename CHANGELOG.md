@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.24.0 - 2026-10-30
+
+- **Breaking: accounts instead of anonymous jobs** (ADR-002). The login is Keycloak (OpenID Connect, realm `pcbhomefab`),
+  published by the gateway under `/auth`; new containers `keycloak` and `keycloak-db` (PostgreSQL). Every call of the API
+  except `/healthz` needs the access token of an account (`Authorization: Bearer`, otherwise `401 jobs.unauthorized`).
+- Jobs belong to the account that made them and are **kept until the owner deletes them**: no expiry any more
+  (`expires` is `null`). New: `GET /v1/jobs` (list, newest first, `limit` and `offset`), `DELETE /v1/jobs/{id}`,
+  `GET /v1/me`. A job of another account gives 404. Limits count per account: jobs per hour, previews per hour and the new
+  limit of jobs kept (`PCBHOMEFAB_MAX_JOBS_PER_USER`, default 200, error `jobs.quota_exceeded`).
+- User interface: login page of Keycloak (English and German), name and "Log out" in the header, new page "My jobs"
+  (`/jobs`) with open and delete; the job page no longer talks about expiry or keeping the link. Files, pictures, the PDF and the
+  ZIP are fetched with the token and shown or saved from blobs.
+- Accounts are created by the administrator (Keycloak console or `scripts/create_user.sh`); there is no self-registration (it
+  would need an SMTP server). `scripts/smoke_test.sh` and the e2e tests need an account (`PCBHOMEFAB_USER`,
+  `PCBHOMEFAB_PASSWORD`), the CI creates one.
+- Upgrading: set `PCBHOMEFAB_PUBLIC_URL`, `KEYCLOAK_ADMIN_PASSWORD` and `KEYCLOAK_DB_PASSWORD` in the `.env` (the compose file
+  stops without them), create the accounts, see `docs/deployment.md`. `PCBHOMEFAB_IP_SALT` and `PCBHOMEFAB_JOB_TTL_HOURS` are gone.
+  Jobs of the anonymous time have no owner: nobody can open them, they expire after their seven days and are deleted.
+- `jobs` depends on `pyjwt[crypto]`. Documentation: ADR-002 in `docs/architecture.md`, a chapter about the login in the manual.
+
 ## 0.23.2 - 2026-10-30
 
 - Documentation: the README describes the installation from git and the features; new manual `docs/manual.md` (from the KiCad

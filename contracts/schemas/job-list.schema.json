@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "job-list.schema.json",
+  "title": "List of the jobs of one account",
+  "type": "object",
+  "required": ["jobs", "total", "limit", "offset"],
+  "properties": {
+    "jobs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "created", "error", "boards", "panel", "exposure", "mill_gcode"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{20,32}$"},
+          "status": {"enum": ["queued", "running", "done", "failed"]},
+          "created": {"type": "number", "description": "Unix time in seconds."},
+          "error": {"type": ["string", "null"]},
+          "boards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "count"],
+              "properties": {"name": {"type": "string"}, "count": {"type": "integer", "minimum": 1}},
+              "additionalProperties": false
+            }
+          },
+          "panel": {
+            "type": ["object", "null"],
+            "properties": {
+              "id": {"type": "string"},
+              "width_mm": {"type": "number"},
+              "height_mm": {"type": "number"}
+            }
+          },
+          "exposure": {"type": "boolean"},
+          "mill_gcode": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "total": {"type": "integer", "minimum": 0, "description": "All jobs of the account, not only this page."},
+    "limit": {"type": "integer", "minimum": 1},
+    "offset": {"type": "integer", "minimum": 0}
+  },
+  "additionalProperties": false
+}

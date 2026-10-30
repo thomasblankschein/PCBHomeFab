@@ -2,8 +2,9 @@
 #
 #   gateway  -> frontend (static pages)        reachable from outside: only the gateway
 #            -> jobs (/api/...)  -> ingest, panel, exposure, mill
+#            -> keycloak (/auth/...) -> keycloak-db      the login (OpenID Connect); jobs only checks its tokens
 #
-# Start:   cp .env.example .env   (set PCBHOMEFAB_IP_SALT), then   docker compose up -d --build
+# Start:   cp .env.example .env   (set the passwords and PCBHOMEFAB_PUBLIC_URL), then   docker compose up -d --build
 # Scale:   docker compose up -d --scale exposure=2     (the processing services keep no state)
 # Check:   scripts/smoke_test.sh http://localhost
 name: pcbhomefab
@@ -47,6 +48,8 @@ services:
         condition: service_healthy
       jobs:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
 
   frontend:
     <<: *service
@@ -65,13 +68,14 @@ services:
       PANEL_URL: http://panel:8000
       EXPOSURE_URL: http://exposure:8000
       MILL_URL: http://mill:8000
-      IP_SALT: ${PCBHOMEFAB_IP_SALT:?Set PCBHOMEFAB_IP_SALT in .env to a random secret}
-      TRUST_PROXY: "1"
+      # who may call: access tokens of this realm (the issuer is the public address the browser logged in at)
+      OIDC_ISSUER: ${PCBHOMEFAB_PUBLIC_URL:?Set PCBHOMEFAB_PUBLIC_URL in .env}/auth/realms/pcbhomefab
+      OIDC_JWKS_URL: http://keycloak:8080/auth/realms/pcbhomefab/protocol/openid-connect/certs
+      MAX_JOBS_PER_USER: ${PCBHOMEFAB_MAX_JOBS_PER_USER:-200}
       ROOT_PATH: /api
       PCBHOMEFAB_PANELS_FILE: ${PCBHOMEFAB_PANELS_FILE:-}
       MAX_FILES: ${PCBHOMEFAB_MAX_FILES:-8}
       MAX_BOARDS: ${PCBHOMEFAB_MAX_BOARDS:-200}
-      JOB_TTL_HOURS: ${PCBHOMEFAB_JOB_TTL_HOURS:-168}
       JOB_TIMEOUT_S: ${PCBHOMEFAB_JOB_TIMEOUT_S:-300}
       RATE_LIMIT_PER_HOUR: ${PCBHOMEFAB_RATE_LIMIT_PER_HOUR:-30}
       PREVIEW_LIMIT_PER_HOUR: ${PCBHOMEFAB_PREVIEW_LIMIT_PER_HOUR:-300}
@@ -80,6 +84,8 @@ services:
     volumes:
       - jobs_data:/data
     depends_on:
+      keycloak:
+        condition: service_healthy
       ingest:
         condition: service_healthy
       panel:
@@ -88,6 +94,62 @@ services:
         condition: service_healthy
       mill:
         condition: service_healthy
+
+  keycloak:
+    image: pcbhomefab-keycloak:latest
+    build: ./services/keycloak
+    restart: unless-stopped
+    mem_limit: 1g
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - internal
+    environment:
+      # the public address of the login, as the browser sees it (the gateway serves it under /auth)
+      KC_HOSTNAME: ${PCBHOMEFAB_PUBLIC_URL:?Set PCBHOMEFAB_PUBLIC_URL in .env}/auth
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set KEYCLOAK_DB_PASSWORD in .env}
+      # the first administrator, created only when the database is empty
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD in .env}
+      # filled into the redirect addresses of the realm when it is imported
+      PCBHOMEFAB_PUBLIC_URL: ${PCBHOMEFAB_PUBLIC_URL}
+      JAVA_OPTS_KC_HEAP: -XX:MaxRAMPercentage=65
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    healthcheck:
+      # the image has no curl: ask the management port with bash
+      test:
+        - CMD-SHELL
+        - exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /auth/health/ready HTTP/1.0\r\n\r\n' >&3 && grep -q '"UP"' <&3
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  keycloak-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    mem_limit: 256m
+    networks:
+      - internal
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?Set KEYCLOAK_DB_PASSWORD in .env}
+    volumes:
+      - keycloak_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   ingest:
     <<: *service
@@ -132,5 +194,6 @@ networks:
 volumes:
   jobs_data:
   mill_data:
+  keycloak_db:
   caddy_data:
   caddy_config:

@@ -1,7 +1,7 @@
 // 3D simulation of the drill and mill programs of a job: the panel, the tool paths and a tool that moves along them.
 // Drawn on a 2D canvas with the small camera of camera.js, so there is no library and no build step.
 
-import { fileUrl } from "./api.js";
+import { fileText } from "./api.js";
 import { basisOf, isoView, makeCamera, orbit, pan, project, topView, triangleTransform, zoom } from "./camera.js";
 import { fill, h } from "./dom.js";
 import { programInfo, programTitle } from "./format.js";
@@ -24,9 +24,7 @@ const css = (name) => getComputedStyle(document.documentElement).getPropertyValu
 export async function loadPrograms(jobId, files) {
   return Promise.all(
     files.map(async (file, index) => {
-      const response = await fetch(fileUrl(jobId, file.name));
-      if (!response.ok) throw new Error(`${file.name}: ${response.status}`);
-      const moves = parseGcode(await response.text());
+      const moves = parseGcode(await fileText(jobId, file.name));
       for (const m of moves) m.p = index;
       return { name: file.name, diameter: Number(programInfo(file.name)?.diameter ?? 1), color: COLORS[index % COLORS.length], moves };
     }),

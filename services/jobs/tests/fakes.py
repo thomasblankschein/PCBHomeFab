@@ -12,6 +12,9 @@ from collections.abc import Callable
 from typing import Any
 
 import httpx
+import jwt
+
+from jobs.auth import User
 
 ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 
@@ -157,3 +160,15 @@ def _form_field(request: httpx.Request, name: str) -> dict[str, Any]:
     end = content.index(b"\r\n--", start)
     value: dict[str, Any] = json.loads(content[start:end])
     return value
+
+
+class FakeVerifier:
+    """Stands in for the identity provider: ``token-<name>`` is the access token of the account ``<name>``."""
+
+    def verify(self, token: str) -> User:
+        if token == "broken":
+            raise ConnectionError("the identity provider is down")
+        if not token.startswith("token-"):
+            raise jwt.InvalidTokenError("not a token")
+        name = token.removeprefix("token-")
+        return User(id=name, name=name)

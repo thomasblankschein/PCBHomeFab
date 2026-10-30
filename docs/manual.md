@@ -7,7 +7,7 @@ Installation and operation of the service are described in the [README](../READM
 ## 1. The process in short
 
 1. **Design** the board in KiCad (one copper layer, B.Cu) and export it as a Gerber ZIP, or keep the `.kicad_pcb` file.
-2. **Create a job** in the web interface: add the boards, set the copies, check the panel layout, press "Create job".
+2. **Log in** (section 3) and **create a job** in the web interface: add the boards, set the copies, check the panel layout, press "Create job".
 3. **Expose** the photoresist board: copy `exposure.pm3` to the printer (USB stick), print it, rinse, develop and etch.
 4. **Drill and mill** on the CNC mill: one G-code program per tool, with the positioning marks as zero point.
 
@@ -32,7 +32,19 @@ on the panel as one block.
 
 Limits (defaults, the operator can change them): 10 MB per file, 8 files per job, 200 boards in total.
 
-## 3. The editor ("New job")
+## 3. Login and your jobs
+
+The service needs a login. Your administrator creates an account for you (username and password, at least 10
+characters). Open the address of the service: you are sent to the login page, and after the login back to where you
+wanted to go. The header shows your name and "Log out". The login lasts for two weeks without use; the page renews it by
+itself.
+
+**My jobs** (`/jobs`) lists all your jobs, the newest first, with the date, boards, panel size, outputs and state. "Open"
+shows the job page, "Delete" removes the job and all its files for good (after a question). **Nothing is deleted
+automatically.** Every account may keep a limited number of jobs (200 by default); when the limit is reached, delete jobs
+you no longer need. A job is visible only to its owner; other accounts get "does not exist".
+
+## 4. The editor ("New job")
 
 ### Adding boards
 
@@ -97,7 +109,7 @@ panel offset from the left and from the bottom of the display, and mirroring of 
 
 "Create job" uploads the files and leads to the job page.
 
-## 4. Positioning marks
+## 5. Positioning marks
 
 The panel is never at exactly the same place on the mill and not exactly square. Two **marks** on the copper layer solve
 that:
@@ -114,10 +126,10 @@ that:
 On the mill: jog the tool to the centre of the lower left mark and set X0 Y0 there. Move to the upper right mark and
 check its position. If it is off, the panel is turned; turn it until both marks fit.
 
-## 5. The job page
+## 6. The job page
 
-The page shows the progress ("This page updates itself"). **Keep the link**: without accounts, the random job id in
-`/jobs/<id>` is the only way back to your files. Jobs and files are deleted after **seven days**.
+The page shows the progress ("This page updates itself"). The job stays in "My jobs" until you delete it; the address
+`/jobs/<id>` opens it again, after the login.
 
 | Section | Content |
 |---|---|
@@ -126,11 +138,11 @@ The page shows the progress ("This page updates itself"). **Keep the link**: wit
 | Drill assignment | Your choice for hole sizes without a drill of their own. |
 | Exposure | Picture of the mask and the downloads `exposure.pm3` and `mask.png`. |
 | Drill and mill | Picture of the panel with outlines and holes (colour = diameter) and one download per G-code program. |
-| 3D simulation | See section 8. |
-| Job description | The PDF, see section 9. |
+| 3D simulation | See section 9. |
+| Job description | The PDF, see section 10. |
 | All files | Everything in one ZIP. |
 
-## 6. Exposure
+## 7. Exposure
 
 The mask is made for **positive photoresist**: **white = exposed = the copper is etched away**, black = the copper
 stays. Copper pours are kept automatically.
@@ -145,7 +157,7 @@ The panel sits in a frame on the display at the offsets set in the calibration s
 the left and 0.8 mm from the bottom, to be checked on your printer). **Calibration:** make a test exposure and measure
 where the copper ends up; correct the offsets and the mirroring in the settings.
 
-## 7. Drilling and milling
+## 8. Drilling and milling
 
 The job contains **one G-code program per tool**, numbered in the order in which to run them: first the drills, then the
 end mills for large holes, cutouts and the board outlines. The G-code is made for GRBL.
@@ -160,14 +172,14 @@ For each program:
 3. Insert the tool named in the program, set **Z0 to the panel surface**, and resume the program.
 4. At the end it parks at the tool change position with the spindle off. Continue with the next program.
 
-X0 Y0 is the lower left positioning mark, see section 4. Without marks, X0 Y0 is the panel origin of the mill profile (`offset_x_mm`, `offset_y_mm` on the Machines page).
+X0 Y0 is the lower left positioning mark, see section 5. Without marks, X0 Y0 is the panel origin of the mill profile (`offset_x_mm`, `offset_y_mm` on the Machines page).
 
 - **Holes** are drilled with explicit moves (GRBL has no canned cycles); deep holes are drilled in steps (pecking).
 - **Outlines** are milled along the real Edge.Cuts contour, offset by the radius of the end mill, with the cutting depth
   of thickness plus overshoot. With tabs on, the boards stay connected at small bridges.
 - The cutting values of the tool library are **starting values**. Tune feed, plunge and depth on your mill.
 
-## 8. 3D simulation
+## 9. 3D simulation
 
 The job page shows the drill and mill paths in 3D, to check them before the mill runs.
 
@@ -178,7 +190,7 @@ The job page shows the drill and mill paths in 3D, to check them before the mill
   boards faintly on the panel.
 - The time is estimated from the feed rates; rapid moves are assumed at 1500 mm/min. Hours are shown from 60 minutes on.
 
-## 9. Job description (PDF)
+## 10. Job description (PDF)
 
 The link "Job description (PDF)" on the job page opens a PDF in the language of the page. It holds:
 
@@ -191,7 +203,7 @@ The run times are estimated from the G-code. They do not include the pause for t
 acceleration of the machine, so the real time is somewhat longer. Jobs made before version 0.23.0 have no times; their
 PDF has no tool table. The PDF is also in the ZIP of "All files".
 
-## 10. Tools and machines
+## 11. Tools and machines
 
 **Tools** (`/tools`): the tool library the G-code is made for. By default drills from 0.6 to 1.5 mm in 0.1 mm steps and
 end mills of 1, 2 and 3 mm, with spindle speed, feed, plunge feed and peck depth. The operator can replace the library
@@ -263,7 +275,7 @@ in `PRINTERS` or `MILLS` with its own id.
 |---|---|---|
 | Printer | `resolution_x/y`, `display_width/height_mm` | Display of the printer; the pixel size follows (40 µm on the Photon M3). |
 | Printer | `frame_left_mm`, `frame_bottom_mm` | Where the lower left corner of the panel lies on the display (calibration). |
-| Printer | `mirror_x` | Mirror the mask. Off by default, see section 6. |
+| Printer | `mirror_x` | Mirror the mask. Off by default, see section 7. |
 | Printer | `default_exposure_s`, lift and retract values | Defaults written to the `.pm3` file. |
 | Printer | `machine_name` and the `machine_*` values | The machine table of the `.pm3` file. Photon Workshop rejects unknown printer names, so keep the values of a file the printer wrote. |
 | Mill | `max_spindle_rpm` | Highest spindle speed; it must match `$30` of GRBL. |
@@ -282,16 +294,23 @@ Jobs keep what they were made with: a change of a tool or profile applies to new
 
 Language: the switch in the header changes between English and German; the first visit follows the browser language.
 
-## 11. REST API
+## 12. REST API
 
-The same functions are available without the web interface. The gateway publishes the `jobs` service under `/api`:
+The same functions are available without the web interface. The gateway publishes the `jobs` service under `/api`.
+Every call needs the access token of an account in the header `Authorization: Bearer <token>`; without it the answer is
+`401`. Scripts get a token from the login with the client `pcbhomefab-cli` (valid for 15 minutes):
 
 ```bash
-curl -F boards=@base.zip -F boards=@node.zip -F counts=1 -F counts=15 -F panel=160x100 -F exposure_s=120 http://localhost/api/v1/jobs
-curl http://localhost/api/v1/jobs/<id>                       # status and file list
-curl -O http://localhost/api/v1/jobs/<id>/files/exposure.pm3
-curl -o job.pdf "http://localhost/api/v1/jobs/<id>/report.pdf?lang=en"
-curl -o all.zip "http://localhost/api/v1/jobs/<id>/archive?lang=en"
+TOKEN=$(curl -s -d client_id=pcbhomefab-cli -d grant_type=password -d username=thomas --data-urlencode password='...' \
+    http://localhost/auth/realms/pcbhomefab/protocol/openid-connect/token | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+AUTH="Authorization: Bearer $TOKEN"
+curl -H "$AUTH" -F boards=@base.zip -F boards=@node.zip -F counts=1 -F counts=15 -F panel=160x100 -F exposure_s=120 http://localhost/api/v1/jobs
+curl -H "$AUTH" http://localhost/api/v1/jobs                        # your jobs, newest first (limit, offset)
+curl -H "$AUTH" http://localhost/api/v1/jobs/<id>                   # status and file list
+curl -H "$AUTH" -O http://localhost/api/v1/jobs/<id>/files/exposure.pm3
+curl -H "$AUTH" -o job.pdf "http://localhost/api/v1/jobs/<id>/report.pdf?lang=en"
+curl -H "$AUTH" -o all.zip "http://localhost/api/v1/jobs/<id>/archive?lang=en"
+curl -H "$AUTH" -X DELETE http://localhost/api/v1/jobs/<id>         # delete a job and its files
 ```
 
 **OpenAPI:** the running service describes its API at `GET /api/openapi.json` (generated by the `jobs` service, for
@@ -299,7 +318,7 @@ tools such as client generators). The maintained description of the public API, 
 is [contracts/jobs.openapi.yaml](../contracts/jobs.openapi.yaml); the other contracts are in
 [contracts/](../contracts/). `GET /api/v1/panels`, `/api/v1/profiles` and `/api/v1/tools` list the choices.
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 | Message or problem | Cause and remedy |
 |---|---|
@@ -309,5 +328,8 @@ is [contracts/jobs.openapi.yaml](../contracts/jobs.openapi.yaml); the other cont
 | `jobs.invalid_marks` | The margin is below 4.5 mm. Increase the margin or switch the marks off. |
 | `exposure.panel_too_large` | The panel and the offsets do not fit on the display of the printer. |
 | Too many requests | The operator limits the number of jobs per hour. Wait and try again. |
-| The job page says it does not exist | The job has expired (seven days) or the link is wrong. |
+| The job page says it does not exist | The link is wrong, the job was deleted, or it belongs to another account. |
+| `jobs.quota_exceeded` | You have reached the limit of jobs of your account. Delete jobs you no longer need. |
+| `jobs.unauthorized` (401) | No login, or it has expired. The web pages log in again by themselves; scripts need a new token. |
+| The login page does not accept the password | Five wrong tries lock the account for a while. Ask the administrator. |
 | The page shows old content after an update | Reload the page (Ctrl+F5). |

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title data-i18n="jobs.page_title">My jobs - PCBHomeFab</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">PCBHomeFab</a>
+  <nav aria-label="Main" data-i18n-attr="aria-label:nav.main">
+    <a href="/" data-i18n="nav.new_job">New job</a>
+    <a href="/jobs" aria-current="page" data-i18n="nav.jobs">My jobs</a>
+    <a href="/tools" data-i18n="nav.tools">Tools</a>
+    <a href="/machines" data-i18n="nav.machines">Machines</a>
+  </nav>
+</header>
+<main>
+<h1 data-i18n="jobs.heading">My jobs</h1>
+<p class="lead" data-i18n="jobs.lead">All your jobs, the newest first. A job stays here until you delete it.</p>
+<p id="load-error" class="error" role="alert" hidden></p>
+<p id="empty" class="muted" hidden><span data-i18n="jobs.empty">You have no jobs yet.</span> <a href="/" data-i18n="jobs.create">Create a job</a></p>
+<table id="jobs" class="boards" hidden>
+  <thead><tr>
+    <th data-i18n="jobs.col_created">Created</th>
+    <th data-i18n="jobs.col_boards">Boards</th>
+    <th data-i18n="jobs.col_panel">Panel</th>
+    <th data-i18n="jobs.col_outputs">Outputs</th>
+    <th data-i18n="jobs.col_state">State</th>
+    <th><span class="sr-only" data-i18n="jobs.col_actions">Actions</span></th>
+  </tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<p class="pager">
+  <button type="button" id="previous" disabled data-i18n="jobs.previous">Previous</button>
+  <span id="range" class="muted" aria-live="polite"></span>
+  <button type="button" id="next" disabled data-i18n="jobs.next">Next</button>
+</p>
+</main>
+<footer class="foot"><a href="https://github.com/thomasblankschein/PCBHomeFab">PCBHomeFab</a> <span id="version"></span></footer>
+<script type="module" src="/js/footer.js"></script>
+<script type="module" src="/js/account.js"></script>
+<script type="module" src="/js/jobs.js"></script>
+</body>
+</html>

@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from conftest import CONTRACTS, contract_operations, normalize, validate
-from fakes import Downstream, _form_field, make_zip, problem
+from fakes import Downstream, FakeVerifier, _form_field, make_zip, problem
 from jobs.config import Settings
 from jobs.main import create_app
 from jobs.services import Services
@@ -44,9 +44,14 @@ def services(settings: Settings, downstream: Downstream) -> Services:
     return Services(settings, downstream.client())
 
 
+def _app_client(settings: Settings, services: Services, user: str = "alice") -> TestClient:
+    """A client logged in as ``user`` (the fake verifier takes ``token-<name>`` as the token of that account)."""
+    return TestClient(create_app(settings, services, FakeVerifier()), headers={"Authorization": f"Bearer token-{user}"})
+
+
 @pytest.fixture
 def client(settings: Settings, services: Services) -> Iterator[TestClient]:
-    with TestClient(create_app(settings, services)) as test_client:
+    with _app_client(settings, services) as test_client:
         yield test_client
 
 
@@ -303,7 +308,7 @@ def test_rate_limit(client: TestClient) -> None:
 
 def test_queue_limit(settings: Settings, services: Services) -> None:
     small = replace(settings, max_queued=1, rate_limit_per_hour=50)
-    with TestClient(create_app(small, services)) as client:
+    with _app_client(small, services) as client:
         assert _post(client, ("n.zip", ZIP)).status_code == 201
         _problem(_post(client, ("n.zip", ZIP)), 503, "jobs.queue_full")
 
@@ -336,9 +341,9 @@ def test_profiles_when_a_service_is_down(client: TestClient, downstream: Downstr
 
 def test_store_claims_oldest_first_and_requeues(settings: Settings) -> None:
     store = JobStore(settings)
-    store.create("a" * 22, {"k": 1}, "c")
+    store.create("a" * 22, {"k": 1}, "alice")
     time.sleep(0.01)
-    store.create("b" * 22, {"k": 2}, "c")
+    store.create("b" * 22, {"k": 2}, "alice")
     first = store.claim_next()
     assert first is not None and first.id == "a" * 22
     assert store.requeue_stale(-1) == 1  # everything running counts as stale
@@ -347,19 +352,41 @@ def test_store_claims_oldest_first_and_requeues(settings: Settings) -> None:
 
 
 def test_expired_jobs_are_deleted(settings: Settings) -> None:
-    store = JobStore(replace(settings, job_ttl_s=-1))
-    store.create("c" * 22, {}, "c")
+    """Only jobs of the anonymous time expire (they have an expiry time and no owner); jobs of accounts stay."""
+    store = JobStore(settings)
+    store.create("c" * 22, {}, "alice")
     folder = store.job_dir("c" * 22)
     folder.mkdir(parents=True)
     (folder / "x.txt").write_text("x")
-    assert store.get("c" * 22) is None
+    assert store.delete_expired() == 0
+    assert store.get("c" * 22, "alice") is not None
+    with store._connect() as db:
+        db.execute("UPDATE jobs SET expires = 1, owner = ''")
+    assert store.get("c" * 22, "alice") is None
     assert store.delete_expired() == 1
     assert not folder.exists()
 
 
+def test_a_database_of_the_anonymous_time_is_migrated(settings: Settings) -> None:
+    settings.data_dir.mkdir(parents=True)
+    import sqlite3
+
+    with sqlite3.connect(settings.db_path) as db:
+        db.execute(
+            "CREATE TABLE jobs (id TEXT PRIMARY KEY, status TEXT NOT NULL, created REAL NOT NULL,"
+            " updated REAL NOT NULL, expires REAL NOT NULL, params TEXT NOT NULL, error TEXT,"
+            " files TEXT NOT NULL DEFAULT '[]',"
+            " client TEXT NOT NULL DEFAULT '')"
+        )
+        db.execute("INSERT INTO jobs VALUES ('old', 'done', 1, 1, 9999999999, '{}', NULL, '[]', 'hash')")
+    store = JobStore(settings)
+    assert store.get("old", "alice") is None  # nobody owns it
+    assert store.list_for("alice", 10, 0) == ([], 0)
+
+
 def test_worker_threads_end_to_end(settings: Settings, services: Services) -> None:
     live = replace(settings, workers=1)
-    with TestClient(create_app(live, services)) as client:
+    with _app_client(live, services) as client:
         job = _post(client, ("node.zip", ZIP), counts=["2"]).json()
         deadline = time.time() + 30
         status = "queued"
@@ -426,7 +453,7 @@ def test_layout_preview_errors(client: TestClient, downstream: Downstream) -> No
 
 def test_previews_have_their_own_rate_limit(settings: Settings, services: Services) -> None:
     limited = replace(settings, preview_limit_per_hour=3)
-    with TestClient(create_app(limited, services)) as client:
+    with _app_client(limited, services) as client:
         body = {"panel": "160x100", "boards": [{"id": "a", "width_mm": 10, "height_mm": 10, "count": 1}]}
         codes = [client.post("/v1/layouts", json=body).status_code for _ in range(4)]
         assert codes == [200, 200, 200, 429]
@@ -601,3 +628,117 @@ def test_report_text_has_header_tools_and_times() -> None:
 
     rows, drilling, milling, timed = _tool_rows(_Texts("en"), getSampleStyleSheet()["BodyText"], PROGRAMS["programs"])
     assert timed and drilling == 75.4 and milling == 3725 and len(rows) == 3
+
+
+# --- accounts ----------------------------------------------------------------------------------------------
+
+
+def test_every_endpoint_needs_a_login(settings: Settings, services: Services) -> None:
+    with TestClient(create_app(settings, services, FakeVerifier())) as anonymous:
+        calls = [
+            anonymous.get("/v1/me"),
+            anonymous.get("/v1/jobs"),
+            anonymous.get("/v1/panels"),
+            anonymous.get("/v1/profiles"),
+            anonymous.get("/v1/tools"),
+            anonymous.get(f"/v1/jobs/{'a' * 22}"),
+            anonymous.get(f"/v1/jobs/{'a' * 22}/archive"),
+            anonymous.get(f"/v1/jobs/{'a' * 22}/report.pdf"),
+            anonymous.delete(f"/v1/jobs/{'a' * 22}"),
+            anonymous.post("/v1/jobs"),
+            anonymous.post("/v1/boards"),
+            anonymous.post("/v1/layouts", json={}),
+        ]
+        for response in calls:
+            _problem(response, 401, "jobs.unauthorized")
+            assert response.headers["www-authenticate"] == "Bearer"
+        assert anonymous.get("/healthz").status_code == 200
+        bad = anonymous.get("/v1/me", headers={"Authorization": "Bearer nonsense"})
+        _problem(bad, 401, "jobs.unauthorized")
+        _problem(anonymous.get("/v1/me", headers={"Authorization": "Basic abc"}), 401, "jobs.unauthorized")
+
+
+def test_the_login_service_being_down_is_a_503(settings: Settings, services: Services) -> None:
+    with TestClient(create_app(settings, services, FakeVerifier())) as client:
+        response = client.get("/v1/me", headers={"Authorization": "Bearer broken"})
+        _problem(response, 503, "jobs.auth_unavailable")
+
+
+def test_the_service_does_not_start_without_a_login_provider(settings: Settings, services: Services) -> None:
+    with pytest.raises(RuntimeError, match="OIDC_ISSUER"):
+        create_app(settings, services)
+
+
+def test_me_names_the_account(client: TestClient) -> None:
+    assert client.get("/v1/me").json() == {"id": "alice", "name": "alice"}
+
+
+def test_jobs_belong_to_their_owner(settings: Settings, services: Services) -> None:
+    with _app_client(settings, services, "alice") as alice, _app_client(settings, services, "bob") as bob:
+        job = _post(alice, ("n.zip", ZIP)).json()
+        process_next(JobStore(settings), services)
+        for path in ("", "/files/exposure.pm3", "/archive", "/report.pdf"):
+            assert alice.get(f"/v1/jobs/{job['id']}{path}").status_code == 200
+            _problem(bob.get(f"/v1/jobs/{job['id']}{path}"), 404, "jobs.not_found")
+        _problem(bob.delete(f"/v1/jobs/{job['id']}"), 404, "jobs.not_found")
+        assert bob.get("/v1/jobs").json()["jobs"] == []
+        assert alice.get(f"/v1/jobs/{job['id']}").status_code == 200
+
+
+def test_the_job_list_shows_the_newest_first_in_pages(client: TestClient) -> None:
+    ids = []
+    for name in ("a", "b", "c"):
+        ids.append(_post(client, (f"{name}.zip", ZIP), counts=["2"]).json()["id"])
+        time.sleep(0.01)
+    listing = client.get("/v1/jobs?limit=2").json()
+    validate("job-list", listing)
+    assert listing["total"] == 3
+    assert [j["id"] for j in listing["jobs"]] == [ids[2], ids[1]]
+    first = listing["jobs"][0]
+    assert first["status"] == "queued"
+    assert first["boards"] == [{"name": "c", "count": 2}]
+    assert first["panel"]["id"] == "160x100"
+    rest = client.get("/v1/jobs?limit=2&offset=2").json()
+    assert [j["id"] for j in rest["jobs"]] == [ids[0]]
+    assert client.get("/v1/jobs?limit=0").status_code == 422
+
+
+def test_a_job_has_no_expiry(client: TestClient) -> None:
+    job = _post(client, ("n.zip", ZIP)).json()
+    body = client.get(f"/v1/jobs/{job['id']}").json()
+    assert body["expires"] is None
+    validate("job", body)
+
+
+def test_delete_removes_the_job_and_its_files(client: TestClient, services: Services, settings: Settings) -> None:
+    job = _post(client, ("n.zip", ZIP)).json()
+    process_next(JobStore(settings), services)
+    folder = JobStore(settings).job_dir(job["id"])
+    assert folder.exists()
+    assert client.delete(f"/v1/jobs/{job['id']}").status_code == 204
+    assert not folder.exists()
+    _problem(client.get(f"/v1/jobs/{job['id']}"), 404, "jobs.not_found")
+    _problem(client.delete(f"/v1/jobs/{job['id']}"), 404, "jobs.not_found")
+
+
+def test_a_running_job_cannot_be_deleted(client: TestClient, settings: Settings) -> None:
+    job = _post(client, ("n.zip", ZIP)).json()
+    assert JobStore(settings).claim_next() is not None
+    _problem(client.delete(f"/v1/jobs/{job['id']}"), 409, "jobs.running")
+
+
+def test_the_quota_counts_jobs_not_time(settings: Settings, services: Services) -> None:
+    small = replace(settings, max_jobs_per_user=2, rate_limit_per_hour=50)
+    with _app_client(small, services, "alice") as alice, _app_client(small, services, "bob") as bob:
+        first = _post(alice, ("n.zip", ZIP)).json()
+        assert _post(alice, ("n.zip", ZIP)).status_code == 201
+        _problem(_post(alice, ("n.zip", ZIP)), 403, "jobs.quota_exceeded")
+        assert _post(bob, ("n.zip", ZIP)).status_code == 201  # the quota is per account
+        assert alice.delete(f"/v1/jobs/{first['id']}").status_code == 204
+        assert _post(alice, ("n.zip", ZIP)).status_code == 201
+
+
+def test_limits_are_per_account(settings: Settings, services: Services) -> None:
+    with _app_client(settings, services, "alice") as alice, _app_client(settings, services, "bob") as bob:
+        assert [_post(alice, ("n.zip", ZIP)).status_code for _ in range(6)] == [201] * 5 + [429]
+        assert _post(bob, ("n.zip", ZIP)).status_code == 201

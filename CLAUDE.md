@@ -23,7 +23,9 @@ They are the reference for behaviour until the port is finished.
 - Input: **Gerber ZIP** (B.Cu, Edge.Cuts, Excellon drill files) or a **KiCad `.kicad_pcb` file** read directly (since 0.15.0:
   `services/ingest/src/ingest/kicad.py` has its own S-expression reader, because gerbonara 1.6 cannot parse KiCad 10 files; it
   writes the B.Cu copper as a small Gerber file, so the rest of the pipeline is unchanged; zones must be filled in the file).
-- Users: **anonymous sessions**, every job has a link. No accounts for now.
+- Users: **accounts with Keycloak** (ADR-002, 2026-10-30, since 0.24.0): OpenID Connect, realm `pcbhomefab`, users created by the
+  administrator (no self-registration, no SMTP). `jobs` checks the access tokens and owns the jobs per account (`owner` =
+  `sub`); jobs are kept until the owner deletes them (limit `MAX_JOBS_PER_USER`). Anonymous use is gone; see "Accounts" below.
 - Hosting: first on the maintainer's Proxmox homelab (Docker), later possibly a root server on the internet.
   Everything must therefore be stateless per request, limits on uploads/CPU time from day one.
 - Stack: FastAPI, jobs queued in SQLite inside `jobs` (no broker, worker threads claim jobs atomically), every
@@ -119,6 +121,20 @@ docker-compose.yaml
 - A hole size without a drill of its own (tolerance 0.02 mm) that is not larger than the largest drill is refused by `mill`
   (`mill.no_drill`) unless the job carries `drill_map` ({hole diameter: drill diameter}); the editor lists such sizes
   with a select box per size (default: the next larger drill), `jobs` stores the choice in `params.drill_map`.
+
+## Accounts (ADR-002)
+- Compose has `keycloak` (image from `services/keycloak/`, realm file imported at the first start, placeholder
+  `${PCBHOMEFAB_PUBLIC_URL}` for the redirect addresses) and `keycloak-db` (PostgreSQL). The gateway routes `/auth/*` to Keycloak.
+  `PCBHOMEFAB_PUBLIC_URL` is part of the token issuer (`iss`): `jobs` gets `OIDC_ISSUER=<public url>/auth/realms/pcbhomefab` and
+  fetches the keys from `http://keycloak:8080/...` (`OIDC_JWKS_URL`). `jobs` refuses to start without both.
+- `services/jobs/src/jobs/auth.py` verifies RS256/ES256 tokens (PyJWT), checks `iss`, `exp` and `azp` (`pcbhomefab-web`,
+  `pcbhomefab-cli`). Every endpoint except `/healthz` needs the token (`CurrentUser` dependency); a foreign job gives 404.
+  Tests use `FakeVerifier` (`token-<name>` is account `<name>`); `tests/e2e` and `scripts/smoke_test.sh` need
+  `PCBHOMEFAB_USER` / `PCBHOMEFAB_PASSWORD` of an account (`scripts/create_user.sh`).
+- The old SQLite database gets an `owner` column on start (empty for old jobs; those expire). `expires = 0` means never.
+- Frontend: `js/auth.js` (code flow with PKCE, tokens in localStorage, renewal with the refresh token), `js/account.js`
+  (name and log-out in the header), `/jobs` (list, `jobs.html`), `/auth-callback`. Files are fetched with the token and shown
+  or saved as blobs (CSP `img-src 'self' blob:`).
 
 ## Job description (PDF)
 - `GET /v1/jobs/{id}/report.pdf?lang=de|en` (`services/jobs/src/jobs/report.py`, reportlab) builds the PDF when it is asked for, from the

@@ -1,6 +1,6 @@
-import { ApiError, archiveUrl, fileUrl, getJob, reportUrl } from "./api.js";
+import { ApiError, archiveBlob, fileBlob, getJob, reportBlob } from "./api.js";
 import { fill, h } from "./dom.js";
-import { daysLeft, formatSize, mm, programTitle } from "./format.js";
+import { formatSize, mm, programTitle } from "./format.js";
 import { currentLanguage, initI18n, onLanguageChange, t } from "./i18n.js";
 
 const jobId = decodeURIComponent(window.location.pathname.split("/").filter(Boolean).pop() ?? "");
@@ -17,11 +17,87 @@ function setState(key, params = {}, kind = "") {
   state.className = `state ${kind}`.trim();
 }
 
+// The files need the access token of the login, so a plain link or picture cannot reach them: they are fetched with the
+// token and then shown or saved from a blob.
+const blobUrls = new Map();
+
+function blobUrl(job, name) {
+  const key = `${job.id}/${name}`;
+  if (!blobUrls.has(key)) blobUrls.set(key, fileBlob(job.id, name).then((blob) => URL.createObjectURL(blob)));
+  return blobUrls.get(key);
+}
+
+function picture(job, name, attributes) {
+  const image = h("img", attributes);
+  blobUrl(job, name).then(
+    (url) => {
+      image.src = url;
+    },
+    () => blobUrls.delete(`${job.id}/${name}`),
+  );
+  return image;
+}
+
+function save(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = h("a", { href: url, download: filename });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** A link that fetches `getBlob()` with the login and runs `then(blob)`; a failure is shown at the top of the page. */
+function fileLink(label, getBlob, then, attributes = {}) {
+  return h(
+    "a",
+    {
+      href: "#",
+      ...attributes,
+      onclick: async (event) => {
+        event.preventDefault();
+        try {
+          then(await getBlob());
+        } catch (error) {
+          setState("job.download_failed", {}, "error");
+          if (!(error instanceof ApiError)) throw error;
+        }
+      },
+    },
+    label,
+  );
+}
+
+/** The PDF opens in a new tab. The tab is opened first (a popup after a wait would be blocked) and gets the file later. */
+function reportLink(job) {
+  return h(
+    "a",
+    {
+      href: "#",
+      onclick: async (event) => {
+        event.preventDefault();
+        const tab = window.open("", "_blank");
+        try {
+          const blob = await reportBlob(job.id, currentLanguage());
+          if (tab) tab.location.href = URL.createObjectURL(blob);
+          else save(blob, `pcbhomefab-${job.id.slice(0, 8)}.pdf`);
+        } catch (error) {
+          tab?.close();
+          setState("job.download_failed", {}, "error");
+          if (!(error instanceof ApiError)) throw error;
+        }
+      },
+    },
+    t("job.report_link"),
+  );
+}
+
 function download(job, file, label, note) {
+  const filename = file.name.split("/").pop();
   return h(
     "li",
     {},
-    h("a", { href: fileUrl(job.id, file.name), download: file.name.split("/").pop() }, label ?? file.name),
+    fileLink(label ?? file.name, () => fileBlob(job.id, file.name), (blob) => save(blob, filename)),
     h("span", { class: "muted" }, ` ${formatSize(file.size)}`),
     note ? h("div", { class: "muted" }, note) : null,
   );
@@ -69,7 +145,7 @@ function simulationPanel(job, programs) {
         await simulation.loadPrograms(job.id, programs),
         job.params.thickness_mm,
         job.params.panel ?? LEGACY_PANEL,
-        { copperUrl: job.files.some((f) => f.name === "copper.png") ? fileUrl(job.id, "copper.png") : null, flip: job.params.flip, panelOrigin: job.params.marks?.panel_origin_mm },
+        { copperUrl: job.files.some((f) => f.name === "copper.png") ? await blobUrl(job, "copper.png") : null, flip: job.params.flip, panelOrigin: job.params.marks?.panel_origin_mm },
       );
     } catch {
       started = false;
@@ -81,7 +157,7 @@ function simulationPanel(job, programs) {
 }
 
 function showDone(job) {
-  setState("job.done", { count: daysLeft(job.expires) }, "ok");
+  setState("job.done", {}, "ok");
   const files = new Map(job.files.map((f) => [f.name, f]));
   const programs = job.files.filter((f) => /^mill\/.+\.nc$/.test(f.name)).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
   const sections = [summaryOf(job)];
@@ -96,7 +172,7 @@ function showDone(job) {
           "div",
           { class: "previews" },
           files.has("mask_preview.png")
-            ? h("figure", {}, h("img", { src: fileUrl(job.id, "mask_preview.png"), alt: t("job.mask_alt"), width: 1024, height: 640 }), h("figcaption", {}, t("job.mask_caption")))
+            ? h("figure", {}, picture(job, "mask_preview.png", { alt: t("job.mask_alt"), width: 1024, height: 640 }), h("figcaption", {}, t("job.mask_caption")))
             : null,
         ),
         h(
@@ -116,7 +192,7 @@ function showDone(job) {
         { class: "panel" },
         h("h2", {}, t("job.drill_mill")),
         files.has("mill_preview.svg")
-          ? h("figure", {}, h("img", { src: fileUrl(job.id, "mill_preview.svg"), alt: t("job.mill_alt"), class: "mill-preview" }), h("figcaption", {}, t("job.mill_caption")))
+          ? h("figure", {}, picture(job, "mill_preview.svg", { alt: t("job.mill_alt"), class: "mill-preview" }), h("figcaption", {}, t("job.mill_caption")))
           : null,
         h("p", { class: "muted" }, t("job.programs_hint")),
         job.params.marks
@@ -140,7 +216,7 @@ function showDone(job) {
       { class: "panel" },
       h("h2", {}, t("job.report")),
       h("p", { class: "muted" }, t("job.report_hint")),
-      h("ul", { class: "files" }, h("li", {}, h("a", { href: reportUrl(job.id, currentLanguage()), target: "_blank", rel: "noopener" }, t("job.report_link")))),
+      h("ul", { class: "files" }, h("li", {}, reportLink(job))),
     ),
   );
 
@@ -150,7 +226,7 @@ function showDone(job) {
       { class: "panel" },
       h("h2", {}, t("job.archive")),
       h("p", { class: "muted" }, t("job.archive_hint")),
-      h("ul", { class: "files" }, h("li", {}, h("a", { href: archiveUrl(job.id, currentLanguage()), download: `pcbhomefab-${job.id.slice(0, 8)}.zip` }, t("job.archive_link")))),
+      h("ul", { class: "files" }, h("li", {}, fileLink(t("job.archive_link"), () => archiveBlob(job.id, currentLanguage()), (blob) => save(blob, `pcbhomefab-${job.id.slice(0, 8)}.zip`)))),
     ),
   );
 
@@ -158,21 +234,13 @@ function showDone(job) {
     h(
       "p",
       { class: "actions-row" },
-      h("button", { type: "button", id: "copy" }, t("job.copy_link")),
-      " ",
       h("a", { class: "button", href: "/" }, t("job.new_job")),
+      " ",
+      h("a", { class: "button", href: "/jobs" }, t("job.all_jobs")),
     ),
   );
   fill(result, sections);
   result.hidden = false;
-  document.getElementById("copy").addEventListener("click", async (event) => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      event.target.textContent = t("job.link_copied");
-    } catch {
-      event.target.textContent = t("job.copy_manually");
-    }
-  });
 }
 
 function showFailed(job) {
