@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.24.1 - 2026-10-30
+
+- Fix: `scripts/create_user.sh` made accounts without a first and last name, which Keycloak counts as not fully set up
+  ("Account is not fully set up", no login possible). The script now sets both (the username and a dash unless given), and the
+  deployment guide says to fill them in when creating an account in the console.
+
 ## 0.24.0 - 2026-10-30
 
 - **Breaking: accounts instead of anonymous jobs** (ADR-002). The login is Keycloak (OpenID Connect, realm `pcbhomefab`),

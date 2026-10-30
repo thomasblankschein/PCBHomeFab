@@ -60,10 +60,11 @@ changes in the Keycloak console stay.
 
 **Accounts.** Registration by the users is off. The administrator creates accounts:
 
-- with the script: `KEYCLOAK_ADMIN_PASSWORD=... scripts/create_user.sh <address> <username> <password> [email]`, or
+- with the script: `KEYCLOAK_ADMIN_PASSWORD=... scripts/create_user.sh <address> <username> <password> [email] [first name] [last name]`, or
 - in the console at `<PCBHOMEFAB_PUBLIC_URL>/auth/admin` (user `KEYCLOAK_ADMIN_USER`, default `admin`, and
-  `KEYCLOAK_ADMIN_PASSWORD` of the `.env`): realm `pcbhomefab` (switch it at the top left), Users, Add user, then the tab
-  Credentials, Set password (turn off "Temporary").
+  `KEYCLOAK_ADMIN_PASSWORD` of the `.env`): realm `pcbhomefab` (switch it at the top left), Users, Add user (fill in e-mail, first
+  name and last name: without them the account cannot log in), then the tab Credentials, Set password (turn off
+  "Temporary").
 
 Passwords need at least 10 characters and must not equal the username. Five wrong tries lock an account for a while
 (brute-force protection). The `KEYCLOAK_ADMIN_*` values create the administrator of the `master` realm at the first
