@@ -28,3 +28,9 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    ignore:
+      # A new major version of PostgreSQL needs a migration of the Keycloak database (dump and restore or pg_upgrade), and
+      # the image of 18 expects its volume at /var/lib/postgresql instead of .../data. Version 17 is supported until
+      # November 2029; updates within 17 still come.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
