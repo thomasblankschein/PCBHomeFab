@@ -36,7 +36,6 @@ def worker_loop(
     store: JobStore, settings: Settings, services: Services, stop: threading.Event, poll_s: float = 1.0
 ) -> None:
     """Process jobs until ``stop`` is set. Also cleans up expired jobs now and then."""
-    store.requeue_stale(settings.job_timeout_s * 2)
     last_cleanup = 0.0
     while not stop.is_set():
         if time.monotonic() - last_cleanup > 600:

@@ -174,25 +174,18 @@ class JobStore:
                 (FAILED, time.time(), error, job_id),
             )
 
-    def requeue_stale(self, older_than_s: float) -> int:
-        """Jobs left in ``running`` by a crashed worker go back to the queue."""
+    def requeue_running(self) -> int:
+        """Jobs left in ``running`` by a stopped or crashed service go back to the queue. Only call it while no worker
+        runs: there is one ``jobs`` container, so at its start every running job is an orphan."""
         with self._connect() as db:
             cursor = db.execute(
-                "UPDATE jobs SET status = ?, updated = ? WHERE status = ? AND updated < ?",
-                (QUEUED, time.time(), RUNNING, time.time() - older_than_s),
+                "UPDATE jobs SET status = ?, updated = ? WHERE status = ?", (QUEUED, time.time(), RUNNING)
             )
             return cursor.rowcount
 
     def queued_count(self) -> int:
         with self._connect() as db:
             return int(db.execute("SELECT COUNT(*) FROM jobs WHERE status = ?", (QUEUED,)).fetchone()[0])
-
-    def recent_count(self, owner: str, window_s: float = 3600.0) -> int:
-        with self._connect() as db:
-            row = db.execute(
-                "SELECT COUNT(*) FROM jobs WHERE owner = ? AND created > ?", (owner, time.time() - window_s)
-            ).fetchone()
-        return int(row[0])
 
     def delete_expired(self) -> int:
         """Remove expired jobs and their files (only jobs of the anonymous time expire). Returns how many."""

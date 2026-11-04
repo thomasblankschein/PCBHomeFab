@@ -71,13 +71,14 @@ cd PCBHomeFab
 git checkout vX.Y.Z             # optional: a released version instead of main (list: git tag, notes: CHANGELOG.md)
 cp .env.example .env            # set PCBHOMEFAB_PUBLIC_URL and the two Keycloak passwords (openssl rand -hex 24)
 docker compose up -d --build    # the first build takes a few minutes
-scripts/create_user.sh http://localhost thomas 'a-password-of-10-or-more-characters'   # your first account
+scripts/create_user.sh thomas   # your first account; asks for its password (12 or more characters)
 PCBHOMEFAB_USER=thomas PCBHOMEFAB_PASSWORD='...' scripts/smoke_test.sh http://localhost
 ```
 
-`create_user.sh` needs `KEYCLOAK_ADMIN_PASSWORD` of your `.env` in the environment. Open `http://localhost/` and log in
-with the account. With the default `SITE_ADDRESS=:80` the gateway serves plain HTTP on port 80; for a public name with
-HTTPS, other ports, more accounts or a homelab see [docs/deployment.md](docs/deployment.md).
+Open `http://localhost/` and log in with the account. With the default `SITE_ADDRESS=:80` the gateway serves plain HTTP on
+port 80, which is fine on your own computer only: as soon as others use it over the network, switch to HTTPS (a public name, or
+a homelab name with Caddy's own certificate). For that, other ports, more accounts or a homelab see
+[docs/deployment.md](docs/deployment.md).
 
 To update an installation:
 
@@ -103,23 +104,25 @@ later starts leave it alone, so changes you make in the console stay.
 | `PCBHOMEFAB_PUBLIC_URL` | The address users type, for example `http://localhost` or `https://pcb.example.org`, no trailing slash. It is part of the token issuer and of the redirect addresses: if you change it after the first start, change the redirect addresses of the client `pcbhomefab-web` in the console too (or start with an empty Keycloak database). |
 | `KEYCLOAK_ADMIN_PASSWORD` | Password of the Keycloak administrator (user `KEYCLOAK_ADMIN_USER`, default `admin`). Only used to create the administrator at the first start; change it later in the console. |
 | `KEYCLOAK_DB_PASSWORD` | Password of the PostgreSQL database of Keycloak. |
+| `KEYCLOAK_ADMIN_NETWORKS` | Who may open the console through the gateway, e.g. `192.168.2.10/32` (your computer) or `private_ranges`. Default: nobody. |
 | `PCBHOMEFAB_MAX_JOBS_PER_USER` | Jobs an account may keep (default 200, 0 = unlimited). |
 
 **Create accounts.** Self-registration is off; the administrator creates every account, with the script
 
 ```bash
-KEYCLOAK_ADMIN_PASSWORD=... scripts/create_user.sh http://localhost anna 'a-password-of-10-or-more-characters' anna@example.org Anna Meier
+scripts/create_user.sh anna anna@example.org Anna Meier   # on the Docker host, in the folder of the repository
 ```
 
 or in the console at `<PCBHOMEFAB_PUBLIC_URL>/auth/admin`: log in as the administrator, switch to the realm `pcbhomefab`
 (top left), Users, Add user. Fill in e-mail, first name and last name (without them the account cannot log in), then
-Credentials, Set password, and turn "Temporary" off. Passwords need at least 10 characters.
+Credentials, Set password, and turn "Temporary" off. Passwords need at least 12 characters. The console answers only to the
+addresses in `KEYCLOAK_ADMIN_NETWORKS`.
 
 **Change a password or remove an account:** console, realm `pcbhomefab`, Users. Deleting an account does not delete its jobs
 from the disk.
 
 **Optional:** e-mail (registration, password reset), two-factor login, passkeys and social login are settings of the realm in
-the console; `jobs` does not change. For a public server, restrict `/auth/admin` at the gateway. Details and backup:
+the console; `jobs` does not change. Details, hardening and backup:
 [docs/deployment.md](docs/deployment.md#login-keycloak).
 
 ## Use it

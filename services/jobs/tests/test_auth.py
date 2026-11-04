@@ -83,3 +83,8 @@ def test_bearer_token() -> None:
     assert bearer_token("Bearer abc") == "abc"
     assert bearer_token("bearer abc") == "abc"
     assert bearer_token("Token abc") is None
+
+
+def test_unknown_key_ids_fetch_the_key_set_at_most_once_a_minute() -> None:
+    verifier = OidcVerifier(ISSUER, "http://keycloak:8080/certs", ("pcbhomefab-web",))
+    assert verifier._keys.cooldown_duration == 60

@@ -1,28 +1,65 @@
 # Gateway: the only service that is reachable from outside.
 #
 # SITE_ADDRESS decides what Caddy serves:
-#   :80                    plain HTTP, for a trial or behind another proxy
+#   :80                    plain HTTP, only for a trial on localhost or behind another proxy that does TLS
 #   pcbhomefab.example.org public name, Caddy gets a Let's Encrypt certificate (ports 80 and 443 must be reachable)
 #   pcbhomefab.home.arpa   with CADDY_TLS="tls internal" a certificate from Caddy's own CA for the homelab
+{
+	# nothing changes the configuration at run time; a new configuration comes with a restart
+	admin off
+	# with "tls internal" the root certificate goes into the browsers, not into the (read-only) container
+	skip_install_trust
+}
+
 {$SITE_ADDRESS::80} {
 	{$CADDY_TLS:}
 
 	encode zstd gzip
 
-	# A job takes up to 8 files of 10 MB each (see MAX_FILES and MAX_UPLOAD_MB of the jobs service).
-	request_body {
+	# one line per request on stdout (JSON); Caddy leaves out the Authorization header and cookies
+	log {
+		output stdout
+		format json
+	}
+
+	# A job takes up to 8 files of 10 MB each (see MAX_FILES and MAX_UPLOAD_MB of the jobs service). Nothing else
+	# needs large bodies, the login least of all.
+	@api path /api/*
+	request_body @api {
 		max_size {$MAX_REQUEST_MB:100}MB
+	}
+	@notapi not path /api/*
+	request_body @notapi {
+		max_size 1MB
 	}
 
 	header {
+		X-Content-Type-Options nosniff
 		-Server
+		-Via
 	}
+	@https protocol https
+	header @https Strict-Transport-Security "max-age=31536000"
 
 	respond /healthz 200
 
 	# /api/... goes to the jobs service without the prefix: /api/v1/jobs -> /v1/jobs
 	handle_path /api/* {
 		reverse_proxy jobs:8000
+	}
+
+	# The administration of the login (console and the realm "master" of the administrator) only from the addresses in
+	# KEYCLOAK_ADMIN_NETWORKS, e.g. "192.168.2.10/32" (the computer of the administrator), several separated by spaces,
+	# or "private_ranges" (every private address). Everybody else gets a 404. The default lets nobody in from outside the
+	# container; scripts/create_user.sh does not need it. Behind another proxy or a tunnel every request comes from the
+	# address of that proxy: do not allow it then.
+	@kcadmin path /auth/admin /auth/admin/* /auth/realms/master /auth/realms/master/*
+	handle @kcadmin {
+		@allowed remote_ip {$KEYCLOAK_ADMIN_NETWORKS:127.0.0.1/32}
+		handle @allowed {
+			reverse_proxy keycloak:8080
+		}
+		respond 404
 	}
 
 	# The login (Keycloak). It lives under /auth with its own pages, scripts and API.
@@ -33,4 +70,9 @@
 	handle {
 		reverse_proxy frontend:8080
 	}
+}
+
+# Health check of the container (not published): answers as soon as Caddy serves, whatever SITE_ADDRESS is.
+http://:2020 {
+	respond /healthz 200
 }

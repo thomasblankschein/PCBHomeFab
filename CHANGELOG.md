@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.26.0 - 2026-11-04
+
+Hardening after a security review. Read "Installations from before 0.26.0" in `docs/deployment.md`.
+
+- **Changed: the Keycloak console** (`/auth/admin`) and the realm `master` of the administrator are passed by the gateway only
+  to the addresses in the new setting `KEYCLOAK_ADMIN_NETWORKS` (for example `192.168.2.10/32` or `private_ranges`); by default
+  nobody gets there (404). Set it in the `.env` before the update if you use the console through the gateway.
+- **Changed: `scripts/create_user.sh <username> [email] [first name] [last name]`** runs on the Docker host and uses the admin
+  tool of Keycloak inside the container: no administrator password over the network, and the password of the new account is
+  asked for (or taken from `PCBHOMEFAB_NEW_PASSWORD`) instead of being an argument.
+- Fix: a job that was running when `jobs` stopped (for example at an update) stayed "running" for ever and could not be
+  deleted. Every running job goes back into the queue when `jobs` starts.
+- Fix: a request that ran into the time limit of a processing service was sent again up to two more times, which kept the
+  service busy for everybody. Only a busy service is asked again, and no call lasts longer than the time that is left for the
+  job (`PCBHOMEFAB_JOB_TIMEOUT_S`); a job that runs out of time fails with "The job took longer than ...".
+- The limit of jobs per hour also counts jobs that were deleted again; the limit of jobs per account is checked once more right
+  before a job is stored, so parallel uploads cannot pass it.
+- The API documentation (`/api/docs`, `/api/openapi.json`) is off by default, it needs no login; `PCBHOMEFAB_API_DOCS=true`
+  switches it on.
+- `jobs` fetches the keys of Keycloak again for an unknown key id at most once a minute (needs PyJWT 2.14).
+- Gateway: no privileges except binding ports below 1024, read-only file system, memory and process limit, health check,
+  Caddy admin API off, one JSON log line per request, `X-Content-Type-Options` everywhere, HSTS over HTTPS, no `Via` header,
+  request bodies above 1 MB only for `/api`. `keycloak-db` keeps only the rights its entry point needs; every container has
+  a limit of processes and rotated logs (5 files of 10 MB).
+- Realm for new installations: a login lasts a day without use and a week at most (before: 14 and 30 days), the refresh token
+  changes with every renewal, passwords need 12 characters and must differ from the e-mail address and the last three
+  passwords, the redirect addresses are exact (`/auth-callback`, `/`), logins and changes of the administrators are stored for
+  30 days.
+- CI: workflows with read-only permissions, Dependabot for base images and actions, `scripts/check_boundaries.py` checks that
+  the copies of `common.py` are identical.
+- Docs: HTTPS as soon as other computers use the service, hardening of the Keycloak administration, monthly update with
+  `docker compose build --pull`.
+
 ## 0.25.2 - 2026-10-30
 
 - Fix: the `frontend` image now sets the file modes of the pages and the Caddyfile itself. After a `git pull` under a restrictive

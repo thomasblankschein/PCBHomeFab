@@ -1,0 +1,30 @@
+# Updates of the base images and of the actions, once a month. The Python packages have only lower bounds (no lock
+# files), so each build takes the newest versions anyway; GitHub reports known vulnerabilities of them separately.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directories:
+      - /services/gateway
+      - /services/frontend
+      - /services/keycloak
+      - /services/jobs
+      - /services/ingest
+      - /services/panel
+      - /services/exposure
+      - /services/mill
+    schedule:
+      interval: monthly
+    groups:
+      images:
+        patterns: ["*"]
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: monthly

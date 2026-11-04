@@ -4,6 +4,7 @@
 - No Dockerfile copies files from outside its own folder.
 - Only the gateway publishes ports, only the gateway is on the outside network.
 - No volume is used by more than one service, no bind mounts.
+- The copies of ``common.py`` in the Python services are identical (they are copies on purpose, not shared code).
 
 Usage: python scripts/check_boundaries.py   (needs PyYAML)
 """
@@ -47,6 +48,16 @@ def check_code() -> list[str]:
     return problems
 
 
+def check_common() -> list[str]:
+    copies = {s: (SERVICES / s / "src" / s / "common.py").read_text(encoding="utf-8") for s in PYTHON_SERVICES}
+    first = PYTHON_SERVICES[0]
+    return [
+        f"services/{s}/src/{s}/common.py differs from the copy in {first}; change all copies or none"
+        for s, text in copies.items()
+        if text.splitlines() != copies[first].splitlines()
+    ]
+
+
 def check_compose() -> list[str]:
     problems: list[str] = []
     compose = yaml.safe_load((ROOT / "docker-compose.yaml").read_text())
@@ -71,7 +82,7 @@ def check_compose() -> list[str]:
 
 
 def main() -> int:
-    problems = check_code() + check_compose()
+    problems = check_code() + check_common() + check_compose()
     for line in problems:
         print(line)
     print("boundaries ok" if not problems else f"{len(problems)} problem(s)")

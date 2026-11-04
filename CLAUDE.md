@@ -124,7 +124,9 @@ docker-compose.yaml
 
 ## Accounts (ADR-002)
 - Compose has `keycloak` (image from `services/keycloak/`, realm file imported at the first start, placeholder
-  `${PCBHOMEFAB_PUBLIC_URL}` for the redirect addresses) and `keycloak-db` (PostgreSQL). The gateway routes `/auth/*` to Keycloak.
+  `${PCBHOMEFAB_PUBLIC_URL}` for the redirect addresses) and `keycloak-db` (PostgreSQL). The gateway routes `/auth/*` to Keycloak,
+  but `/auth/admin` and `/auth/realms/master` only for the addresses in `KEYCLOAK_ADMIN_NETWORKS` (default: nobody, since 0.26.0).
+  `scripts/create_user.sh <username>` runs `kcadm.sh` inside the keycloak container (password from `PCBHOMEFAB_NEW_PASSWORD` or a prompt).
   `PCBHOMEFAB_PUBLIC_URL` is part of the token issuer (`iss`): `jobs` gets `OIDC_ISSUER=<public url>/auth/realms/pcbhomefab` and
   fetches the keys from `http://keycloak:8080/...` (`OIDC_JWKS_URL`). `jobs` refuses to start without both.
 - `services/jobs/src/jobs/auth.py` verifies RS256/ES256 tokens (PyJWT), checks `iss`, `exp` and `azp` (`pcbhomefab-web`,

@@ -269,6 +269,56 @@ def test_job_timeout_between_steps(client: TestClient, settings: Settings, downs
     assert status["status"] == FAILED and "longer" in status["error"]
 
 
+def test_timeout_of_a_service_is_not_repeated(
+    client: TestClient, services: Services, downstream: Downstream, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A request that ran into the time limit of a service would only run into it again (and block the service)."""
+    monkeypatch.setattr(time, "sleep", lambda _s: None)
+    original = downstream.handle
+    calls = {"layouts": 0}
+
+    def slow(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/layouts":
+            calls["layouts"] += 1
+            return problem(503, "common.timeout", "The request took longer than 30 seconds.")
+        return original(request)
+
+    services.client = httpx.Client(transport=httpx.MockTransport(slow))
+    job = _post(client, ("node.zip", ZIP)).json()
+    process_next(JobStore(services.settings), services)
+    assert client.get(f"/v1/jobs/{job['id']}").json()["status"] == FAILED
+    assert calls["layouts"] == 1
+
+
+def test_job_timeout_during_a_call(client: TestClient, settings: Settings, downstream: Downstream) -> None:
+    """No call lasts beyond the time limit of the job: the call gets only the time that is left."""
+    short = replace(settings, job_timeout_s=0.5)
+    original = downstream.handle
+    timeouts: list[float] = []
+
+    def slow(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/layouts":
+            timeouts.append(request.extensions["timeout"]["read"])
+            time.sleep(0.6)
+            raise httpx.ReadTimeout("slow", request=request)
+        return original(request)
+
+    job = _post(client, ("node.zip", ZIP)).json()
+    assert process_next(JobStore(short), Services(short, httpx.Client(transport=httpx.MockTransport(slow))))
+    status = client.get(f"/v1/jobs/{job['id']}").json()
+    assert status["status"] == FAILED and "longer" in status["error"]
+    assert len(timeouts) == 1 and timeouts[0] <= 0.5
+
+
+def test_interrupted_jobs_are_queued_again_at_start(settings: Settings, services: Services) -> None:
+    """A job that was running when the service stopped (an update) must not stay "running" for ever."""
+    store = JobStore(settings)
+    store.create("d" * 22, {}, "alice")
+    assert store.claim_next() is not None
+    with _app_client(settings, services) as client:
+        assert client.get(f"/v1/jobs/{'d' * 22}").json()["status"] == "queued"
+
+
 def test_upload_validation(client: TestClient) -> None:
     _problem(_post(client, ("a.zip", b"x" * (2 * 1024 * 1024))), 413, "jobs.upload_too_large")
     _problem(_post(client, ("a.zip", ZIP), counts=["1", "2"]), 422, "jobs.invalid_upload")
@@ -304,6 +354,21 @@ def test_rate_limit(client: TestClient) -> None:
     response = _post(client, ("n.zip", ZIP))
     _problem(response, 429, "jobs.rate_limited")
     assert response.headers["retry-after"] == "3600"
+
+
+def test_rate_limit_counts_deleted_jobs(client: TestClient) -> None:
+    for _ in range(5):
+        job = _post(client, ("n.zip", ZIP)).json()
+        assert client.delete(f"/v1/jobs/{job['id']}").status_code == 204
+    _problem(_post(client, ("n.zip", ZIP)), 429, "jobs.rate_limited")
+
+
+def test_api_documentation_only_when_asked_for(settings: Settings, services: Services) -> None:
+    with _app_client(settings, services) as client:
+        assert client.get("/openapi.json").status_code == 404
+        assert client.get("/docs").status_code == 404
+    with _app_client(replace(settings, api_docs=True), services) as client:
+        assert client.get("/openapi.json").status_code == 200
 
 
 def test_queue_limit(settings: Settings, services: Services) -> None:
@@ -346,7 +411,7 @@ def test_store_claims_oldest_first_and_requeues(settings: Settings) -> None:
     store.create("b" * 22, {"k": 2}, "alice")
     first = store.claim_next()
     assert first is not None and first.id == "a" * 22
-    assert store.requeue_stale(-1) == 1  # everything running counts as stale
+    assert store.requeue_running() == 1
     again = store.claim_next()
     assert again is not None and again.id == "a" * 22
 

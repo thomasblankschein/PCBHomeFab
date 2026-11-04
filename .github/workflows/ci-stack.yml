@@ -23,6 +23,9 @@ on:
       - "scripts/create_user.sh"
       - ".github/workflows/ci-stack.yml"
 
+permissions:
+  contents: read
+
 jobs:
   stack:
     runs-on: ubuntu-latest
@@ -40,7 +43,7 @@ jobs:
           echo "PCBHOMEFAB_RATE_LIMIT_PER_HOUR=300" >> .env
           docker compose up -d --build --wait
       - name: Create an account for the tests
-        run: KEYCLOAK_ADMIN_PASSWORD=ci-admin-password scripts/create_user.sh http://localhost ci-user ci-user-password-1
+        run: PCBHOMEFAB_NEW_PASSWORD=ci-user-password-1 scripts/create_user.sh ci-user
       - name: Smoke test through the gateway
         run: scripts/smoke_test.sh http://localhost || (docker compose logs; exit 1)
         env:

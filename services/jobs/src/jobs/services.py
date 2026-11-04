@@ -42,15 +42,29 @@ class Services:
 
     # --- generic call -----------------------------------------------------------------------------------------
 
-    def _call(self, method: str, url: str, request_id: str, **kwargs: Any) -> httpx.Response:
+    def _call(
+        self, method: str, url: str, request_id: str, deadline: float | None = None, **kwargs: Any
+    ) -> httpx.Response:
+        """One call. ``deadline`` (``time.monotonic()``) is when the job runs out of time; no call waits longer."""
         response: httpx.Response | None = None
         for attempt in range(MAX_ATTEMPTS):
+            timeout = self.settings.call_timeout_s
+            if deadline is not None:
+                timeout = min(timeout, deadline - time.monotonic())
+                if timeout <= 0:
+                    log.error("[%s] %s %s skipped: no time left for the job", request_id, method, url)
+                    raise Unavailable(url)
             try:
-                response = self.client.request(method, url, headers={"X-Request-Id": request_id}, **kwargs)
+                response = self.client.request(
+                    method, url, headers={"X-Request-Id": request_id}, timeout=timeout, **kwargs
+                )
             except httpx.HTTPError as exc:
                 log.error("[%s] %s %s failed: %r", request_id, method, url, exc)
                 raise Unavailable(url) from exc
-            if response.status_code == 503 and attempt < MAX_ATTEMPTS - 1:  # busy: wait as asked and try again
+            # Only a busy service is asked again. A request that ran into the time limit of the service would only
+            # run into it again and keep the service busy for everybody (``common.timeout`` is not repeated).
+            busy = response.status_code == 503 and (_problem(response) or ("",))[0] == "common.busy"
+            if busy and attempt < MAX_ATTEMPTS - 1:  # wait as asked and try again
                 time.sleep(min(float(response.headers.get("retry-after", "2") or 2), 5.0))
                 continue
             break
@@ -75,18 +89,24 @@ class Services:
         )
         return response.content
 
-    def panel(self, request: dict[str, Any], request_id: str) -> dict[str, Any]:
-        response = self._call("POST", f"{self.settings.panel_url}/v1/layouts", request_id, json=request)
+    def panel(self, request: dict[str, Any], request_id: str, deadline: float | None = None) -> dict[str, Any]:
+        response = self._call("POST", f"{self.settings.panel_url}/v1/layouts", request_id, deadline, json=request)
         layout: dict[str, Any] = response.json()
         return layout
 
     def exposure(
-        self, packages: dict[str, bytes], layout: dict[str, Any], settings: dict[str, Any], request_id: str
+        self,
+        packages: dict[str, bytes],
+        layout: dict[str, Any],
+        settings: dict[str, Any],
+        request_id: str,
+        deadline: float | None = None,
     ) -> dict[str, bytes]:
         response = self._call(
             "POST",
             f"{self.settings.exposure_url}/v1/masks",
             request_id,
+            deadline,
             files=_package_parts(packages),
             data={"layout": json.dumps(layout), "settings": json.dumps(settings)},
         )
@@ -94,12 +114,18 @@ class Services:
         return read_zip(response.content, lambda name: bool(allowed.match(name)))
 
     def mill(
-        self, packages: dict[str, bytes], layout: dict[str, Any], settings: dict[str, Any], request_id: str
+        self,
+        packages: dict[str, bytes],
+        layout: dict[str, Any],
+        settings: dict[str, Any],
+        request_id: str,
+        deadline: float | None = None,
     ) -> dict[str, bytes]:
         response = self._call(
             "POST",
             f"{self.settings.mill_url}/v1/programs",
             request_id,
+            deadline,
             files=_package_parts(packages),
             data={"layout": json.dumps(layout), "settings": json.dumps(settings)},
         )

@@ -16,8 +16,9 @@ PCBHomeFab runs as nine containers from one `docker-compose.yaml`:
 
 Only `gateway` publishes ports. All services share the network `internal`, which has no access to the internet or
 the host; only `gateway` is also on the network `edge`. Every service has its own image, a read-only file system, no
-capabilities and a memory limit (`keycloak` and `keycloak-db` write to their own folders and have no read-only file
-system). State lives in named volumes: `jobs_data` (job database and files, only `jobs`), `keycloak_db` (the accounts,
+capabilities, a memory limit and a limit of processes (`gateway` keeps only the right to bind ports below 1024;
+`keycloak` and `keycloak-db` write to their own folders and have no read-only file system, `keycloak-db` keeps the few
+rights its entry point needs to switch to the user `postgres`). The logs of every container are rotated (5 files of 10 MB). State lives in named volumes: `jobs_data` (job database and files, only `jobs`), `keycloak_db` (the accounts,
 only `keycloak-db`), `mill_data` (own tool library, only `mill`) and the Caddy volumes (only `gateway`). Do not put the volumes on NFS or
 SMB: SQLite needs a local file system.
 
@@ -29,7 +30,7 @@ cd PCBHomeFab
 cp .env.example .env
 # edit .env: PCBHOMEFAB_PUBLIC_URL, KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_DB_PASSWORD (openssl rand -hex 24) and SITE_ADDRESS
 docker compose up -d --build                # Keycloak needs about a minute to start
-KEYCLOAK_ADMIN_PASSWORD=... scripts/create_user.sh http://localhost thomas 'a-password-of-10-or-more-characters'
+scripts/create_user.sh thomas                # asks for the password of the new account (12 or more characters)
 PCBHOMEFAB_USER=thomas PCBHOMEFAB_PASSWORD=... scripts/smoke_test.sh http://localhost   # creates a job and checks the result
 ```
 
@@ -43,9 +44,14 @@ to set it right before the first start.
 
 | Value | Result |
 |---|---|
-| `:80` | plain HTTP on port 80 (trial, or behind another proxy) |
+| `:80` | plain HTTP on port 80: only for a trial on the same computer, or behind another proxy that does TLS. Over a network, passwords and login tokens would travel in plain text. |
 | `pcbhomefab.example.org` | public name, Caddy gets a Let's Encrypt certificate (ports 80 and 443 must be reachable) |
 | `pcbhomefab.home.arpa` with `CADDY_TLS=tls internal` | HTTPS in the homelab with Caddy's own CA (import its root certificate into the browsers, it is in the `caddy_data` volume under `pki/authorities/local/root.crt`) |
+
+Use HTTPS as soon as other computers use the service, also at home: set `SITE_ADDRESS` to the name, `CADDY_TLS=tls internal`
+(or a certificate of your own CA) and `PCBHOMEFAB_PUBLIC_URL=https://<name>`. Plain HTTP redirects to HTTPS then. After the
+change set the address in the realm too (see "Login (Keycloak)") and, in the console, Realm settings, General, "Require SSL"
+to "all requests".
 
 To try the stack next to another one on the same host, give it another project name and other ports:
 `docker compose -p pcbhomefab-trial up -d --build` with `PCBHOMEFAB_HTTP_PORT=8081` and `PCBHOMEFAB_HTTPS_PORT=8444`
@@ -60,16 +66,38 @@ changes in the Keycloak console stay.
 
 **Accounts.** Registration by the users is off. The administrator creates accounts:
 
-- with the script: `KEYCLOAK_ADMIN_PASSWORD=... scripts/create_user.sh <address> <username> <password> [email] [first name] [last name]`, or
+- with the script, on the Docker host in the folder of the repository: `scripts/create_user.sh <username> [email] [first name] [last name]`.
+  It asks for the password (or takes it from `PCBHOMEFAB_NEW_PASSWORD`) and runs the admin tool of Keycloak inside the
+  `keycloak` container, so neither password goes over the network. After a change of the administrator password give the new
+  one in `KEYCLOAK_ADMIN_PASSWORD`. Or
 - in the console at `<PCBHOMEFAB_PUBLIC_URL>/auth/admin` (user `KEYCLOAK_ADMIN_USER`, default `admin`, and
   `KEYCLOAK_ADMIN_PASSWORD` of the `.env`): realm `pcbhomefab` (switch it at the top left), Users, Add user (fill in e-mail, first
   name and last name: without them the account cannot log in), then the tab Credentials, Set password (turn off
   "Temporary").
 
-Passwords need at least 10 characters and must not equal the username. Five wrong tries lock an account for a while
-(brute-force protection). The `KEYCLOAK_ADMIN_*` values create the administrator of the `master` realm at the first
-start only; to change the password later, use the console. For a public server, restrict `/auth/admin` at the gateway
-(for example to the home network) or change the Caddyfile.
+Passwords need at least 12 characters and must not equal the username, the e-mail address or one of the last three
+passwords. Five wrong tries lock an account for a while (brute-force protection). A login lasts a day without use and a week
+at most; the refresh token changes with every renewal.
+
+**Administration.** The gateway passes the console (`/auth/admin`) and the realm `master` of the administrator only to the
+addresses in `KEYCLOAK_ADMIN_NETWORKS` (`.env`), for example `192.168.2.10/32` for the computer of the administrator,
+several separated by spaces, or `private_ranges` for every private address. By default nobody gets there (404). Behind
+another proxy or a tunnel every request comes from the address of that proxy, so do not allow that address. The
+`KEYCLOAK_ADMIN_*` values create the administrator of the `master` realm at the first start only. Afterwards, in the
+console: create an administrator with your own name and two factors (Authentication, Required actions, "Configure OTP"),
+delete the account `admin`, switch on the brute-force protection of the realm `master` (Realm settings, Security defenses)
+and remove `KEYCLOAK_ADMIN_PASSWORD` from the `.env` (give it to `create_user.sh` when needed). Keep the `.env` readable for
+its owner only: `chmod 600 .env`.
+
+**Events.** The realm stores logins, failed logins and changes of the administrators for 30 days (console, realm
+`pcbhomefab`, Events).
+
+**Installations from before 0.26.0.** The realm file is read only at the first start, so an existing realm keeps its old
+settings. Change them in the console (realm `pcbhomefab`): Realm settings, Sessions: "SSO Session Idle" 1 day, "SSO Session
+Max" 7 days; Realm settings, Tokens: "Revoke Refresh Token" on, "Refresh Token Max Reuse" 0; Authentication, Policies:
+length 12, not username, not email, password history 3; Realm settings, Events: save user events and admin events;
+Clients, `pcbhomefab-web`: "Valid redirect URIs" `<PCBHOMEFAB_PUBLIC_URL>/auth-callback`, "Valid post logout redirect URIs"
+`<PCBHOMEFAB_PUBLIC_URL>/`.
 
 **Registration, password reset, e-mail.** Both need an SMTP server, and the internal network has no access to the
 internet. Give the `keycloak` container the network `edge` (or an own network with a mail relay) in the compose file,
@@ -79,8 +107,10 @@ set the mail server in the console (realm settings, Email), then switch on "User
 **Other logins.** Two factors, passkeys and social login (Google, GitHub, ...) are settings of the realm in the console;
 `jobs` does not change.
 
-**Scripts.** The client `pcbhomefab-cli` allows the password grant (`curl` and the tests of `tests/e2e` use it). Switch
-it off in the console (realm `pcbhomefab`, Clients) if you do not need it.
+**Scripts.** The client `pcbhomefab-cli` allows the password grant (`curl`, `scripts/smoke_test.sh` and the tests of
+`tests/e2e` use it). It skips the login page, so it allows no second factor and lets anybody try passwords by script. Switch
+it off in the console (realm `pcbhomefab`, Clients, `pcbhomefab-cli`, Enabled) when you do not run the tests, and always on
+a public server; `smoke_test.sh` also takes a ready token in `PCBHOMEFAB_TOKEN`.
 
 **Limits.** Jobs are never deleted automatically. `PCBHOMEFAB_MAX_JOBS_PER_USER` (default 200, 0 = unlimited) limits the
 jobs of an account, `PCBHOMEFAB_RATE_LIMIT_PER_HOUR` the jobs an account creates per hour. Watch the size of the volume
@@ -95,8 +125,9 @@ jobs of an account, `PCBHOMEFAB_RATE_LIMIT_PER_HOUR` the jobs an account creates
 The processing services keep no state. Run more of them when jobs wait for each other:
 `docker compose up -d --scale exposure=2 --scale mill=2`. Docker's DNS spreads the calls of `jobs` over the copies.
 Each copy runs at most `MAX_PARALLEL` requests at the same time (`exposure` 2, `ingest` and `mill` 4, `panel` 8) and answers
-with `503` and `Retry-After` when it is busy; `jobs` waits and retries up to three times. There is exactly one
-`jobs` container, because it owns the database.
+with `503` and `Retry-After` when it is busy; `jobs` waits and retries up to three times. A request that runs into the
+time limit of a service is not repeated, and no call lasts longer than the time that is left for the job
+(`PCBHOMEFAB_JOB_TIMEOUT_S`). There is exactly one `jobs` container, because it owns the database.
 
 ## Own panel sizes
 
@@ -184,6 +215,8 @@ The same `docker-compose.yaml` works unchanged. What changes:
 - `SITE_ADDRESS` is the public name and the DNS record points to the server.
 - Open only ports 80 and 443 in the firewall, nothing else; the services are not published.
 - Never publish the `jobs` or `keycloak` containers directly, only the gateway.
+- Keep `KEYCLOAK_ADMIN_NETWORKS` at its default (nobody) or at the fixed address of the administrator; switch off the
+  client `pcbhomefab-cli`.
 - Tighten the limits in `.env` if needed: `PCBHOMEFAB_RATE_LIMIT_PER_HOUR`, `PCBHOMEFAB_MAX_QUEUED`,
   `PCBHOMEFAB_MAX_UPLOAD_MB`, `PCBHOMEFAB_MAX_JOBS_PER_USER`.
 - The rate limits count per account (the login is required for every call). An upload is checked by `ingest` before the job
@@ -193,11 +226,15 @@ The same `docker-compose.yaml` works unchanged. What changes:
 
 ## Operation
 
-- Update: `git pull && docker compose up -d --build` (Keycloak restarts and the users have to log in again once). Jobs in the queue survive a restart; a job that was running at the
-  restart is put back into the queue at the next start once it has been running for more than twice the job
-  time limit.
+- Update: `git pull && docker compose build --pull && docker compose pull keycloak-db && docker compose up -d` (Keycloak
+  restarts and the users have to log in again once). `--pull` brings the security updates of the base images, so update
+  about once a month even without a new release; take a snapshot of the machine first. Jobs in the queue survive a
+  restart; a job that was running at the restart is put back into the queue at the next start.
 - Logs: `docker compose logs -f jobs ingest panel exposure mill`. A request carries one `X-Request-Id` through the
-  services (`<id>-panel`, `<id>-exposure`, ...), so a job can be followed across the logs.
+  services (`<id>-panel`, `<id>-exposure`, ...), so a job can be followed across the logs. The gateway writes one JSON line
+  per request (`docker compose logs gateway`), without the `Authorization` header and cookies.
+- API documentation: off, because it needs no login; `PCBHOMEFAB_API_DOCS=true` serves it at `/api/docs`. The contracts in
+  `contracts/` describe the same API.
 - Health: `GET /healthz` of each service; the containers have Docker health checks.
 - Clean up: nothing is deleted automatically (only jobs from before the accounts expire); accounts delete their jobs
   themselves. To see the size: `docker system df -v` (volume `jobs_data`).

@@ -47,6 +47,8 @@ class Settings:
     oidc_clients: tuple[str, ...] = ("pcbhomefab-web", "pcbhomefab-cli")
     #: Path prefix under which the gateway publishes this service (for the API documentation).
     root_path: str = ""
+    #: Serve the API documentation (``/docs``, ``/openapi.json``). Off by default: it needs no login.
+    api_docs: bool = False
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -74,6 +76,7 @@ class Settings:
                 if c.strip()
             ),
             root_path=os.environ.get("ROOT_PATH", ""),
+            api_docs=os.environ.get("API_DOCS", "").strip().lower() in {"1", "true", "yes", "on"},
         )
 
     @property

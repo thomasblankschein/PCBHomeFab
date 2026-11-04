@@ -38,7 +38,9 @@ class OidcVerifier:
     def __init__(self, issuer: str, jwks_url: str, clients: tuple[str, ...]) -> None:
         self.issuer = issuer
         self.clients = clients
-        self._keys = jwt.PyJWKClient(jwks_url, cache_keys=True, lifespan=3600, timeout=5)
+        # A token with an unknown key id makes the client fetch the key set again (the provider may have a new key).
+        # Anybody can send such a token, so that happens at most once a minute.
+        self._keys = jwt.PyJWKClient(jwks_url, cache_keys=True, lifespan=3600, timeout=5, cooldown_duration=60)
 
     def verify(self, token: str) -> User:
         key = self._keys.get_signing_key_from_jwt(token)

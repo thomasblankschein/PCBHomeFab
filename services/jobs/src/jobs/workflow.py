@@ -42,12 +42,26 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
     """Read the board packages listed in ``params["boards"]`` from ``job_dir/input`` and write the results to
     ``job_dir/output``. Returns the produced files (name relative to the output folder, size, content type).
     """
-    request_id = secrets.token_hex(6)
     deadline = time.monotonic() + services.settings.job_timeout_s
+    try:
+        return _run(job_dir, params, services, deadline)
+    except Unavailable as exc:
+        if time.monotonic() < deadline:
+            raise
+        raise _timeout(services) from exc
+
+
+def _timeout(services: Services) -> UserError:
+    return UserError("jobs.timeout", f"The job took longer than {services.settings.job_timeout_s:g} seconds.")
+
+
+def _run(job_dir: Path, params: dict[str, Any], services: Services, deadline: float) -> list[dict[str, Any]]:
+    """The steps of :func:`run_job`. No call to another service lasts beyond ``deadline``."""
+    request_id = secrets.token_hex(6)
 
     def step(name: str) -> str:
         if time.monotonic() > deadline:
-            raise UserError("jobs.timeout", f"The job took longer than {services.settings.job_timeout_s:g} seconds.")
+            raise _timeout(services)
         return f"{request_id}-{name}"
 
     entries = params["boards"]
@@ -66,6 +80,7 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
             ],
         },
         step("panel"),
+        deadline,
     )
 
     if marks:
@@ -98,7 +113,7 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
         for key in ("frame_left_mm", "frame_bottom_mm", "mirror_x"):
             if params.get(key) is not None:
                 settings[key] = params[key]
-        for name, data in services.exposure(packages, layout, settings, step("exposure")).items():
+        for name, data in services.exposure(packages, layout, settings, step("exposure"), deadline).items():
             _write(output / name, data, files)
 
     elif params["mill_gcode"]:
@@ -115,6 +130,7 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
                     **({"marks": marks} if marks else {}),
                 },
                 step("copper"),
+                deadline,
             )
         except (UserError, Unavailable):
             copper = {}
@@ -134,6 +150,7 @@ def run_job(job_dir: Path, params: dict[str, Any], services: Services) -> list[d
                 **({"drill_map": params["drill_map"]} if params.get("drill_map") else {}),
             },
             step("mill"),
+            deadline,
         )
         archive = io.BytesIO()
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as bundle:

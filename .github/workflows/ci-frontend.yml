@@ -13,6 +13,9 @@ on:
       - "services/gateway/**"
       - ".github/workflows/ci-frontend.yml"
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest

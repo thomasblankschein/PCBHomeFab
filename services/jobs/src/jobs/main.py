@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import re
 import secrets
 import threading
@@ -36,6 +37,7 @@ from .services import Services, Unavailable, UserError
 from .store import DONE, JobRecord, JobStore
 from .worker import worker_loop
 
+log = logging.getLogger("jobs.main")
 JOB_ID = re.compile(r"^[A-Za-z0-9_-]{20,32}$")
 SAFE_NAME = re.compile(r"[^A-Za-z0-9_-]+")
 #: Folders of the archive with all result files and what goes into them (the 3D view's copper picture is internal).
@@ -166,6 +168,9 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        # jobs that were running when the service stopped (an update, a crash) would otherwise stay "running" for ever
+        if requeued := store.requeue_running():
+            log.warning("%d interrupted job(s) put back into the queue", requeued)
         threads = [
             threading.Thread(
                 target=worker_loop, args=(store, settings, services, stop), name=f"worker-{i}", daemon=True
@@ -179,27 +184,50 @@ def create_app(
         for thread in threads:
             thread.join(timeout=5)
 
-    app = FastAPI(title="PCBHomeFab jobs", version="1.0.0", lifespan=lifespan, root_path=settings.root_path)
+    # the API documentation only when asked for (API_DOCS=1): the contracts in contracts/ describe the API
+    docs = settings.api_docs
+    app = FastAPI(
+        title="PCBHomeFab jobs",
+        version="1.0.0",
+        lifespan=lifespan,
+        root_path=settings.root_path,
+        docs_url="/docs" if docs else None,
+        redoc_url="/redoc" if docs else None,
+        openapi_url="/openapi.json" if docs else None,
+    )
     common.install(app, "jobs")
     app.state.store = store
     app.state.verifier = verifier
-    previews: dict[str, deque[float]] = defaultdict(deque)
-    preview_lock = threading.Lock()
+    requests: dict[str, dict[str, deque[float]]] = {"jobs": defaultdict(deque), "previews": defaultdict(deque)}
+    rate_lock = threading.Lock()
 
-    def check_preview_rate(user: User) -> None:
-        """Previews cost a call to ingest or panel, so they get a limit of their own (kept in memory)."""
-        client = user.id
+    def check_rate(kind: str, user: User, limit: int, detail: str, retry_after: str) -> None:
+        """At most ``limit`` requests of one kind per account and hour (kept in memory). Every request counts, also one
+        that fails later or whose job is deleted again: each of them costs a call to another service."""
+        windows = requests[kind]
         now = time.monotonic()
-        with preview_lock:
-            window = previews[client]
+        with rate_lock:
+            window = windows[user.id]
             while window and window[0] < now - 3600:
                 window.popleft()
-            if len(window) >= settings.preview_limit_per_hour:
-                raise Problem(429, "jobs.rate_limited", "Too many requests. Try again later.", {"Retry-After": "600"})
+            if len(window) >= limit:
+                raise Problem(429, "jobs.rate_limited", detail, {"Retry-After": retry_after})
             window.append(now)
-            if len(previews) > 10000:  # forget clients that have been quiet for an hour
-                for key in [k for k, w in previews.items() if not w or w[-1] < now - 3600]:
-                    del previews[key]
+            if len(windows) > 10000:  # forget clients that have been quiet for an hour
+                for key in [k for k, w in windows.items() if not w or w[-1] < now - 3600]:
+                    del windows[key]
+
+    def check_preview_rate(user: User) -> None:
+        """Previews cost a call to ingest or panel, so they get a limit of their own."""
+        check_rate("previews", user, settings.preview_limit_per_hour, "Too many requests. Try again later.", "600")
+
+    def check_job_quota(user: User) -> None:
+        if settings.max_jobs_per_user and store.count_for(user.id) >= settings.max_jobs_per_user:
+            raise Problem(
+                403,
+                "jobs.quota_exceeded",
+                f"You have {settings.max_jobs_per_user} jobs, the limit. Delete jobs you no longer need.",
+            )
 
     @app.get("/v1/tools")
     def tool_library(user: CurrentUser) -> dict[str, Any]:
@@ -296,14 +324,7 @@ def create_app(
         mark_labels: Annotated[bool, Form()] = True,
         drill_map: Annotated[str | None, Form()] = None,
     ) -> JSONResponse:
-        if store.recent_count(user.id) >= settings.rate_limit_per_hour:
-            raise Problem(429, "jobs.rate_limited", "Too many jobs. Try again later.", {"Retry-After": "3600"})
-        if settings.max_jobs_per_user and store.count_for(user.id) >= settings.max_jobs_per_user:
-            raise Problem(
-                403,
-                "jobs.quota_exceeded",
-                f"You have {settings.max_jobs_per_user} jobs, the limit. Delete jobs you no longer need.",
-            )
+        check_job_quota(user)
         if store.queued_count() >= settings.max_queued:
             raise Problem(503, "jobs.queue_full", "The queue is full. Try again later.", {"Retry-After": "300"})
         if not boards or len(boards) > settings.max_files:
@@ -324,6 +345,8 @@ def create_app(
         if marks and min(chosen_panel.width_mm, chosen_panel.height_mm) < MIN_PANEL_MM:
             raise Problem(422, "jobs.invalid_marks", f"Positioning marks need a panel of at least {MIN_PANEL_MM:g} mm.")
 
+        # counted from here on: reading the files costs a call to ingest per file
+        check_rate("jobs", user, settings.rate_limit_per_hour, "Too many jobs. Try again later.", "3600")
         uploads: list[bytes] = []
         for upload in boards:
             try:
@@ -342,6 +365,8 @@ def create_app(
             except Unavailable as exc:
                 raise _unavailable() from exc
 
+        # again, without waiting in between: parallel uploads of one account must not pass the limit together
+        check_job_quota(user)
         job_id = secrets.token_urlsafe(16)
         job_dir = store.job_dir(job_id)
         (job_dir / "input").mkdir(parents=True)

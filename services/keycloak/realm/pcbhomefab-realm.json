@@ -15,10 +15,17 @@
   "failureFactor": 5,
   "maxFailureWaitSeconds": 900,
   "waitIncrementSeconds": 60,
-  "passwordPolicy": "length(10) and notUsername",
+  "passwordPolicy": "length(12) and notUsername and notEmail and passwordHistory(3)",
   "accessTokenLifespan": 900,
-  "ssoSessionIdleTimeout": 1209600,
-  "ssoSessionMaxLifespan": 2592000,
+  "ssoSessionIdleTimeout": 86400,
+  "ssoSessionMaxLifespan": 604800,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "eventsEnabled": true,
+  "eventsExpiration": 2592000,
+  "enabledEventTypes": ["LOGIN", "LOGIN_ERROR", "LOGOUT", "CODE_TO_TOKEN_ERROR", "REFRESH_TOKEN_ERROR", "UPDATE_PASSWORD"],
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": false,
   "internationalizationEnabled": true,
   "supportedLocales": ["en", "de"],
   "defaultLocale": "en",
@@ -33,11 +40,11 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
-      "redirectUris": ["${PCBHOMEFAB_PUBLIC_URL}/*"],
+      "redirectUris": ["${PCBHOMEFAB_PUBLIC_URL}/auth-callback"],
       "webOrigins": ["${PCBHOMEFAB_PUBLIC_URL}"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "${PCBHOMEFAB_PUBLIC_URL}/*"
+        "post.logout.redirect.uris": "${PCBHOMEFAB_PUBLIC_URL}/"
       }
     },
     {
