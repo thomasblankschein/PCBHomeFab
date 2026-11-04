@@ -42,6 +42,7 @@ How to use it: [docs/manual.md](docs/manual.md).
 
 ```
 Browser ─▶ gateway ─┬─▶ frontend   static pages
+                    ├─▶ keycloak   login (OpenID Connect), with its database keycloak-db
                     └─▶ jobs ──┬─▶ ingest     Gerber ZIP  ─▶ canonical board package
                                ├─▶ panel      boards + counts ─▶ placements on the blank
                                ├─▶ exposure   packages + placements ─▶ mask PNG, .pm3
@@ -137,7 +138,8 @@ the files to download (`exposure.pm3`, one G-code program per tool, all programs
 the drill and mill paths (turn, zoom, play with the tool moving along the paths, copper of the boards shown faintly on the panel; it
 can be switched off). `/tools` shows the tool
 library. "My jobs" lists all jobs of your account, the newest first; open one again whenever you need it or delete it.
-Nothing is deleted automatically.
+Nothing is deleted automatically. "Exposure series" makes a test exposure in strips with different times, to find the
+right exposure time once for your photoresist (manual, section 8).
 
 The same through the REST API (the gateway publishes the `jobs` service under `/api`). Every call needs the access token of
 an account; scripts get it from Keycloak with the client `pcbhomefab-cli`:

@@ -6,6 +6,7 @@ Installation and operation of the service are described in the [README](../READM
 
 ## 1. The process in short
 
+0. **Once:** find the exposure time of your photoresist with an exposure series (section 8).
 1. **Design** the board in KiCad (one copper layer, B.Cu) and export it as a Gerber ZIP, or keep the `.kicad_pcb` file.
 2. **Log in** (section 3) and **create a job** in the web interface: add the boards, set the copies, check the panel layout, press "Create job".
 3. **Expose** the photoresist board: copy `exposure.pm3` to the printer (USB stick), print it, rinse, develop and etch.
@@ -170,7 +171,8 @@ stays. Copper pours are kept automatically.
 
 The panel sits in a frame on the display at the offsets set in the calibration settings (starting values 1.8 mm from
 the left and 0.8 mm from the bottom, to be checked on your printer). **Calibration:** make a test exposure and measure
-where the copper ends up; correct the offsets and the mirroring in the settings.
+where the copper ends up; correct the offsets and the mirroring in the settings. The exposure time is found with an
+exposure series, see the next section.
 
 ## 8. Exposure series (finding the exposure time)
 

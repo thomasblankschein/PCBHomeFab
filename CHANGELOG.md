@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.27.1 - 2026-11-04
+
+- Docs: the state in `CLAUDE.md` (nine containers, tests, the running instances), Keycloak in the architecture picture of the
+  README, the exposure series in the README, the architecture, the roadmap and the short process of the manual.
+
 ## 0.27.0 - 2026-11-04
 
 - **New: exposure series** (menu "Exposure series"). One `.pm3` file exposes a test board in 2 to 10 strips with the same

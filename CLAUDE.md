@@ -78,20 +78,26 @@ They are the reference for behaviour until the port is finished.
   both equal), tag `vX.Y.Z`, create the GitHub release from the changelog entry.
 - No secrets, no uploaded user data, no generated `.pm3`/`.nc` files in the repository.
 
-## State (2026-10-26)
+## State (2026-11-04, release 0.27.0)
 
-Milestones 1 to 4 and 8 are done. The system runs as seven containers (`docker-compose.yaml`): Gerber ZIP in, mask PNG,
-`.pm3` (native writer) and G-code out; the outputs equal the golden outputs of the old single-package code
-(`tests/e2e`). 146 service tests are green (ingest 27, panel 14, exposure 27, mill 47, jobs 31) plus the frontend tests
-(`node --test`: geometry, language files).
-The outline is milled along the real Edge.Cuts contour (ingest extracts it, mill offsets it); panelizing still uses
-each board's box. Photon Workshop opens
-the native `.pm3` file and shows the correct mask (confirmed by the maintainer).
-The frontend (milestone 5) is done as plain ES modules without a build step: editor with live panel preview, job page,
-tool library. Open: manual positioning and rotation of boards, calibration of mirroring and frame offsets on the real
-printer, monitoring.
-A test instance of the new stack ran on the maintainer's WSL (Ubuntu-26.04, `~/pcbhomefab-new`, project
-`pcbhomefab-new`, port 8081) next to the older instance (`~/PCBHomeFab`, ports 80/443); switching over is open.
+Milestones 1 to 5 and 8 are done, 6 nearly (monitoring open), 7 in part (exposure series and manual done, a test pattern for
+the frame offsets and the zero point of the mill is open). The system runs as nine containers (`docker-compose.yaml`: gateway,
+frontend, jobs, ingest, panel, exposure, mill, keycloak, keycloak-db). Gerber ZIP or `.kicad_pcb` in; mask PNG, `.pm3` (native
+writer), G-code per tool, mill preview, 3D simulation, PDF job description and ZIP archive out; the outputs equal the golden
+outputs of the old single-package code (`tests/e2e`). 288 service tests are green (ingest 47, panel 14, exposure 65, mill 65,
+jobs 97) plus 55 frontend tests (`node --test`).
+The outline is milled along the real Edge.Cuts contour (ingest extracts it, mill offsets it); panelizing still uses each
+board's box. The printer reads the native `.pm3` directly from the USB stick; the mask and the calibration are
+confirmed by the maintainer. Open: manual positioning and rotation of boards, monitoring, a root server on the internet.
+
+Running instances (both deployed by `git pull` and `docker compose up -d --build`):
+- **VM 974** on proxmox2: Alpine 3.24 (2 cores, 2 GB RAM, 10 GB disk, about 7 GB of it for the root file system),
+  `http://pcbhomefab.blankschein.intranet` (192.168.2.74), repository in `/home/localadmin/PCBHomeFab`. Described on the
+  Confluence page "PCBHomeFab - Installation und Konfiguration als VM auf Proxmox (Alpine + Docker)" (space REC). Run commands
+  there as `localadmin` with `umask 022` (`su localadmin -c "umask 022; ..."` through the guest agent); files written under
+  umask 0077 broke the frontend before 0.25.2.
+- **WSL** of the maintainer (Ubuntu-26.04): `~/pcbhomefab-new`, `http://localhost` (port 80). The old single-package instance in
+  `~/PCBHomeFab` is no longer running.
 The reference for the output is the old scripts; tests compare against their results
 (`services/mill/tests/data/reference_*`, `services/exposure/tests/data/reference_mask_fbh.png`).
 
@@ -100,17 +106,18 @@ The reference for the output is the old scripts; tests compare against their res
 ```
 contracts/        OpenAPI files, JSON schemas, error codes, examples: the only thing services share
 services/
-  gateway/        Caddy: TLS, routing (/ -> frontend, /api -> jobs)
+  gateway/        Caddy: TLS, routing (/ -> frontend, /api -> jobs, /auth -> keycloak)
   frontend/       static pages and ES modules (Caddy), tests with `node --test`; no inline styles (CSP default-src 'self')
   jobs/           uploads, job store (SQLite), workflow, worker threads, downloads
   ingest/         Gerber ZIP -> canonical board package (copper.gbr + board.json)
   panel/          packing of boards on the panel
   exposure/       raster, mask, .pm3 writer, printer profiles
   mill/           G-code, tool library (data/tools.toml), mill profiles
+  keycloak/       the login: Keycloak image and the realm pcbhomefab (ADR-002)
 tests/            e2e (golden test against a running stack), golden (hashes), data (two real boards)
-scripts/          check_service.sh, check_contracts.py, check_boundaries.py, smoke_test.sh, make_golden.py (old code, tag
-                  pre-services), make_package_fixtures.py
-docs/             architecture (ADR-001), migration, deployment, roadmap
+scripts/          check_service.sh, check_contracts.py, check_boundaries.py, smoke_test.sh, create_user.sh, make_golden.py
+                  (old code, tag pre-services), make_package_fixtures.py
+docs/             manual (for users), architecture (ADR-001, ADR-002), migration, deployment, roadmap
 docker-compose.yaml
 ```
 

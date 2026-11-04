@@ -94,10 +94,12 @@ Endpoints (the OpenAPI files are authoritative):
 | `panel` | `POST /v1/layouts` | panel, boards, counts, spacing in; placements out |
 | `exposure` | `GET /v1/profiles` | available printer profiles |
 | `exposure` | `POST /v1/masks` | packages, layout, settings in; ZIP with `mask.png`, `mask_preview.png`, `exposure.pm3` out |
+| `exposure` | `POST /v1/exposure-series` | panel, times and steps in; ZIP with `series.pm3` (strips with different times, several equal layers per exposure), `series.json`, `series_preview.png` out |
 | `mill` | `GET /v1/profiles`, `GET /v1/tools` | mill profiles, tool library |
 | `mill` | `POST /v1/programs` | packages, layout, settings in; ZIP with one `.nc` per tool, `preview.svg`, `programs.json` (with the estimated run time of every program) out |
 | `jobs` | `POST /v1/jobs`, `GET /v1/jobs`, `GET /v1/jobs/{id}`, `DELETE /v1/jobs/{id}`, `GET /v1/jobs/{id}/files/{name}`, `GET /v1/me`, `GET /v1/profiles`, `GET /v1/tools` | what the browser uses (behind `/api` at the gateway), all with a login |
 | `jobs` | `POST /v1/boards`, `POST /v1/layouts` | previews for the editor: board info from `ingest`, placement from `panel`; nothing is stored, limited per account |
+| `jobs` | `POST /v1/exposure-series` | the `.pm3` of a test exposure from `exposure` (panel id instead of a size); nothing is stored, limited like the previews |
 
 ### Consequences
 
