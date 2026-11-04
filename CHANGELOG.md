@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.27.2 - 2026-11-04
+
+- Keycloak 26.8 (before 26.4). It migrates its database by itself at the first start (tried with a database and an account
+  made under 26.4); the users have to log in again once.
+- The GitHub Actions of CI are at version 7 (`checkout`, `setup-python`, `setup-node`).
+- PostgreSQL of Keycloak stays at 17: Dependabot no longer proposes major versions (18 needs a migration of the database and
+  expects its volume at another place).
+- Fix: the smoke test failed now and then with "curl: Failed writing body" (`grep -q` on a pipe); the stack check of CI had
+  failed this way since 0.27.0.
+
 ## 0.27.1 - 2026-11-04
 
 - Docs: the state in `CLAUDE.md` (nine containers, tests, the running instances), Keycloak in the architecture picture of the
