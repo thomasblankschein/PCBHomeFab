@@ -20,6 +20,9 @@ EXAMPLES = {
     "layout.json": "layout",
     "exposure-settings.json": "exposure-settings",
     "mill-settings.json": "mill-settings",
+    "exposure-series-request.json": "exposure-series-request",
+    "series-request.json": "series-request",
+    "exposure-series.json": "exposure-series",
 }
 
 

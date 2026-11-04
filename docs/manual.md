@@ -153,8 +153,8 @@ The page shows the progress ("This page updates itself"). The job stays in "My j
 | Drill assignment | Your choice for hole sizes without a drill of their own. |
 | Exposure | Picture of the mask and the downloads `exposure.pm3` and `mask.png`. |
 | Drill and mill | Picture of the panel with outlines and holes (colour = diameter) and one download per G-code program. |
-| 3D simulation | See section 9. |
-| Job description | The PDF, see section 10. |
+| 3D simulation | See section 10. |
+| Job description | The PDF, see section 11. |
 | All files | Everything in one ZIP. |
 
 ## 7. Exposure
@@ -172,7 +172,42 @@ The panel sits in a frame on the display at the offsets set in the calibration s
 the left and 0.8 mm from the bottom, to be checked on your printer). **Calibration:** make a test exposure and measure
 where the copper ends up; correct the offsets and the mirroring in the settings.
 
-## 8. Drilling and milling
+## 8. Exposure series (finding the exposure time)
+
+The right exposure time depends on the photoresist, its age and the UV light of the printer. The page **Exposure series**
+(menu at the top) makes one `.pm3` file that exposes a test board with several times at once:
+
+- The panel is divided into **strips** side by side with the same test pattern: the total time of the strip in large
+  letters, tracks and gaps of 0.1, 0.15, 0.2, 0.25, 0.3, 0.4 and 0.5 mm (four tracks with gaps of the same width, a single
+  track and a slit of that width in copper), SMD pad rows with a pitch of 1.27, 0.8, 0.65 and 0.5 mm, round pads with
+  drill holes and vias, a copper pour with isolation gaps of 0.2 to 0.4 mm, and text 1.0 to 0.6 mm high.
+- You enter the **longest** and the **shortest** time and the number of **steps** (2 to 10 strips, each at least 14 mm
+  wide). The times run evenly from the longest to the shortest, in whole seconds.
+- The board stays on the display for the whole series. **Exposure k lights the strips 1 to k**: strip 1 gets every
+  exposure (the longest time), the last strip only the last one (the shortest time). Example 60 to 180 s in 5 steps:
+  four exposures of 30 s and a last one of 60 s give the strips 180, 150, 120, 90 and 60 s.
+- The Photon M3 exposes every layer for the time in the header of the file and ignores times per layer (tried on the
+  printer). A longer exposure is therefore written as several equal layers of the same image; the time of one layer is
+  the greatest common divisor of the exposures (30 s in the example, 6 layers). Between two layers the printer lifts the Z
+  axis for a few seconds, which does not matter for the resist. Times without a common divisor need many layers: the page
+  refuses more than 200 and asks for rounder values.
+
+The page shows the strips, the exposures with their layers and the time the printer needs. "Create the exposure file"
+saves `exposure-series-<shortest>-<longest>s-<steps>.pm3`; nothing is stored on the server. Calibration (offsets,
+mirroring) is taken from the printer profile, change it in the folded part of the form if your values differ.
+
+1. Copy the file to the USB stick, lay a photoresist board of the panel size on the display with the copper side down and
+   start the file. Do not move the board until the printer is finished.
+2. Develop and etch the board as usual.
+3. Seen from the copper side, strip 1 (longest time) is on the left; every strip shows its time. Choose the **shortest
+   time at which the exposed areas are etched clean** and the fine tracks and gaps are still sharp. Too short: copper is
+   left in the gaps and on the large free areas. Too long: thin tracks get thinner or break, small text runs together.
+4. Enter that time as the exposure time in the settings of the editor.
+
+Black pixels of the LCD let a little UV light through, so in a long series the strips with the short times get a small
+extra dose; for a fine search make a second series with a narrow range around the time found.
+
+## 9. Drilling and milling
 
 The job contains **one G-code program per tool**, numbered in the order in which to run them: first the drills, then the
 end mills for large holes, cutouts and the board outlines. The G-code is made for GRBL.
@@ -194,7 +229,7 @@ X0 Y0 is the lower left positioning mark, see section 5. Without marks, X0 Y0 is
   of thickness plus overshoot. With tabs on, the boards stay connected at small bridges.
 - The cutting values of the tool library are **starting values**. Tune feed, plunge and depth on your mill.
 
-## 9. 3D simulation
+## 10. 3D simulation
 
 The job page shows the drill and mill paths in 3D, to check them before the mill runs.
 
@@ -205,7 +240,7 @@ The job page shows the drill and mill paths in 3D, to check them before the mill
   boards faintly on the panel.
 - The time is estimated from the feed rates; rapid moves are assumed at 1500 mm/min. Hours are shown from 60 minutes on.
 
-## 10. Job description (PDF)
+## 11. Job description (PDF)
 
 The link "Job description (PDF)" on the job page opens a PDF in the language of the page. It holds:
 
@@ -218,7 +253,7 @@ The run times are estimated from the G-code. They do not include the pause for t
 acceleration of the machine, so the real time is somewhat longer. Jobs made before version 0.23.0 have no times; their
 PDF has no tool table. The PDF is also in the ZIP of "All files".
 
-## 11. Tools and machines
+## 12. Tools and machines
 
 **Tools** (`/tools`): the tool library the G-code is made for. By default drills from 0.6 to 1.5 mm in 0.1 mm steps and
 end mills of 1, 2 and 3 mm, with spindle speed, feed, plunge feed and peck depth. The operator can replace the library
@@ -309,7 +344,7 @@ Jobs keep what they were made with: a change of a tool or profile applies to new
 
 Language: the switch in the header changes between English and German; the first visit follows the browser language.
 
-## 12. REST API
+## 13. REST API
 
 The same functions are available without the web interface. The gateway publishes the `jobs` service under `/api`.
 Every call needs the access token of an account in the header `Authorization: Bearer <token>`; without it the answer is
@@ -333,7 +368,7 @@ tools such as client generators). The maintained description of the public API, 
 is [contracts/jobs.openapi.yaml](../contracts/jobs.openapi.yaml); the other contracts are in
 [contracts/](../contracts/). `GET /api/v1/panels`, `/api/v1/profiles` and `/api/v1/tools` list the choices.
 
-## 13. Troubleshooting
+## 14. Troubleshooting
 
 | Message or problem | Cause and remedy |
 |---|---|

@@ -1,0 +1,7 @@
+{
+ "printer": "photon-m3",
+ "panel": {"width_mm": 160, "height_mm": 100},
+ "shortest_s": 60,
+ "longest_s": 180,
+ "steps": 5
+}

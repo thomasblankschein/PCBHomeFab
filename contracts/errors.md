@@ -36,6 +36,8 @@ its own prefix, plus `common.*`.
 | `exposure.unknown_board` | 422 | the layout refers to a board id without package |
 | `exposure.unreadable_copper` | 422 | `copper.gbr` could not be read or drawn |
 | `exposure.panel_too_large` | 422 | the panel, with the calibration offsets, does not fit on the display of the printer |
+| `exposure.invalid_series` | 422 | exposure series: the longest time is not above the shortest, the range has fewer seconds than steps, or the strips get narrower than 14 mm on this panel |
+| `exposure.series_too_many_layers` | 422 | exposure series: the times need more than 200 equal layers (their greatest common divisor is too small); choose rounder values |
 | `mill.unknown_mill` | 422 | no mill profile with this id |
 | `mill.invalid_package` | 422 | a board package is not a canonical package |
 | `mill.unknown_board` | 422 | the layout refers to a board id without package |

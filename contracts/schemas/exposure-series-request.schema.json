@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "exposure-series-request.schema.json",
+  "title": "Exposure series request (exposure service)",
+  "description": "A test exposure: the panel is divided into `steps` strips with the same test pattern. Exposure k lights the strips 1 to k, so strip 1 gets the longest time and the last strip the shortest. The times run evenly from `longest_s` to `shortest_s` (whole seconds, rounded half up).",
+  "type": "object",
+  "required": ["printer", "panel", "shortest_s", "longest_s", "steps"],
+  "properties": {
+    "printer": {"type": "string", "description": "Printer profile id, see GET /v1/profiles."},
+    "panel": {
+      "type": "object",
+      "required": ["width_mm", "height_mm"],
+      "properties": {
+        "width_mm": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000},
+        "height_mm": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000}
+      },
+      "additionalProperties": false
+    },
+    "shortest_s": {"type": "integer", "minimum": 1, "maximum": 3600, "description": "Total time of the last strip."},
+    "longest_s": {"type": "integer", "minimum": 2, "maximum": 3600, "description": "Total time of the first strip."},
+    "steps": {"type": "integer", "minimum": 2, "maximum": 10, "description": "Number of strips."},
+    "frame_left_mm": {"type": "number", "minimum": 0, "maximum": 20, "description": "Calibration, default from the profile."},
+    "frame_bottom_mm": {"type": "number", "minimum": 0, "maximum": 20, "description": "Calibration, default from the profile."},
+    "mirror_x": {"type": "boolean", "description": "Default from the profile."}
+  },
+  "additionalProperties": false
+}

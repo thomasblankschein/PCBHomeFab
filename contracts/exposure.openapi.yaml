@@ -92,6 +92,34 @@ paths:
           $ref: "#/components/responses/Problem"
         "503":
           $ref: "#/components/responses/Problem"
+  /v1/exposure-series:
+    post:
+      operationId: createExposureSeries
+      description: >
+        A test exposure to find the right exposure time: the panel is divided into strips with the same test pattern
+        (tracks and gaps from 0.1 to 0.5 mm, pads, SMD rows, a copper pour, small text, the total time of the strip).
+        The panel stays on the display for the whole series; exposure k lights the strips 1 to k. The printer uses
+        the time of the file header for every layer, so a longer exposure is written as several equal layers.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: schemas/exposure-series-request.schema.json
+      responses:
+        "200":
+          description: >
+            ZIP with `series.pm3` (the slice file), `series.json` (schemas/exposure-series.schema.json) and
+            `series_preview.png` (1024 x 640, grey, the last layer with all strips lit).
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "422":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
 components:
   responses:
     Problem:

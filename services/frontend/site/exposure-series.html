@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title data-i18n="series.page_title">Exposure series - PCBHomeFab</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">PCBHomeFab</a>
+  <nav aria-label="Main" data-i18n-attr="aria-label:nav.main">
+    <a href="/" data-i18n="nav.new_job">New job</a>
+    <a href="/jobs" data-i18n="nav.jobs">My jobs</a>
+    <a href="/exposure-series" aria-current="page" data-i18n="nav.series">Exposure series</a>
+    <a href="/tools" data-i18n="nav.tools">Tools</a>
+    <a href="/machines" data-i18n="nav.machines">Machines</a>
+  </nav>
+</header>
+<main>
+<h1 data-i18n="series.heading">Exposure series</h1>
+<p class="lead" data-i18n="series.lead">A test exposure to find the right exposure time. The panel is divided into strips with the same test pattern (tracks and gaps from 0.1 to 0.5 mm, pads, SMD rows, a copper pour, small text). The panel stays on the display; every exposure lights one strip more, so the first strip gets the longest time and the last one the shortest.</p>
+<p id="load-error" class="error" role="alert"></p>
+
+<div id="series" class="editor" hidden>
+  <div class="column">
+    <form id="form" class="panel" novalidate>
+      <h2 data-i18n="settings.title">Settings</h2>
+      <div class="grid">
+        <label><span data-i18n="settings.panel_size">Panel size</span><select name="panel"></select></label>
+        <label><span data-i18n="settings.printer">Printer</span><select name="printer"></select></label>
+        <label><span data-i18n="series.longest">Longest time (s)</span><input type="number" name="longest_s" value="180" min="2" max="3600" step="1"></label>
+        <label><span data-i18n="series.shortest">Shortest time (s)</span><input type="number" name="shortest_s" value="60" min="1" max="3600" step="1"></label>
+        <label><span data-i18n="series.steps">Steps (strips)</span><input type="number" name="steps" value="5" min="2" max="10" step="1"></label>
+      </div>
+      <details>
+        <summary data-i18n="settings.calibration">Calibration</summary>
+        <div class="grid">
+          <label><span data-i18n="settings.frame_left">Panel offset from the left (mm)</span><input type="number" name="frame_left_mm" step="0.1" min="0" max="20"></label>
+          <label><span data-i18n="settings.frame_bottom">Panel offset from the bottom (mm)</span><input type="number" name="frame_bottom_mm" step="0.1" min="0" max="20"></label>
+          <label class="inline"><input type="checkbox" name="mirror_x"> <span data-i18n="settings.mirror_x">Mirror the image in X</span></label>
+        </div>
+        <p class="muted" data-i18n="settings.calibration_hint">Values of your printer profile. Change them only after measuring a test exposure.</p>
+      </details>
+      <p>
+        <button id="create" type="submit" class="primary" data-i18n="series.create">Create the exposure file (.pm3)</button>
+      </p>
+      <p id="state" class="state" role="status"></p>
+    </form>
+
+    <section class="panel" aria-labelledby="how-title">
+      <h2 id="how-title" data-i18n="series.how_title">How to use it</h2>
+      <ol class="how">
+        <li data-i18n="series.how_1">Lay a photoresist board of the panel size on the display with the copper side down, as for a normal exposure.</li>
+        <li data-i18n="series.how_2">Start the file from the USB stick. The printer exposes all layers by itself; do not move the board. Between the layers it lifts the Z axis for a few seconds.</li>
+        <li data-i18n="series.how_3">Develop and etch the board as usual.</li>
+        <li data-i18n="series.how_4">Choose the shortest time at which the exposed areas are etched clean and the fine tracks and gaps are still sharp. Every strip shows its time; seen from the copper side the first strip (longest time) is on the left.</li>
+        <li data-i18n="series.how_5">Enter this time as the exposure time in the settings of the editor.</li>
+      </ol>
+      <p class="muted" data-i18n="series.leak_hint">Black areas of the display let a little UV light through. In a long series the strips with short times get a small extra dose.</p>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="plan-title">
+    <h2 id="plan-title" data-i18n="series.plan_title">Strips and exposures</h2>
+    <p id="plan-error" class="error" role="alert"></p>
+    <div id="plan">
+      <svg id="strips" class="series-view" role="img" data-i18n-attr="aria-label:series.view_label" aria-label="The strips seen from the copper side"></svg>
+      <p class="muted" data-i18n="series.view_hint">Seen from the copper side. Darker strips get more light.</p>
+      <p id="plan-summary"></p>
+      <div class="table-wrap">
+        <table class="series">
+          <thead>
+            <tr>
+              <th class="num" data-i18n="series.col_exposure">Exposure</th>
+              <th data-i18n="series.col_strips">Lights strips</th>
+              <th class="num" data-i18n="series.col_duration">Duration</th>
+              <th class="num" data-i18n="series.col_layers">Layers</th>
+            </tr>
+          </thead>
+          <tbody id="exposures"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+</main>
+<footer class="foot"><a href="https://github.com/thomasblankschein/PCBHomeFab">PCBHomeFab</a> <span id="version"></span></footer>
+<script type="module" src="/js/footer.js"></script>
+<script type="module" src="/js/account.js"></script>
+<script type="module" src="/js/exposure-series.js"></script>
+</body>
+</html>

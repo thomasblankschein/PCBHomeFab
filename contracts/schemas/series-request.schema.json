@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "series-request.schema.json",
+  "title": "Exposure series request (jobs service)",
+  "description": "Like exposure-series-request.schema.json, but the panel is the id of a panel size (GET /v1/panels).",
+  "type": "object",
+  "required": ["panel", "shortest_s", "longest_s", "steps"],
+  "properties": {
+    "panel": {"type": "string", "pattern": "^[A-Za-z0-9_.-]{1,40}$"},
+    "printer": {"type": "string", "pattern": "^[a-z0-9-]{1,40}$", "default": "photon-m3"},
+    "shortest_s": {"type": "integer", "minimum": 1, "maximum": 3600},
+    "longest_s": {"type": "integer", "minimum": 2, "maximum": 3600},
+    "steps": {"type": "integer", "minimum": 2, "maximum": 10},
+    "frame_left_mm": {"type": "number", "minimum": 0, "maximum": 20},
+    "frame_bottom_mm": {"type": "number", "minimum": 0, "maximum": 20},
+    "mirror_x": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}

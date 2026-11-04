@@ -259,6 +259,80 @@ def build_pm3(
     return mark + header + preview + color_table + layer_def + extra + machine + encoded * layers
 
 
+def build_pm3_sequence(
+    images: list[Image.Image],
+    order: list[int],
+    printer: PrinterProfile,
+    exposure_s: float,
+) -> bytes:
+    """Build a ``.pm3`` file whose layer ``n`` shows ``images[order[n]]``, every layer for ``exposure_s``.
+
+    Every layer gets its own copy of the image data, like a sliced print (sharing the data between layers is not
+    known to work on the printer). The printer takes the time of the header for every layer, so a longer exposure is
+    several layers with the same image (``series.py``)."""
+    if not images or not order or any(not 0 <= index < len(images) for index in order):
+        raise Pm3Error("Every layer must name one of the images.")
+    for image in images:
+        if image.size != (printer.resolution_x, printer.resolution_y):
+            raise Pm3Error(f"The images must be {printer.resolution_x} x {printer.resolution_y} pixels.")
+    layers = len(order)
+    encoded = [encode_layer(image) for image in images]
+    lift, up, down = printer.lift_height_mm, printer.lift_speed_mms, printer.retract_speed_mms
+    print_time = round(layers * (exposure_s + lift / up + lift / down))
+
+    header = _table(b"HEADER", _header_body(printer, None, exposure_s, layers, print_time))
+    preview_data = _preview(images[order[-1]])
+    preview_body = struct.pack("<I", PREVIEW_SIZE[0]) + b"x".ljust(4, b"\0") + struct.pack("<I", PREVIEW_SIZE[1])
+    preview = _table(b"PREVIEW", preview_body + preview_data, 16 + len(preview_body) + len(preview_data))
+    color_table = struct.pack("<II", 0, 16) + b"\xff" * 16 + struct.pack("<I", 0)
+    layer_table_length = 4 + 32 * layers
+    extra = _table(b"EXTRA", _extra_body(printer), 24)
+    machine = _machine_table(printer)
+
+    header_address = FILE_MARK_SIZE
+    preview_address = header_address + len(header)
+    color_address = preview_address + len(preview)
+    layer_def_address = color_address + len(color_table)
+    extra_address = layer_def_address + 16 + layer_table_length
+    machine_address = extra_address + len(extra)
+    image_address = machine_address + len(machine)
+    mark = b"ANYCUBIC".ljust(12, b"\0") + struct.pack(
+        "<10I",
+        VERSION,
+        8,  # number of tables
+        header_address,
+        0,  # software table (version 517 and later)
+        preview_address,
+        color_address,
+        layer_def_address,
+        extra_address,
+        machine_address,
+        image_address,
+    )
+    entries, address = b"", image_address
+    for index in order:
+        data, white = encoded[index]
+        entries += struct.pack("<IIffffII", address, len(data), lift, up, exposure_s, LAYER_HEIGHT_MM, white, 0)
+        address += len(data)
+    layer_def = _table(b"LAYERDEF", struct.pack("<I", layers) + entries, layer_table_length)
+    return mark + header + preview + color_table + layer_def + extra + machine + b"".join(encoded[i][0] for i in order)
+
+
+def read_layers(path: Path) -> list[tuple[float, Image.Image]]:
+    """Time and image of every layer of a ``.pm3`` file (for tests; decodes every layer)."""
+    data = path.read_bytes()
+    at = _addresses(data)
+    width, height = struct.unpack_from("<2I", data, at["header"] + 16 + 44)
+    (count,) = struct.unpack_from("<I", data, at["layer_def"] + 16)
+    layers: list[tuple[float, Image.Image]] = []
+    for index in range(count):
+        address, length, _lift, _up, exposure, _height, _white, _ = struct.unpack_from(
+            "<IIffffII", data, at["layer_def"] + 20 + 32 * index
+        )
+        layers.append((exposure, decode_layer(data[address : address + length], width, height)))
+    return layers
+
+
 def write_pm3(
     mask: Image.Image,
     printer: PrinterProfile,

@@ -141,6 +141,34 @@ paths:
           $ref: "#/components/responses/Problem"
         "503":
           $ref: "#/components/responses/Problem"
+  /v1/exposure-series:
+    post:
+      operationId: createExposureSeries
+      description: >
+        The slice file of a test exposure (see the exposure service). Nothing is stored. Limited per client like the
+        previews.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: schemas/series-request.schema.json
+      responses:
+        "200":
+          description: The slice file, `exposure-series-<shortest>-<longest>s-<steps>.pm3`.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "429":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
   /v1/jobs:
     get:
       operationId: listJobs

@@ -1,0 +1,19 @@
+{
+ "unit_s": 30,
+ "layers": 6,
+ "print_time_s": 201,
+ "sections": [
+  {"section": 1, "exposure_s": 180},
+  {"section": 2, "exposure_s": 150},
+  {"section": 3, "exposure_s": 120},
+  {"section": 4, "exposure_s": 90},
+  {"section": 5, "exposure_s": 60}
+ ],
+ "exposures": [
+  {"exposure": 1, "sections": 1, "duration_s": 30, "layers": 1},
+  {"exposure": 2, "sections": 2, "duration_s": 30, "layers": 1},
+  {"exposure": 3, "sections": 3, "duration_s": 30, "layers": 1},
+  {"exposure": 4, "sections": 4, "duration_s": 30, "layers": 1},
+  {"exposure": 5, "sections": 5, "duration_s": 60, "layers": 2}
+ ]
+}

@@ -75,7 +75,8 @@ code {
 
 .top {
   display: flex;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
   align-items: center;
   padding: 0.6rem 16px;
   background: var(--surface);
@@ -90,7 +91,8 @@ code {
 
 .top nav {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
 }
 
 .top nav a {
@@ -579,4 +581,36 @@ details.panel > summary {
   list-style: none;
   padding: 0;
   margin: 0.5rem 0;
+}
+
+/* exposure series: the strips seen from the copper side */
+.series-view {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 22rem;
+}
+
+.series-view .copper {
+  fill: #c9a06a;
+}
+
+.series-view .strip {
+  fill: var(--accent);
+}
+
+.series-view text {
+  fill: var(--text);
+  text-anchor: middle;
+  font-size: 4px;
+  font-weight: 600;
+}
+
+.series-view .strip-number {
+  font-size: 3px;
+  font-weight: 400;
+}
+
+ol.how li {
+  margin: 0.3rem 0;
 }

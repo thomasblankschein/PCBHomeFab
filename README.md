@@ -20,6 +20,8 @@ REST APIs.
   possible), with gap and margin. The editor shows the layout live, as design view and as copper underside, with zoom and pan.
 - **Exposure:** mask PNG and `.pm3` file for the Anycubic Photon M3 (native writer), exposure time, hole mode
   (full, centre mark, none) and calibration of the panel position and mirroring per printer profile.
+- **Exposure series:** one `.pm3` file that exposes a test board in strips with different times (tracks and gaps from
+  0.1 mm, pads, SMD rows), to find the right exposure time for your photoresist; the board stays on the display.
 - **Positioning marks:** two marks on the copper layer give the zero point of the mill and the rotation of the panel; the
   G-code coordinates are exposed next to them as text.
 - **Drilling and milling:** GRBL G-code with one program per tool, tool change pause (`M0`), pecking, outline along the

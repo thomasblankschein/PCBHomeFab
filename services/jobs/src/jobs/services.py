@@ -113,6 +113,14 @@ class Services:
         allowed = re.compile(r"^(mask\.png|mask_preview\.png|exposure\.pm3|copper\.png)$")
         return read_zip(response.content, lambda name: bool(allowed.match(name)))
 
+    def exposure_series(self, request: dict[str, Any], request_id: str) -> bytes:
+        """The slice file of a test exposure (``series.pm3`` of the answer of exposure)."""
+        response = self._call("POST", f"{self.settings.exposure_url}/v1/exposure-series", request_id, json=request)
+        files = read_zip(response.content, lambda name: name in ("series.pm3", "series.json", "series_preview.png"))
+        if "series.pm3" not in files:
+            raise Unavailable("series.pm3 missing in the answer")
+        return files["series.pm3"]
+
     def mill(
         self,
         packages: dict[str, bytes],

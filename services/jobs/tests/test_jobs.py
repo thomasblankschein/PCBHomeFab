@@ -807,3 +807,37 @@ def test_limits_are_per_account(settings: Settings, services: Services) -> None:
     with _app_client(settings, services, "alice") as alice, _app_client(settings, services, "bob") as bob:
         assert [_post(alice, ("n.zip", ZIP)).status_code for _ in range(6)] == [201] * 5 + [429]
         assert _post(bob, ("n.zip", ZIP)).status_code == 201
+
+
+def test_exposure_series_gives_the_slice_file(client: TestClient, downstream: Downstream) -> None:
+    request = json.loads((CONTRACTS / "examples" / "series-request.json").read_text())
+    validate("series-request", request)
+    response = client.post("/v1/exposure-series", json={**request, "frame_left_mm": 2.0})
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/octet-stream"
+    assert response.headers["content-disposition"] == 'attachment; filename="exposure-series-60-180s-5.pm3"'
+    # the panel id becomes its size; calibration values only when they are given
+    sent = json.loads(response.content.removeprefix(b"ANYCUBIC"))
+    validate("exposure-series-request", sent)
+    assert sent == {
+        "printer": "photon-m3",
+        "panel": {"width_mm": 160.0, "height_mm": 100.0},
+        "shortest_s": 60,
+        "longest_s": 180,
+        "steps": 5,
+        "frame_left_mm": 2.0,
+    }
+    assert downstream.calls[-1][1] == "/v1/exposure-series"
+
+
+def test_exposure_series_errors(client: TestClient, downstream: Downstream) -> None:
+    body = {"panel": "160x100", "shortest_s": 60, "longest_s": 180, "steps": 5}
+    _problem(client.post("/v1/exposure-series", json={**body, "panel": "nope"}), 422, "jobs.invalid_panel")
+    _problem(client.post("/v1/exposure-series", json={**body, "steps": 1}), 422, "common.invalid_request")
+    _problem(client.post("/v1/exposure-series", json={**body, "longest_s": 60}), 422, "exposure.invalid_series")
+    downstream.override["exposure"] = lambda _r: httpx.Response(500, text="boom")
+    _problem(client.post("/v1/exposure-series", json=body), 503, "jobs.upstream_unavailable")
+    downstream.override["exposure"] = lambda _r: httpx.Response(
+        200, content=make_zip({"other.txt": "x"}), headers={"content-type": "application/zip"}
+    )
+    _problem(client.post("/v1/exposure-series", json=body), 503, "jobs.upstream_unavailable")

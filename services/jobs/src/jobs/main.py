@@ -67,6 +67,20 @@ class PreviewLayoutRequest(BaseModel):
     margin_mm: float = Field(default=3.0, ge=0, le=20)
 
 
+class SeriesRequest(BaseModel):
+    """contracts/schemas/series-request.schema.json: a test exposure on a panel size of the list."""
+
+    model_config = ConfigDict(extra="forbid")
+    panel: Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.-]{1,40}$")]
+    printer: Annotated[str, StringConstraints(pattern=PROFILE_ID)] = "photon-m3"
+    shortest_s: int = Field(ge=1, le=3600)
+    longest_s: int = Field(ge=2, le=3600)
+    steps: int = Field(ge=2, le=10)
+    frame_left_mm: float | None = Field(default=None, ge=0, le=20)
+    frame_bottom_mm: float | None = Field(default=None, ge=0, le=20)
+    mirror_x: bool | None = None
+
+
 def _unavailable() -> Problem:
     return Problem(503, "jobs.upstream_unavailable", "A required service is not reachable. Try again later.")
 
@@ -299,6 +313,34 @@ def create_app(
             raise Problem(422, exc.code, exc.message) from exc
         except Unavailable as exc:
             raise _unavailable() from exc
+
+    @app.post("/v1/exposure-series")
+    def exposure_series(user: CurrentUser, body: SeriesRequest) -> Response:
+        """The slice file of a test exposure with strips of different times. Asks exposure, stores nothing."""
+        check_preview_rate(user)
+        panel = find_panel(body.panel)
+        request: dict[str, Any] = {
+            "printer": body.printer,
+            "panel": {"width_mm": panel.width_mm, "height_mm": panel.height_mm},
+            "shortest_s": body.shortest_s,
+            "longest_s": body.longest_s,
+            "steps": body.steps,
+        }
+        for key in ("frame_left_mm", "frame_bottom_mm", "mirror_x"):
+            if getattr(body, key) is not None:
+                request[key] = getattr(body, key)
+        try:
+            data = services.exposure_series(request, f"{secrets.token_hex(6)}-exposure")
+        except UserError as exc:
+            raise Problem(422, exc.code, exc.message) from exc
+        except Unavailable as exc:
+            raise _unavailable() from exc
+        filename = f"exposure-series-{body.shortest_s}-{body.longest_s}s-{body.steps}.pm3"
+        return Response(
+            data,
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     @app.post("/v1/jobs", status_code=201)
     async def post_job(

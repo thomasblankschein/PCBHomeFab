@@ -18,8 +18,9 @@ from . import common
 from .boards import Board, LayoutModel, Mark, MarkModel, Placement, board_id_of, load_board
 from .common import Isolation, Problem
 from .mask import build_copper, build_mask
-from .pm3 import build_pm3
-from .profiles import PRINTERS
+from .pm3 import build_pm3, build_pm3_sequence
+from .profiles import PRINTERS, PrinterProfile
+from .series import SeriesError, check_strips, layer_order, plan_series, series_layers
 
 PREVIEW_SIZE = (1024, 640)
 _ZIP_TIME = (1980, 1, 1, 0, 0, 0)
@@ -35,6 +36,26 @@ class ExposureSettings(BaseModel):
     mirror_x: bool | None = None
     marks: list[MarkModel] | None = Field(default=None, min_length=2, max_length=2)
     outputs: list[Literal["mask", "preview", "pm3", "copper"]] = Field(default=["mask", "preview", "pm3"], min_length=1)
+
+
+class PanelSizeModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    width_mm: float = Field(gt=0, le=1000)
+    height_mm: float = Field(gt=0, le=1000)
+
+
+class SeriesRequest(BaseModel):
+    """contracts/schemas/exposure-series-request.schema.json"""
+
+    model_config = ConfigDict(extra="forbid")
+    printer: str
+    panel: PanelSizeModel
+    shortest_s: int = Field(ge=1, le=3600)
+    longest_s: int = Field(ge=2, le=3600)
+    steps: int = Field(ge=2, le=10)
+    frame_left_mm: float | None = Field(default=None, ge=0, le=20)
+    frame_bottom_mm: float | None = Field(default=None, ge=0, le=20)
+    mirror_x: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -116,6 +137,42 @@ def _masks(packages: dict[str, bytes], layout: dict[str, Any], settings: dict[st
     return buffer.getvalue()
 
 
+def _printer_for(
+    printer_id: str, width_mm: float, height_mm: float, overrides: dict[str, float | bool | None]
+) -> PrinterProfile:
+    """The printer profile with the calibration values of the request; the panel must fit on its display."""
+    if printer_id not in PRINTERS:
+        known = ", ".join(sorted(PRINTERS))
+        raise Problem(422, "exposure.unknown_printer", f"Unknown printer '{printer_id}' (known: {known}).")
+    changes: dict[str, Any] = {key: value for key, value in overrides.items() if value is not None}
+    printer = replace(PRINTERS[printer_id], **changes)
+    left, bottom = printer.frame_left_mm, printer.frame_bottom_mm
+    if left + width_mm > printer.display_width_mm or bottom + height_mm > printer.display_height_mm:
+        raise Problem(
+            422,
+            "exposure.panel_too_large",
+            f"A {width_mm:g} x {height_mm:g} mm panel does not fit on the display of {printer.name} "
+            f"({printer.display_width_mm:g} x {printer.display_height_mm:g} mm, "
+            f"offsets {left:g} and {bottom:g} mm).",
+        )
+    return printer
+
+
+def _series(request: dict[str, Any], printer: PrinterProfile) -> bytes:
+    """The ZIP of an exposure series. Runs in its own process."""
+    plan = plan_series(request["shortest_s"], request["longest_s"], request["steps"], printer)
+    panel = request["panel"]
+    images = series_layers(plan, panel["width_mm"], panel["height_mm"], printer)
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        _zip_entry(archive, "series.pm3", build_pm3_sequence(images, layer_order(plan), printer, plan.unit_s))
+        _zip_entry(archive, "series.json", json.dumps(plan.to_dict(), indent=1).encode())
+        png = io.BytesIO()
+        images[-1].convert("L").resize(PREVIEW_SIZE, Image.Resampling.BOX).save(png, format="PNG")
+        _zip_entry(archive, "series_preview.png", png.getvalue())
+    return buffer.getvalue()
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     isolation = Isolation(settings.timeout_s, settings.max_parallel, settings.isolate)
@@ -153,23 +210,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ) -> Response:
         parsed_layout = _parse(LayoutModel, layout, "layout")
         parsed_settings = _parse(ExposureSettings, settings_json, "settings")
-        if parsed_settings.printer not in PRINTERS:
-            known = ", ".join(sorted(PRINTERS))
-            raise Problem(
-                422, "exposure.unknown_printer", f"Unknown printer '{parsed_settings.printer}' (known: {known})."
-            )
-        printer = PRINTERS[parsed_settings.printer]
-        left = printer.frame_left_mm if parsed_settings.frame_left_mm is None else parsed_settings.frame_left_mm
-        bottom = printer.frame_bottom_mm if parsed_settings.frame_bottom_mm is None else parsed_settings.frame_bottom_mm
         panel = parsed_layout.panel
-        if left + panel.width_mm > printer.display_width_mm or bottom + panel.height_mm > printer.display_height_mm:
-            raise Problem(
-                422,
-                "exposure.panel_too_large",
-                f"A {panel.width_mm:g} x {panel.height_mm:g} mm panel does not fit on the display of {printer.name} "
-                f"({printer.display_width_mm:g} x {printer.display_height_mm:g} mm, "
-                f"offsets {left:g} and {bottom:g} mm).",
-            )
+        _printer_for(
+            parsed_settings.printer,
+            panel.width_mm,
+            panel.height_mm,
+            {"frame_left_mm": parsed_settings.frame_left_mm, "frame_bottom_mm": parsed_settings.frame_bottom_mm},
+        )
         if not 1 <= len(packages) <= settings.max_packages:
             raise Problem(422, "common.invalid_request", f"Send between 1 and {settings.max_packages} packages.")
         data: dict[str, bytes] = {}
@@ -185,6 +232,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         return Response(
             result, media_type="application/zip", headers={"Content-Disposition": 'attachment; filename="masks.zip"'}
+        )
+
+    @app.post("/v1/exposure-series")
+    async def create_exposure_series(body: SeriesRequest) -> Response:
+        printer = _printer_for(
+            body.printer,
+            body.panel.width_mm,
+            body.panel.height_mm,
+            {"frame_left_mm": body.frame_left_mm, "frame_bottom_mm": body.frame_bottom_mm, "mirror_x": body.mirror_x},
+        )
+        try:
+            plan_series(body.shortest_s, body.longest_s, body.steps, printer)
+            check_strips(body.panel.width_mm, body.steps)
+        except SeriesError as exc:
+            raise Problem(422, exc.code, exc.message) from exc
+        result: bytes = await run_in_threadpool(isolation.run, _series, body.model_dump(), printer)
+        return Response(
+            result, media_type="application/zip", headers={"Content-Disposition": 'attachment; filename="series.zip"'}
         )
 
     return app

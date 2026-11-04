@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "exposure-series.schema.json",
+  "title": "Exposure series (series.json)",
+  "description": "The printer exposes every layer for the time of the file header and ignores times per layer. A longer exposure is therefore several equal layers of `unit_s` with the same image: exposure k is `layers` layers lighting the strips 1 to k.",
+  "type": "object",
+  "required": ["unit_s", "layers", "print_time_s", "sections", "exposures"],
+  "properties": {
+    "unit_s": {"type": "integer", "minimum": 1, "description": "Time of one layer (greatest common divisor of the exposures)."},
+    "layers": {"type": "integer", "minimum": 2, "maximum": 200},
+    "print_time_s": {"type": "integer", "minimum": 1, "description": "Estimate with the lift moves between the layers."},
+    "sections": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["section", "exposure_s"],
+        "properties": {
+          "section": {"type": "integer", "minimum": 1, "description": "Number of the strip, 1 is the leftmost seen from the copper side."},
+          "exposure_s": {"type": "integer", "minimum": 1, "description": "Total time the strip gets."}
+        },
+        "additionalProperties": false
+      }
+    },
+    "exposures": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["exposure", "sections", "duration_s", "layers"],
+        "properties": {
+          "exposure": {"type": "integer", "minimum": 1},
+          "sections": {"type": "integer", "minimum": 1, "description": "This exposure lights the strips 1 to this number."},
+          "duration_s": {"type": "integer", "minimum": 1},
+          "layers": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -128,6 +128,18 @@ class Downstream:
     # --- exposure and mill ----------------------------------------------------------------------------------
 
     def _exposure(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/exposure-series":
+            body = json.loads(request.content)
+            if body["longest_s"] <= body["shortest_s"]:
+                return problem(422, "exposure.invalid_series", "The longest time must be longer than the shortest.")
+            series = make_zip(
+                {
+                    "series.pm3": b"ANYCUBIC" + json.dumps(body, sort_keys=True).encode(),
+                    "series.json": "{}",
+                    "series_preview.png": tiny_png(),
+                }
+            )
+            return httpx.Response(200, content=series, headers={"content-type": "application/zip"})
         settings = _form_field(request, "settings")
         pm3 = b"ANYCUBIC" + str(settings.get("exposure_s")).encode()
         available = {

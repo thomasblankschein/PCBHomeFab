@@ -159,6 +159,18 @@ docker-compose.yaml
   so they read correctly on the finished copper. The font is DejaVu Sans Mono Bold
   (`services/exposure/src/exposure/data/fonts/`, licence included).
 
+## Exposure series (since 0.27.0)
+- Page `/exposure-series` (`js/exposure-series.js`, the plan in `js/series.js`), `jobs` `POST /v1/exposure-series` (panel id,
+  nothing stored) -> `exposure` `POST /v1/exposure-series` (`series.py`, ZIP with `series.pm3`, `series.json`, preview).
+- Strips side by side, exposure k lights the strips 1 to k; times evenly from longest to shortest, whole seconds rounded half
+  up with integers (frontend and service must give the same values; both test against `contracts/examples/exposure-series.json`).
+- **The Photon M3 ignores the exposure time per layer** (LAYERDEF), also with the header switch "per layer settings" = 1:
+  every layer gets the header time (tried by the maintainer on 2026-11-04 with two test files). It shows a different image per
+  layer. So an exposure of d seconds is d / unit equal layers, unit = gcd of the exposures; at most 200 layers.
+  `pm3.build_pm3_sequence` writes a copy of the image data for every layer (sharing data between layers is untested).
+- The pattern is drawn as seen from the copper side and mirrored for the display (like a B.Cu mask); strip 1 is on the left
+  seen from the copper side. Strips need 14 mm (`MIN_STRIP_MM`), so at most 10 on 160 mm.
+
 ## Exposure mask
 - The mask has no frame around the display (an earlier version drew an exposed border of 1 mm so that Photon Workshop could
   slice the image; removed on 2026-10-27 at the maintainer's request). The `.pm3` file is not opened in Photon Workshop at

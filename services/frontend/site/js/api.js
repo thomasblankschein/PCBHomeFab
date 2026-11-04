@@ -80,3 +80,13 @@ export const archiveBlob = async (jobId, lang) => (await request(`${jobPath(jobI
 
 /** The job description as a PDF, written in German or English (`lang`). */
 export const reportBlob = async (jobId, lang) => (await request(`${jobPath(jobId)}/report.pdf?lang=${languageOf(lang)}`)).blob();
+
+/** The slice file of a test exposure (an exposure series), as a blob. Nothing is stored on the server. */
+export async function exposureSeriesBlob(request_) {
+  const response = await request("/exposure-series", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request_),
+  });
+  return response.blob();
+}

@@ -33,6 +33,9 @@
 	@machines path /machines
 	rewrite @machines /machines.html
 
+	@series path /exposure-series
+	rewrite @series /exposure-series.html
+
 	# Pages, scripts, language files and the version change with releases: always ask whether they are still current (the
 	# ETag keeps this cheap). Without it a browser may mix a cached old module with a new one and show an empty page.
 	header Cache-Control no-cache

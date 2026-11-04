@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.27.0 - 2026-11-04
+
+- **New: exposure series** (menu "Exposure series"). One `.pm3` file exposes a test board in 2 to 10 strips with the same
+  test pattern (tracks and gaps from 0.1 to 0.5 mm, SMD rows, pads and vias, a copper pour with isolation gaps, small text,
+  the time of the strip). The board stays on the display; exposure k lights the strips 1 to k, so the times run evenly from
+  the longest to the shortest. The Photon M3 takes the time of the file header for every layer (tried on the printer), so a
+  longer exposure is several equal layers. New endpoints `POST /v1/exposure-series` in `exposure` and `jobs` (nothing is
+  stored), see the manual, section 8.
+- Fix: the menu at the top wraps on narrow windows instead of pushing the account and the language out of the page.
+
 ## 0.26.0 - 2026-11-04
 
 Hardening after a security review. Read "Installations from before 0.26.0" in `docs/deployment.md`.
