@@ -13,7 +13,9 @@ for _ in $(seq 1 60); do
 done
 curl -fsS "$base/healthz"; echo
 curl -fsS "$base/api/healthz"; echo
-curl -fsS "$base/" | grep -q PCBHomeFab
+# grep without -q reads the whole answer: grep -q stops at the first match, curl then fails on the closed pipe
+# ("Failed writing body") and pipefail turns that into an error, depending on timing.
+curl -fsS "$base/" | grep PCBHomeFab >/dev/null
 
 # without a login the API is closed
 [ "$(curl -s -o /dev/null -w '%{http_code}' "$base/api/v1/jobs")" = 401 ]
@@ -44,7 +46,7 @@ echo "status $status"
 
 curl -fsS -H "$auth" -o /tmp/pcbhomefab_smoke.pm3 "$base/api/v1/jobs/$id/files/exposure.pm3"
 head -c 8 /tmp/pcbhomefab_smoke.pm3 | grep -q ANYCUBIC
-curl -fsS "$base/jobs/$id" | grep -q job.js
-curl -fsS -H "$auth" "$base/api/v1/jobs" | grep -q "$id"
+curl -fsS "$base/jobs/$id" | grep job.js >/dev/null
+curl -fsS -H "$auth" "$base/api/v1/jobs" | grep "$id" >/dev/null
 curl -fsS -H "$auth" -X DELETE "$base/api/v1/jobs/$id"
 echo "smoke test passed"
